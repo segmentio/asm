@@ -12,9 +12,9 @@ targets := \
 build: $(targets)
 
 $(dstdir)/%_amd64.s $(dstdir)/%_amd64.go: $(srcdir)/%_asm.go
-	cd build && go run $< \
+	cd build && go run $(patsubst $(CURDIR)/build/%,%,$<) \
 		-pkg   $(notdir $(realpath $(dir $<))) \
-		-out   $(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.s,$<) \
-		-stubs $(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.go,$<)
+		-out   ../$(patsubst $(CURDIR)/%,%,$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.s,$<)) \
+		-stubs ../$(patsubst $(CURDIR)/%,%,$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.go,$<))
 
 .PHONY: build
