@@ -28,8 +28,8 @@ func Copy(dst, src []byte) int {
 	n := 0
 
 	if len(dst) >= 64 && simd.copy64 != nil {
-		simd.copy64(unsafebytes.Pointer(dst), unsafebytes.Pointer(src), len(dst)/64)
 		n = (len(dst) / 64) * 64
+		simd.copy64(unsafebytes.Pointer(dst), unsafebytes.Pointer(src), n)
 	}
 
 	if n >= 0 && n < len(dst) && n < len(src) {

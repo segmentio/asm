@@ -2,16 +2,18 @@
 
 #include "textflag.h"
 
-// func copyAVX2(dst *byte, src *byte, count int)
+// func copyAVX2(dst *byte, src *byte, n int)
 // Requires: AVX, AVX2
 TEXT ·copyAVX2(SB), NOSPLIT, $0-24
 	MOVQ dst+0(FP), AX
 	MOVQ src+8(FP), CX
-	MOVQ count+16(FP), DX
+	MOVQ n+16(FP), DX
+	MOVQ AX, BX
+	ADDQ DX, BX
 
 loop:
-	// Loop until zero bytes remain.
-	CMPQ DX, $0x00
+	// Loop until we reach the end.
+	CMPQ AX, BX
 	JE   done
 
 	// Load operands in registers, apply the OR operation, assign the result.
@@ -22,8 +24,7 @@ loop:
 	VMOVUPS Y0, (AX)
 	VMOVUPS Y1, 32(AX)
 
-	// Decrement byte count, advance pointers.
-	DECQ DX
+	// Advance pointers.
 	ADDQ $0x40, AX
 	ADDQ $0x40, CX
 	JMP  loop
