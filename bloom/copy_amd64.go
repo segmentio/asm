@@ -3,4 +3,4 @@
 package bloom
 
 // Copies the one-bits of src to dst, using SIMD instructions as an optimization.
-func copyAVX2(dst *byte, src *byte, count int)
+func copyAVX2(dst *byte, src *byte, n int)

@@ -8,38 +8,40 @@ import (
 )
 
 func main() {
-	TEXT("copyAVX2", NOSPLIT, "func(dst, src *byte, count int)")
+	TEXT("copyAVX2", NOSPLIT, "func(dst, src *byte, n int)")
 	Doc("Copies the one-bits of src to dst, using SIMD instructions as an optimization.")
 
-	dstPtr := Load(Param("dst"), GP64())
-	srcPtr := Load(Param("src"), GP64())
-	count := Load(Param("count"), GP64())
+	dst := Load(Param("dst"), GP64())
+	src := Load(Param("src"), GP64())
+	n := Load(Param("n"), GP64())
 
-	// 256 bits registers
-	dstReg0 := YMM()
-	dstReg1 := YMM()
+	end := GP64()
+	MOVQ(dst, end)
+	ADDQ(n, end)
+
+	ymm0 := YMM()
+	ymm1 := YMM()
 
 	Label("loop")
-	Comment("Loop until zero bytes remain.")
-	CMPQ(count, Imm(0))
+	Comment("Loop until we reach the end.")
+	CMPQ(dst, end)
 	JE(LabelRef("done"))
 
 	Comment("Load operands in registers, apply the OR operation, assign the result.")
-	dstMem := Mem{Base: dstPtr}
-	srcMem := Mem{Base: srcPtr}
-	VMOVUPS(dstMem, dstReg0)
-	VMOVUPS(dstMem.Offset(32), dstReg1)
+	dstMem := Mem{Base: dst}
+	srcMem := Mem{Base: src}
+	VMOVUPS(dstMem, ymm0)
+	VMOVUPS(dstMem.Offset(32), ymm1)
 
-	VPOR(srcMem, dstReg0, dstReg0)
-	VPOR(srcMem.Offset(32), dstReg1, dstReg1)
+	VPOR(srcMem, ymm0, ymm0)
+	VPOR(srcMem.Offset(32), ymm1, ymm1)
 
-	VMOVUPS(dstReg0, dstMem)
-	VMOVUPS(dstReg1, dstMem.Offset(32))
+	VMOVUPS(ymm0, dstMem)
+	VMOVUPS(ymm1, dstMem.Offset(32))
 
-	Comment("Decrement byte count, advance pointers.")
-	DECQ(count)
-	ADDQ(Imm(64), dstPtr)
-	ADDQ(Imm(64), srcPtr)
+	Comment("Advance pointers.")
+	ADDQ(Imm(64), dst)
+	ADDQ(Imm(64), src)
 	JMP(LabelRef("loop"))
 
 	Label("done")
