@@ -17,7 +17,7 @@ avx2_loop:
 	MOVQ    AX, CX
 	ADDQ    $0x80, CX
 	CMPQ    CX, DX
-	JAE     slow_loop
+	JAE     x86_loop
 	VMOVDQU (AX), Y1
 	VMOVDQU 32(AX), Y2
 	VMOVDQU 64(AX), Y3

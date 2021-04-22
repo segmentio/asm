@@ -45,7 +45,7 @@ func main() {
 	MOVQ(ptr, next)
 	ADDQ(Imm(unroll*32), next)
 	CMPQ(next, end)
-	JAE(LabelRef("slow_loop"))
+	JAE(LabelRef("x86_loop"))
 
 	// Load multiple chunks => byte swap => store.
 	var vectors [unroll]reg.VecVirtual
