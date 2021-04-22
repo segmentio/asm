@@ -74,7 +74,7 @@ func main() {
 	CMPQ(next, end)
 	JAE(LabelRef("slow_loop"))
 
-	// Load qwords => byte swap => store. Use MOVBEQQ to BSWAPQ+MOVQ in one op.
+	// Load qwords => byte swap => store.
 	var chunks [unroll]reg.GPVirtual
 	for i := 0; i < unroll; i++ {
 		chunks[i] = GP64()
@@ -83,7 +83,10 @@ func main() {
 		MOVQ(Mem{Base: ptr}.Offset(i*8), chunks[i])
 	}
 	for i := 0; i < unroll; i++ {
-		MOVBEQQ(chunks[i], Mem{Base: ptr}.Offset(i*8))
+		BSWAPQ(chunks[i])
+	}
+	for i := 0; i < unroll; i++ {
+		MOVQ(chunks[i], Mem{Base: ptr}.Offset(i*8))
 	}
 
 	// Increment ptr and loop.
@@ -98,7 +101,8 @@ func main() {
 	// Load a qword => byte swap => store.
 	qword := GP64()
 	MOVQ(Mem{Base: ptr}, qword)
-	MOVBEQQ(qword, Mem{Base: ptr})
+	BSWAPQ(qword)
+	MOVQ(qword, Mem{Base: ptr})
 
 	// Increment ptr and loop.
 	ADDQ(Imm(8), ptr)

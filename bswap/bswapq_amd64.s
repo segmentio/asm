@@ -5,7 +5,7 @@
 #include "textflag.h"
 
 // func bswapq(b []byte)
-// Requires: AVX, AVX2, MOVBE
+// Requires: AVX, AVX2
 TEXT ·bswapq(SB), NOSPLIT, $0-24
 	MOVQ    b_base+0(FP), AX
 	MOVQ    b_len+8(FP), CX
@@ -34,28 +34,33 @@ avx2_loop:
 	JMP     avx2_loop
 
 x86_loop:
-	MOVQ    AX, CX
-	ADDQ    $0x20, CX
-	CMPQ    CX, DX
-	JAE     slow_loop
-	MOVQ    (AX), BX
-	MOVQ    8(AX), BP
-	MOVQ    16(AX), SI
-	MOVQ    24(AX), DI
-	MOVBEQQ BX, (AX)
-	MOVBEQQ BP, 8(AX)
-	MOVBEQQ SI, 16(AX)
-	MOVBEQQ DI, 24(AX)
-	MOVQ    CX, AX
-	JMP     x86_loop
+	MOVQ   AX, CX
+	ADDQ   $0x20, CX
+	CMPQ   CX, DX
+	JAE    slow_loop
+	MOVQ   (AX), BX
+	MOVQ   8(AX), BP
+	MOVQ   16(AX), SI
+	MOVQ   24(AX), DI
+	BSWAPQ BX
+	BSWAPQ BP
+	BSWAPQ SI
+	BSWAPQ DI
+	MOVQ   BX, (AX)
+	MOVQ   BP, 8(AX)
+	MOVQ   SI, 16(AX)
+	MOVQ   DI, 24(AX)
+	MOVQ   CX, AX
+	JMP    x86_loop
 
 slow_loop:
-	CMPQ    AX, DX
-	JAE     done
-	MOVQ    (AX), CX
-	MOVBEQQ CX, (AX)
-	ADDQ    $0x08, AX
-	JMP     slow_loop
+	CMPQ   AX, DX
+	JAE    done
+	MOVQ   (AX), CX
+	BSWAPQ CX
+	MOVQ   CX, (AX)
+	ADDQ   $0x08, AX
+	JMP    slow_loop
 
 done:
 	RET
