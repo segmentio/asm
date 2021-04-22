@@ -18,8 +18,8 @@ var avx2ShuffleMask = []byte{
 }
 
 func main() {
-	TEXT("bswapq", NOSPLIT, "func(b []byte)")
-	Doc("bswapq performs an in-place byte swap on each qword of the input buffer.")
+	TEXT("swap64", NOSPLIT, "func(b []byte)")
+	Doc("swap64 performs an in-place byte swap on each qword of the input buffer.")
 
 	// Load slice ptr + length, and calculate end ptr.
 	ptr := Load(Param("b").Base(), GP64())

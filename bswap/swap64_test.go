@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestBSwapQ(t *testing.T) {
+func TestSwap64(t *testing.T) {
 	input := make([]byte, 4096)
 	prng := rand.New(rand.NewSource(0))
 	io.ReadFull(prng, input)
@@ -16,7 +16,7 @@ func TestBSwapQ(t *testing.T) {
 
 	for i := 0; i < 4096; i += 8 {
 		copy(output, input)
-		BSwapQ(output[:i])
+		Swap64(output[:i])
 		for j := 0; j < i; j += 8 {
 			u1 := binary.BigEndian.Uint64(input[j:])
 			u2 := binary.LittleEndian.Uint64(output[j:])
@@ -27,7 +27,7 @@ func TestBSwapQ(t *testing.T) {
 	}
 }
 
-func BenchmarkBSwapQ(b *testing.B) {
+func BenchmarkSwap64(b *testing.B) {
 	input := make([]byte, 64*1024)
 	prng := rand.New(rand.NewSource(0))
 	io.ReadFull(prng, input)
@@ -36,6 +36,6 @@ func BenchmarkBSwapQ(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		BSwapQ(input)
+		Swap64(input)
 	}
 }
