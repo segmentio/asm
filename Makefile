@@ -2,8 +2,7 @@ dstdir := $(CURDIR)
 srcdir := $(CURDIR)/build
 
 sources := \
-	$(wildcard $(srcdir)/*_asm.go \
-	$(srcdir)/bloom/*_asm.go)
+	$(wildcard $(srcdir)/*/*_asm.go)
 
 targets := \
 	$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.s,$(sources)) \
