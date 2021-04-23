@@ -1,105 +1,96 @@
 package qsort
 
-import (
-	"encoding/binary"
-)
+type uint256 struct {
+	a uint64 // hi
+	b uint64
+	c uint64
+	d uint64 // lo
+}
 
-func quicksort32(data []b32, lo, hi int, swap func(int, int)) {
+func quicksort256(data []uint256, lo, hi int, swap func(int, int)) {
 	for lo < hi {
-		if hi-lo < smallCutoff/32 {
-			insertionsort32(data, lo, hi, swap)
+		if hi-lo < smallCutoff/24 {
+			insertionsort256(data, lo, hi, swap)
 			return
 		}
 		mid := lo + (hi-lo)/2
-		pivot := medianOfThree32(data, lo, mid, hi, swap)
-		p := hoarePartition32(data, lo, hi, pivot, swap)
+		pivot := medianOfThree256(data, mid, lo, hi, swap)
+		p := hoarePartition256(data, lo, hi, pivot, swap)
 		if p-lo < hi-p { // recurse on the smaller side
-			quicksort32(data, lo, p-1, swap)
+			quicksort256(data, lo, p-1, swap)
 			lo = p + 1
 		} else {
-			quicksort32(data, p+1, hi, swap)
+			quicksort256(data, p+1, hi, swap)
 			hi = p - 1
 		}
 	}
 }
 
-func insertionsort32(data []b32, lo, hi int, swap func(int, int)) {
-	// Additional superfluous checks have been added to
-	// eliminate bounds checks in the inner loops.
+func insertionsort256(data []uint256, lo, hi int, swap func(int, int)) {
+	// Extra superfluous checks have been added to prevent the compiler
+	// from adding bounds checks in the inner loop.
 	i := lo + 1
 	if i < 0 || hi >= len(data) {
 		return
 	}
 	for ; i <= hi; i++ {
+		item := data[i]
 		for j := i; j > 0 && j > lo; j-- {
-			if !less32(data, j, j-1) {
+			if prev := data[j-1]; !less256(item, prev) {
 				break
 			}
-			swap32(data, j, j-1, swap)
+			swap256(data, j, j-1, swap)
 		}
 	}
 }
 
-func medianOfThree32(data []b32, a, b, c int, swap func(int, int)) int {
-	if less32(data, b, a) {
-		swap32(data, a, b, swap)
+func medianOfThree256(data []uint256, a, b, c int, swap func(int, int)) int {
+	if less256(data[b], data[a]) {
+		swap256(data, a, b, swap)
 	}
-	if less32(data, c, b) {
-		swap32(data, b, c, swap)
-		if less32(data, b, a) {
-			swap32(data, a, b, swap)
+	if less256(data[c], data[b]) {
+		swap256(data, b, c, swap)
+		if less256(data[b], data[a]) {
+			swap256(data, a, b, swap)
 		}
 	}
 	return b
 }
 
-func hoarePartition32(data []b32, lo, hi, p int, swap func(int, int)) int {
-	swap32(data, lo, p, swap)
+func hoarePartition256(data []uint256, lo, hi, p int, swap func(int, int)) int {
+	// Extra superfluous checks have been added to prevent the compiler
+	// from adding bounds checks in the inner loops.
 	i, j := lo+1, hi
-	for {
-		for i <= hi && less32(data, i, lo) {
-			i++
+	pivot := data[lo]
+	for i >= 0 && hi < len(data) && j < len(data) {
+		for ; i <= hi; i++ {
+			if item := data[i]; !less256(item, pivot) {
+				break
+			}
 		}
-		for less32(data, lo, j) {
-			j--
+		for ; j >= lo; j-- {
+			if item := data[j]; !less256(pivot, item) {
+				break
+			}
 		}
 		if i >= j {
 			break
 		}
-		swap32(data, i, j, swap)
+		swap256(data, i, j, swap)
 		i++
 		j--
 	}
-	swap32(data, lo, j, swap)
+	swap256(data, lo, j, swap)
 	return j
 }
 
-func swap32(data []b32, a, b int, swap func(int, int)) {
+func swap256(data []uint256, a, b int, swap func(int, int)) {
 	data[a], data[b] = data[b], data[a]
 	if swap != nil {
 		swap(a, b)
 	}
 }
 
-func less32(data []b32, a, b int) bool {
-	return less32cmp(&data[a], &data[b])
-}
-
-func less32cmp(a, b *b32) bool {
-	x1 := binary.BigEndian.Uint64(a[:8])
-	x2 := binary.BigEndian.Uint64(b[:8])
-	if x1 != x2 {
-		return x1 < x2
-	}
-	x1 = binary.BigEndian.Uint64(a[8:16])
-	x2 = binary.BigEndian.Uint64(b[8:16])
-	if x1 != x2 {
-		return x1 < x2
-	}
-	x1 = binary.BigEndian.Uint64(a[16:24])
-	x2 = binary.BigEndian.Uint64(b[16:24])
-	if x1 != x2 {
-		return x1 < x2
-	}
-	return binary.BigEndian.Uint64(a[24:]) < binary.BigEndian.Uint64(b[24:])
+func less256(a, b uint256) bool {
+	return a.a < b.a || (a.a == b.a && a.b < b.b) || (a.a == b.a && a.b == b.b && a.c < b.c) || (a.a == b.a && a.b == b.b && a.c == b.c && a.d <= b.d)
 }
