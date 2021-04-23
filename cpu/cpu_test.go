@@ -51,7 +51,7 @@ func TestX86None(t *testing.T) {
 func TestX86All(t *testing.T) {
 	var c X86CPU
 	for _, feature := range x86 {
-		c.set(feature, true)
+		c.Set(feature, true)
 	}
 
 	for name, feature := range x86 {
@@ -64,7 +64,7 @@ func TestX86All(t *testing.T) {
 func TestX86Single(t *testing.T) {
 	for name, feature := range x86 {
 		var c X86CPU
-		c.set(feature, true)
+		c.Set(feature, true)
 		t.Run(name, func(t *testing.T) {
 			for n, f := range x86 {
 				if n == name {
@@ -94,7 +94,7 @@ func TestARMNone(t *testing.T) {
 func TestARMAll(t *testing.T) {
 	var c ARMCPU
 	for _, feature := range arm {
-		c.set(feature, true)
+		c.Set(feature, true)
 	}
 
 	for name, feature := range arm {
@@ -107,7 +107,7 @@ func TestARMAll(t *testing.T) {
 func TestARMSingle(t *testing.T) {
 	for name, feature := range arm {
 		var c ARMCPU
-		c.set(feature, true)
+		c.Set(feature, true)
 		t.Run(name, func(t *testing.T) {
 			for n, f := range arm {
 				if n == name {
