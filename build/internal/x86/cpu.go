@@ -10,18 +10,21 @@ import (
 	"github.com/segmentio/asm/cpu"
 )
 
-// cpuAddr is a Mem operand containing the global symbolic reference to the
-// X86 cpu feature flags.
-var cpuAddr = NewDataAddr(Symbol{Name: "github·com∕segmentio∕asm∕cpu·X86"}, 0)
-
-// JumpIfFeature
+// JumpIfFeature constructs a jump sequence that tests for one or more feature flags.
+// If all flags are matched, jump to the target label.
 func JumpIfFeature(jmp string, f cpu.X86Feature) {
 	jump(LabelRef(jmp), f, false)
 }
 
+// JumpUnlessFeature constructs a jump sequence that tests for one or more feature flags.
+// Unless all flags are matched, jump to the target label.
 func JumpUnlessFeature(jmp string, f cpu.X86Feature) {
 	jump(LabelRef(jmp), f, true)
 }
+
+// cpuAddr is a Mem operand containing the global symbolic reference to the
+// X86 cpu feature flags.
+var cpuAddr = NewDataAddr(Symbol{Name: "github·com∕segmentio∕asm∕cpu·X86"}, 0)
 
 func jump(jmp Op, f cpu.X86Feature, invert bool) {
 	if bits.OnesCount64(uint64(f)) == 1 {
