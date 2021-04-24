@@ -3,7 +3,6 @@ srcdir := $(CURDIR)/build
 
 sources := $(wildcard \
 	$(srcdir)/*_asm.go \
-	$(srcdir)/ascii/*_asm.go \
 	$(srcdir)/bloom/*_asm.go \
 )
 
