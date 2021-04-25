@@ -1,4 +1,4 @@
-package amd64
+package x86
 
 import (
 	. "github.com/mmcloughlin/avo/build"
