@@ -32,7 +32,6 @@ var (
 )
 
 const (
-	// X86
 	SSE                X86Feature = 1 << iota // SSE functions
 	SSE2                                      // P4 SSE functions
 	SSE3                                      // Prescott SSE3 functions
@@ -57,8 +56,9 @@ const (
 	AVX512VNNI                                // AVX-512 Vector Neural Network Instructions
 	AVX512VP2INTERSECT                        // AVX-512 Intersect for D/Q
 	AVX512VPOPCNTDQ                           // AVX-512 Vector Population Count Doubleword and Quadword
+)
 
-	// ARM
+const (
 	ASIMD    ARMFeature = 1 << iota // Advanced SIMD
 	ASIMDDP                         // SIMD Dot Product
 	ASIMDHP                         // Advanced SIMD half-precision floating point
