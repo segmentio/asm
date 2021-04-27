@@ -1,17 +1,22 @@
 dstdir := $(CURDIR)
 srcdir := $(CURDIR)/build
 
-sources := \
-	$(wildcard $(srcdir)/*_asm.go \
-	$(srcdir)/bloom/*_asm.go)
+sources := $(wildcard \
+	$(srcdir)/*_asm.go \
+	$(srcdir)/bloom/*_asm.go \
+)
 
 targets := \
 	$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.s,$(sources)) \
 	$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.go,$(sources))
 
+internal := $(wildcard \
+	$(srcdir)/internal/x86/*.go \
+)
+
 build: $(targets)
 
-$(dstdir)/%_amd64.s $(dstdir)/%_amd64.go: $(srcdir)/%_asm.go
+$(dstdir)/%_amd64.s $(dstdir)/%_amd64.go: $(srcdir)/%_asm.go $(internal)
 	cd build && go run $(patsubst $(CURDIR)/build/%,%,$<) \
 		-pkg   $(notdir $(realpath $(dir $<))) \
 		-out   ../$(patsubst $(CURDIR)/%,%,$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.s,$<)) \
