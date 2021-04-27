@@ -37,17 +37,17 @@ x86_loop:
 	CMPQ   CX, DX
 	JAE    slow_loop
 	MOVQ   (AX), BX
-	MOVQ   8(AX), BP
-	MOVQ   16(AX), SI
-	MOVQ   24(AX), DI
+	MOVQ   8(AX), SI
+	MOVQ   16(AX), DI
+	MOVQ   24(AX), R8
 	BSWAPQ BX
-	BSWAPQ BP
 	BSWAPQ SI
 	BSWAPQ DI
+	BSWAPQ R8
 	MOVQ   BX, (AX)
-	MOVQ   BP, 8(AX)
-	MOVQ   SI, 16(AX)
-	MOVQ   DI, 24(AX)
+	MOVQ   SI, 8(AX)
+	MOVQ   DI, 16(AX)
+	MOVQ   R8, 24(AX)
 	MOVQ   CX, AX
 	JMP    x86_loop
 
