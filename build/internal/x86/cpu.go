@@ -57,12 +57,9 @@ func jumpMultiFlag(jmp Op, f cpu.X86Feature, invert bool) {
 	MOVQ(cpuAddr, r)
 
 	var op Op
-	switch {
-	case f <= math.MaxUint8:
-		op = U8(f)
-	case f <= math.MaxUint32:
+	if f <= math.MaxUint32 {
 		op = U32(f)
-	default:
+	} else {
 		op = GP64()
 		MOVQ(U64(f), op)
 	}
