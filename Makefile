@@ -3,7 +3,7 @@ srcdir := $(CURDIR)/build
 
 sources := $(wildcard \
 	$(srcdir)/*_asm.go \
-	$(srcdir)/bloom/*_asm.go \
+	$(srcdir)/*/*_asm.go \
 )
 
 targets := \
