@@ -9,6 +9,8 @@ TEXT ·swap64(SB), NOSPLIT, $0-24
 	MOVQ    b_len+8(FP), CX
 	MOVQ    AX, DX
 	ADDQ    CX, DX
+	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCC     x86_loop
 	VMOVDQU shuffle_mask<>+0(SB), Y0
 
 avx2_loop:

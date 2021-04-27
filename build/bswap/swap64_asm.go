@@ -5,7 +5,10 @@ package main
 import (
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
+	. "github.com/segmentio/asm/build/internal/x86"
+
 	"github.com/mmcloughlin/avo/reg"
+	"github.com/segmentio/asm/cpu"
 )
 
 const unroll = 4
@@ -28,7 +31,7 @@ func main() {
 	MOVQ(ptr, end)
 	ADDQ(len, end)
 
-	// TODO: jump to x86_loop if there's no AVX2 support
+	JumpUnlessFeature("x86_loop", cpu.AVX2)
 
 	// Prepare the shuffle mask.
 	shuffleMaskData := GLOBL("shuffle_mask", RODATA|NOPTR)
