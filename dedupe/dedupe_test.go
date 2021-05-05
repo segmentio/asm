@@ -54,6 +54,10 @@ func TestDedupe16(t *testing.T) {
 	testDedupeSize(t, 16)
 }
 
+func TestDedupe32(t *testing.T) {
+	testDedupeSize(t, 32)
+}
+
 func testDedupeSize(t *testing.T, size int) {
 	const maxCount = 100
 	const iterations = 1000
@@ -74,6 +78,10 @@ func testDedupeSize(t *testing.T, size int) {
 
 func BenchmarkDedupe16(b *testing.B) {
 	benchmarkDedupeSize(b, 16)
+}
+
+func BenchmarkDedupe32(b *testing.B) {
+	benchmarkDedupeSize(b, 32)
 }
 
 func benchmarkDedupeSize(b *testing.B, size int) {
@@ -104,7 +112,7 @@ func randomSortedArray(prng *rand.Rand, size int, count int, repeatChance float6
 
 	pool := make([]byte, size*count)
 	prng.Read(pool)
-	sort.Sort(&sortChunks{b: pool, size: size})
+	sort.Sort(&chunks{b: pool, size: size})
 
 	// Sanity checks:
 	for i := size; i < len(pool); i += size {
@@ -130,27 +138,27 @@ func randomSortedArray(prng *rand.Rand, size int, count int, repeatChance float6
 	return
 }
 
-type sortChunks struct {
+type chunks struct {
 	b    []byte
 	size int
 	tmp  []byte
 }
 
-func (s *sortChunks) Len() int {
+func (s *chunks) Len() int {
 	return len(s.b) / s.size
 }
 
-func (s *sortChunks) Less(i, j int) bool {
+func (s *chunks) Less(i, j int) bool {
 	return bytes.Compare(s.slice(i), s.slice(j)) < 0
 }
 
-func (s *sortChunks) Swap(i, j int) {
+func (s *chunks) Swap(i, j int) {
 	tmp := make([]byte, s.size)
 	copy(tmp, s.slice(j))
 	copy(s.slice(j), s.slice(i))
 	copy(s.slice(i), tmp)
 }
 
-func (s *sortChunks) slice(i int) []byte {
+func (s *chunks) slice(i int) []byte {
 	return s.b[i*s.size : (i+1)*s.size]
 }

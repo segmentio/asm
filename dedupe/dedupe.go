@@ -20,6 +20,8 @@ func Dedupe(b []byte, size int) []byte {
 	switch {
 	case size == 16 && cpu.X86.Has(cpu.SSE4):
 		pos = dedupe16(b)
+	case size == 32 && cpu.X86.Has(cpu.AVX2):
+		pos = dedupe32(b)
 	default:
 		pos = dedupeGeneric(b, size)
 	}
