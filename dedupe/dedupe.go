@@ -2,8 +2,12 @@ package dedupe
 
 import (
 	"bytes"
+
+	"github.com/segmentio/asm/cpu"
 )
 
+// Dedupe scans a slice containing contiguous chunks of a specific size,
+// and removes duplicates in place.
 func Dedupe(b []byte, size int) []byte {
 	if size <= 0 || len(b)%size != 0 {
 		panic("len(b) % size != 0")
@@ -13,8 +17,8 @@ func Dedupe(b []byte, size int) []byte {
 	}
 
 	var pos int
-	switch size {
-	case 16:
+	switch {
+	case size == 16 && cpu.X86.Has(cpu.SSE4):
 		pos = dedupe16(b)
 	default:
 		pos = dedupeGeneric(b, size)

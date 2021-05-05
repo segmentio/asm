@@ -1,10 +1,11 @@
+// +build ignore
+
 package main
 
 import (
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 )
-
 
 func main() {
 	TEXT("dedupe16", NOSPLIT, "func(b []byte) (pos int)")
@@ -17,7 +18,7 @@ func main() {
 	MOVQ(src, end)
 	ADDQ(length, end)
 
-	// Load the first item (which is never a duplicate)
+	// Load the first item (which is never a duplicate).
 	prev := XMM()
 	MOVUPS(Mem{Base: src}, prev)
 
@@ -37,18 +38,18 @@ func main() {
 	item := XMM()
 	MOVUPS(Mem{Base: src}, item)
 
-	// Compare item == prev
+	// Compare item == prev by comparing the two qwords that make up the 16 byte item.
 	result := XMM()
 	MOVUPS(item, result)
 	PCMPEQQ(prev, result)
 
-	// Extract into mask, where 0x3 indicates that both qword components are equal
+	// Extract the equality mask, where 0x3 indicates that both qword components are equal.
 	mask := GP32()
 	MOVMSKPD(result, mask)
 	CMPL(mask, Imm(3))
 	JE(LabelRef("next")) // skip the write if they're equal
 
-	// Write item to dst and advance the write pointer
+	// Write item to dst and advance the write pointer.
 	MOVUPS(item, Mem{Base: dst})
 	ADDQ(Imm(16), dst)
 	MOVUPS(item, prev)
@@ -60,7 +61,7 @@ func main() {
 
 	Label("done")
 
-	// Calculate byte offset of the dst pointer and return that.
+	// Calculate and return byte offset of the dst pointer.
 	base := Load(Param("b").Base(), GP64())
 	SUBQ(base, dst)
 	Store(dst, Return("pos"))
