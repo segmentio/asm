@@ -2,7 +2,6 @@ package dedupe
 
 import (
 	"bytes"
-	"unsafe"
 )
 
 func Dedupe(b []byte, size int) []byte {
@@ -16,7 +15,7 @@ func Dedupe(b []byte, size int) []byte {
 	var pos int
 	switch size {
 	case 16:
-		pos = dedupeUnsafe16(b)
+		pos = dedupe16(b)
 	default:
 		pos = dedupeGeneric(b, size)
 	}
@@ -36,27 +35,4 @@ func dedupeGeneric(b []byte, size int) int {
 		}
 	}
 	return pos
-}
-
-func dedupeUnsafe16(values []byte) int {
-	n := (len(values) / 16) * 16
-	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&values))
-	end := unsafe.Pointer(uintptr(ptr) + uintptr(n))
-	rdp := unsafe.Pointer(uintptr(ptr) + uintptr(16))
-	wrp := ptr
-
-	for uintptr(rdp) < uintptr(end) {
-		u := (*[16]byte)(wrp)
-		v := (*[16]byte)(rdp)
-
-		if *u != *v {
-			if wrp = unsafe.Pointer(uintptr(wrp) + 16); wrp != rdp {
-				*(*[16]byte)(wrp) = *v
-			}
-		}
-
-		rdp = unsafe.Pointer(uintptr(rdp) + 16)
-	}
-
-	return int(uintptr(wrp)-uintptr(ptr)) + 16
 }
