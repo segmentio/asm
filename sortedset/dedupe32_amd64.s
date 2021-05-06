@@ -17,17 +17,15 @@ loop:
 	CMPQ      AX, DX
 	JE        done
 	VMOVUPS   (AX), Y1
+	ADDQ      $0x20, AX
 	VPCMPEQB  Y0, Y1, Y2
 	VPMOVMSKB Y2, BX
 	CMPL      BX, $0xffffffff
-	JE        next
+	JE        loop
 	VMOVUPS   Y1, (CX)
 	ADDQ      $0x20, CX
 	VMOVUPS   Y1, Y0
-
-next:
-	ADDQ $0x20, AX
-	JMP  loop
+	JMP       loop
 
 done:
 	MOVQ b_base+0(FP), AX

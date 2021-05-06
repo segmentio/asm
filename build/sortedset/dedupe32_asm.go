@@ -37,6 +37,7 @@ func main() {
 	// Load the item at the input pointer.
 	item := YMM()
 	VMOVUPS(Mem{Base: src}, item)
+	ADDQ(Imm(32), src)
 
 	// Compare item == prev by comparing each byte.
 	result := YMM()
@@ -46,16 +47,12 @@ func main() {
 	mask := GP32()
 	VPMOVMSKB(result, mask)
 	CMPL(mask, U32(0xFFFFFFFF))
-	JE(LabelRef("next")) // skip the write if they're equal
+	JE(LabelRef("loop")) // skip the write if they're equal
 
 	// Write item to dst and advance the write pointer.
 	VMOVUPS(item, Mem{Base: dst})
 	ADDQ(Imm(32), dst)
 	VMOVUPS(item, prev)
-
-	// Advance the input pointer and loop.
-	Label("next")
-	ADDQ(Imm(32), src)
 	JMP(LabelRef("loop"))
 
 	Label("done")
