@@ -1,4 +1,4 @@
-package dedupe
+package sortedset
 
 import (
 	"bytes"
