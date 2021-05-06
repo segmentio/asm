@@ -37,6 +37,7 @@ func main() {
 	// Load the item at the input pointer.
 	item := XMM()
 	MOVUPS(Mem{Base: src}, item)
+	ADDQ(Imm(16), src)
 
 	// Compare item == prev by comparing the two qwords that make up the 16 byte item.
 	result := XMM()
@@ -47,16 +48,12 @@ func main() {
 	mask := GP32()
 	MOVMSKPD(result, mask)
 	CMPL(mask, Imm(3))
-	JE(LabelRef("next")) // skip the write if they're equal
+	JE(LabelRef("loop")) // skip the write if they're equal
 
 	// Write item to dst and advance the write pointer.
 	MOVUPS(item, Mem{Base: dst})
 	ADDQ(Imm(16), dst)
 	MOVUPS(item, prev)
-
-	// Advance the input pointer and loop.
-	Label("next")
-	ADDQ(Imm(16), src)
 	JMP(LabelRef("loop"))
 
 	Label("done")
