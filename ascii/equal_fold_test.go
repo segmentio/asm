@@ -1,6 +1,7 @@
 package ascii
 
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 	"testing"
@@ -173,19 +174,24 @@ func TestEqualFold(t *testing.T) {
 	}
 }
 
-func BenchmarkEqualFoldString(b *testing.B) {
-	const N = 16
-
-	lower := ""
-	upper := ""
-
-	for i := 0; i < N; i++ {
-		lower += string(byte(i%26) + 'A')
-		upper += string(byte(i%26) + 'a')
+func genEqualStrings(n int) (l string, u string) {
+	for i := 0; i < n; i++ {
+		l += string(byte(i%26) + 'A')
+		u += string(byte(i%26) + 'a')
 	}
+	return
+}
 
-	for i := 0; i < b.N; i++ {
-		EqualFoldString(lower, upper)
+func BenchmarkEqualFoldString(b *testing.B) {
+	sizes := [...]int{7, 8, 9, 15, 16, 17, 31, 32, 33, 512, 2000}
+
+	for _, s := range sizes {
+		lower, upper := genEqualStrings(s)
+		b.Run(fmt.Sprintf("%04d", s), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				EqualFoldString(lower, upper)
+			}
+		})
 	}
 }
 
