@@ -60,11 +60,14 @@ func main() {
 	PINSRQ(Imm(0), mask64, mask256.AsX())
 	VPBROADCASTQ(mask256.AsX(), mask256)
 
+	// Moving the 128-byte scanning helps the branch predictor for small inputs
+	CMPQ(n, U8(128))       // if n >= 128:
+	JNB(LabelRef("eq128")) //   goto eq128
+
 	Label("eq64")
 	CMPQ(n, U8(64))                // if n < 64:
 	JB(LabelRef("eq32"))           //   goto eq32
 	SIMDEQ(p, q, n, i, mask256, 2) // [compare 64 bytes]
-	JMP(LabelRef("eq64"))          // loop eq64
 
 	Label("eq32")
 	CMPQ(n, U8(32))       // if n < 32:
@@ -140,6 +143,12 @@ func main() {
 	Label("done")
 	SETEQ(ret.Addr)
 	RET()
+
+	Label("eq128")
+	SIMDEQ(p, q, n, i, mask256, 4) // [compare 128 bytes]
+	CMPQ(n, U8(128))               // if n < 128:
+	JB(LabelRef("eq64"))           //   goto eq64
+	JMP(LabelRef("eq128"))         // loop eq128
 
 	Generate()
 }

@@ -14,17 +14,19 @@ TEXT ·EqualFoldString(SB), NOSPLIT, $0-33
 	MOVQ         $0xdfdfdfdfdfdfdfdf, SI
 	BTL          $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC          eq8
-	PINSRQ       $0x00, SI, X4
-	VPBROADCASTQ X4, Y4
+	PINSRQ       $0x00, SI, X8
+	VPBROADCASTQ X8, Y8
+	CMPQ         CX, $0x80
+	JNB          eq128
 
 eq64:
 	CMPQ      CX, $0x40
 	JB        eq32
-	VPAND     (AX)(DI*1), Y4, Y0
-	VPAND     (DX)(DI*1), Y4, Y1
+	VPAND     (AX)(DI*1), Y8, Y0
+	VPAND     (DX)(DI*1), Y8, Y1
 	VPCMPEQB  Y1, Y0, Y0
-	VPAND     32(AX)(DI*1), Y4, Y2
-	VPAND     32(DX)(DI*1), Y4, Y3
+	VPAND     32(AX)(DI*1), Y8, Y2
+	VPAND     32(DX)(DI*1), Y8, Y3
 	VPCMPEQB  Y3, Y2, Y2
 	VPAND     Y2, Y0, Y0
 	VPMOVMSKB Y0, BX
@@ -32,7 +34,6 @@ eq64:
 	SUBQ      $0x40, CX
 	CMPL      BX, $0xffffffff
 	JNE       done
-	JMP       eq64
 
 eq32:
 	CMPQ    CX, $0x20
@@ -41,7 +42,7 @@ eq32:
 	VPXOR   (DX)(DI*1), Y0, Y0
 	ADDQ    $0x20, DI
 	SUBQ    $0x20, CX
-	VPTEST  Y4, Y0
+	VPTEST  Y8, Y0
 	JNE     done
 
 eq16:
@@ -51,7 +52,7 @@ eq16:
 	VPXOR   (DX)(DI*1), X0, X0
 	ADDQ    $0x10, DI
 	SUBQ    $0x10, CX
-	VPTEST  X4, X0
+	VPTEST  X8, X0
 	JNE     done
 
 eq8:
@@ -108,3 +109,28 @@ eq1:
 done:
 	SETEQ ret+32(FP)
 	RET
+
+eq128:
+	VPAND     (AX)(DI*1), Y8, Y0
+	VPAND     (DX)(DI*1), Y8, Y1
+	VPCMPEQB  Y1, Y0, Y0
+	VPAND     32(AX)(DI*1), Y8, Y2
+	VPAND     32(DX)(DI*1), Y8, Y3
+	VPCMPEQB  Y3, Y2, Y2
+	VPAND     64(AX)(DI*1), Y8, Y4
+	VPAND     64(DX)(DI*1), Y8, Y5
+	VPCMPEQB  Y5, Y4, Y4
+	VPAND     96(AX)(DI*1), Y8, Y6
+	VPAND     96(DX)(DI*1), Y8, Y7
+	VPCMPEQB  Y7, Y6, Y6
+	VPAND     Y2, Y0, Y0
+	VPAND     Y6, Y4, Y4
+	VPAND     Y4, Y0, Y0
+	VPMOVMSKB Y0, BX
+	ADDQ      $0x80, DI
+	SUBQ      $0x80, CX
+	CMPL      BX, $0xffffffff
+	JNE       done
+	CMPQ      CX, $0x80
+	JB        eq64
+	JMP       eq128
