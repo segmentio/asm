@@ -144,7 +144,7 @@ func TestEqualFold(t *testing.T) {
 		l[i] = 'a'
 		u[i] = 'z'
 		if EqualFold(l, u) {
-			t.Errorf("ASCII characters should not match:\n  %v\n  %v\n", l, u)
+			t.Errorf("%q matches %q", l, u)
 		}
 
 		l[i] = byte(i%26) + 'A'
@@ -155,16 +155,20 @@ func TestEqualFold(t *testing.T) {
 			m[i] = u[i]
 		}
 
+		if EqualFold(l[:len(l)-1], u) {
+			t.Errorf("%q matches %q", l[:len(l)-1], u)
+		}
+
 		if !EqualFold(l, u) {
-			t.Errorf("ASCII characters should match:\n  %v\n  %v\n", l, u)
+			t.Errorf("%q does not match %q", l, u)
 		}
 
 		if !EqualFold(l, m) {
-			t.Errorf("ASCII characters should match:\n  %v\n  %v\n", l, m)
+			t.Errorf("%q does not match %q", l, m)
 		}
 
 		if !EqualFold(u, m) {
-			t.Errorf("ASCII characters should match:\n  %v\n  %v\n", u, m)
+			t.Errorf("%q does not match %q", u, m)
 		}
 	}
 }
