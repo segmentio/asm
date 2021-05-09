@@ -37,11 +37,8 @@ func main() {
 	CMPQ(n, l.Addr)       // if a_len != b_len:
 	JNE(LabelRef("done")) //   return false
 
-	x0 := XMM()
-	y0 := YMM()
-	y1 := YMM()
-	y2 := YMM()
-	y3 := YMM()
+	eqy := YMM()
+	eqx := XMM()
 	eq := GP64()
 	eqa := GP32()
 	eqb := GP32()
@@ -64,41 +61,30 @@ func main() {
 	VPBROADCASTQ(mask256.AsX(), mask256)
 
 	Label("eq64")
-	CMPQ(n, U8(64))                  // if n < 64:
-	JB(LabelRef("eq32"))             //   goto eq32
-	VPAND(p, mask256, y0)            // y0 = a[i:i+32] & mask256
-	VPAND(q, mask256, y1)            // y1 = b[i:i+32] & mask256
-	VPCMPEQB(y1, y0, y0)             // y0 = y1 == y0
-	VPAND(p.Offset(32), mask256, y2) // y2 = a[i+32:i+64] & mask256
-	VPAND(q.Offset(32), mask256, y3) // y3 = b[i+32:i+64] & mask256
-	VPCMPEQB(y3, y2, y2)             // y2 = y3 == y2
-	VPAND(y2, y0, y0)                // y0 = y2 & y0
-	VPMOVMSKB(y0, eq.As32())         // eq[0,1,2,...] = y0[0,8,16,...]
-	ADDQ(U8(64), i)                  // i += 64
-	SUBQ(U8(64), n)                  // n -= 64
-	CMPL(eq.As32(), U32(0xFFFFFFFF)) // if eq != 0xFFFFFFFF:
-	JNE(LabelRef("done"))            //   return false
-	JMP(LabelRef("eq64"))            // loop eq64
+	CMPQ(n, U8(64))                // if n < 64:
+	JB(LabelRef("eq32"))           //   goto eq32
+	SIMDEQ(p, q, n, i, mask256, 2) // [compare 64 bytes]
+	JMP(LabelRef("eq64"))          // loop eq64
 
 	Label("eq32")
 	CMPQ(n, U8(32))       // if n < 32:
 	JB(LabelRef("eq16"))  //   goto eq16
-	VMOVDQU(p, y0)        // y0 = a[i:i+32]
-	VPXOR(q, y0, y0)      // y0 = b[i:i+32] ^ y0
+	VMOVDQU(p, eqy)       // eqy = a[i:i+32]
+	VPXOR(q, eqy, eqy)    // eqy = b[i:i+32] ^ eqy
 	ADDQ(U8(32), i)       // i += 32
 	SUBQ(U8(32), n)       // n -= 32
-	VPTEST(mask256, y0)   // if !(mask256 & y0):
+	VPTEST(mask256, eqy)  // if !(mask256 & eqy):
 	JNE(LabelRef("done")) //   return false
 
 	Label("eq16")
-	CMPQ(n, U8(16))           // if n < 16:
-	JB(LabelRef("eq8"))       //   goto eq8
-	VMOVDQU(p, x0)            // x0 = a[i:i+16]
-	VPXOR(q, x0, x0)          // x0 = b[i:i+16] ^ x0
-	ADDQ(U8(16), i)           // i += 16
-	SUBQ(U8(16), n)           // n -= 16
-	VPTEST(mask256.AsX(), x0) // if !(mask128 & x0):
-	JNE(LabelRef("done"))     //   return false
+	CMPQ(n, U8(16))            // if n < 16:
+	JB(LabelRef("eq8"))        //   goto eq8
+	VMOVDQU(p, eqx)            // eqx = a[i:i+16]
+	VPXOR(q, eqx, eqx)         // eqx = b[i:i+16] ^ eqx
+	ADDQ(U8(16), i)            // i += 16
+	SUBQ(U8(16), n)            // n -= 16
+	VPTEST(mask256.AsX(), eqx) // if !(mask128 & eqx):
+	JNE(LabelRef("done"))      //   return false
 
 	Label("eq8")
 	CMPQ(n, U8(8))        // if n < 8:
@@ -156,4 +142,37 @@ func main() {
 	RET()
 
 	Generate()
+}
+
+func SIMDEQ(p, q Mem, n, i Register, mask256 VecVirtual, lanes int) {
+	eq := GP32()
+	ymm := make([]VecVirtual, lanes*2)
+	and := make([]VecVirtual, 0)
+	for i := 0; i < len(ymm); i++ {
+		ymm[i] = YMM()
+	}
+
+	for i := 0; i < lanes; i++ {
+		y0 := ymm[2*i]
+		y1 := ymm[2*i+1]
+		and = append(and, y0)
+
+		VPAND(p.Offset(32*i), mask256, y0) // y0 = a[i:i+32] & mask256
+		VPAND(q.Offset(32*i), mask256, y1) // y1 = b[i:i+32] & mask256
+		VPCMPEQB(y1, y0, y0)               // y0 = y1 == y0
+	}
+
+	for len(and) > 1 {
+		y0 := and[0]
+		y1 := and[1]
+		and = append(and[2:], y0)
+
+		VPAND(y1, y0, y0)
+	}
+
+	VPMOVMSKB(and[0], eq)          // eq[0,1,2,...] = y0[0,8,16,...]
+	ADDQ(Imm(32*uint64(lanes)), i) // i += 32*lanes
+	SUBQ(Imm(32*uint64(lanes)), n) // n -= 32*lanes
+	CMPL(eq, U32(0xFFFFFFFF))      // if eq != 0xFFFFFFFF:
+	JNE(LabelRef("done"))          //   return false
 }
