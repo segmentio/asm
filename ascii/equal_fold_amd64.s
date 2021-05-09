@@ -35,28 +35,24 @@ eq64:
 	JMP       eq64
 
 eq32:
-	CMPQ      CX, $0x20
-	JB        eq16
-	VPAND     (AX)(DI*1), Y1, Y0
-	VPAND     (DX)(DI*1), Y1, Y2
-	VPCMPEQB  Y2, Y0, Y0
-	VPMOVMSKB Y0, BX
-	ADDQ      $0x20, DI
-	SUBQ      $0x20, CX
-	CMPL      BX, $0xffffffff
-	JNE       done
+	CMPQ    CX, $0x20
+	JB      eq16
+	VMOVDQU (AX)(DI*1), Y0
+	VPXOR   (DX)(DI*1), Y0, Y0
+	ADDQ    $0x20, DI
+	SUBQ    $0x20, CX
+	VPTEST  Y1, Y0
+	JNE     done
 
 eq16:
-	CMPQ      CX, $0x10
-	JB        eq8
-	VPAND     (AX)(DI*1), X1, X0
-	VPAND     (DX)(DI*1), X1, X1
-	VPCMPEQB  X1, X0, X0
-	VPMOVMSKB X0, BX
-	ADDQ      $0x10, DI
-	SUBQ      $0x10, CX
-	CMPL      BX, $0x0000ffff
-	JNE       done
+	CMPQ    CX, $0x10
+	JB      eq8
+	VMOVDQU (AX)(DI*1), X0
+	VPXOR   (DX)(DI*1), X0, X0
+	ADDQ    $0x10, DI
+	SUBQ    $0x10, CX
+	VPTEST  X1, X0
+	JNE     done
 
 eq8:
 	CMPQ  CX, $0x08

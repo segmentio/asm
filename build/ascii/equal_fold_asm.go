@@ -38,7 +38,6 @@ func main() {
 	JNE(LabelRef("done")) //   return false
 
 	x0 := XMM()
-	x1 := XMM()
 	y0 := YMM()
 	y1 := YMM()
 	y2 := YMM()
@@ -82,28 +81,24 @@ func main() {
 	JMP(LabelRef("eq64"))            // loop eq64
 
 	Label("eq32")
-	CMPQ(n, U8(32))                  // if n < 32:
-	JB(LabelRef("eq16"))             //   goto eq16
-	VPAND(p, mask256, y0)            // y0 = a[i:i+32] & mask256
-	VPAND(q, mask256, y1)            // y1 = b[i:i+32] & mask256
-	VPCMPEQB(y1, y0, y0)             // y0 = y1 == y0
-	VPMOVMSKB(y0, eq.As32())         // eq[0,1,2,...] = y0[0,8,16,...]
-	ADDQ(U8(32), i)                  // i += 32
-	SUBQ(U8(32), n)                  // n -= 32
-	CMPL(eq.As32(), U32(0xFFFFFFFF)) // if eq != 0xFFFFFFFF:
-	JNE(LabelRef("done"))            //   return false
+	CMPQ(n, U8(32))       // if n < 32:
+	JB(LabelRef("eq16"))  //   goto eq16
+	VMOVDQU(p, y0)        // y0 = a[i:i+32]
+	VPXOR(q, y0, y0)      // y0 = b[i:i+32] ^ y0
+	ADDQ(U8(32), i)       // i += 32
+	SUBQ(U8(32), n)       // n -= 32
+	VPTEST(mask256, y0)   // if !(mask256 & y0):
+	JNE(LabelRef("done")) //   return false
 
 	Label("eq16")
-	CMPQ(n, U8(16))              // if n < 16:
-	JB(LabelRef("eq8"))          //   goto eq8
-	VPAND(p, mask256.AsX(), x0)  // x0 = a[i:i+16] & mask128
-	VPAND(q, mask256.AsX(), x1)  // x1 = b[i:i+16] & mask128
-	VPCMPEQB(x1, x0, x0)         // x0 = x1 == x0
-	VPMOVMSKB(x0, eq.As32())     // eq[0,1,2,...] = x0[0,8,16,...]
-	ADDQ(U8(16), i)              // i += 16
-	SUBQ(U8(16), n)              // n -= 16
-	CMPL(eq.As32(), U32(0xFFFF)) // if eq != 0xFFFF:
-	JNE(LabelRef("done"))        //   return false
+	CMPQ(n, U8(16))           // if n < 16:
+	JB(LabelRef("eq8"))       //   goto eq8
+	VMOVDQU(p, x0)            // x0 = a[i:i+16]
+	VPXOR(q, x0, x0)          // x0 = b[i:i+16] ^ x0
+	ADDQ(U8(16), i)           // i += 16
+	SUBQ(U8(16), n)           // n -= 16
+	VPTEST(mask256.AsX(), x0) // if !(mask128 & x0):
+	JNE(LabelRef("done"))     //   return false
 
 	Label("eq8")
 	CMPQ(n, U8(8))        // if n < 8:
