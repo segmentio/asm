@@ -146,11 +146,8 @@ func main() {
 
 func SIMDEQ(p, q Mem, n, i Register, mask256 VecVirtual, lanes int) {
 	eq := GP32()
-	ymm := make([]VecVirtual, lanes*2)
-	and := make([]VecVirtual, 0)
-	for i := 0; i < len(ymm); i++ {
-		ymm[i] = YMM()
-	}
+	and := make([]VecPhysical, 0)
+	ymm := []VecPhysical{Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8, Y9, Y10, Y11, Y12, Y13, Y14, Y15}
 
 	for i := 0; i < lanes; i++ {
 		y0 := ymm[2*i]

@@ -14,17 +14,17 @@ TEXT ·EqualFoldString(SB), NOSPLIT, $0-33
 	MOVQ         $0xdfdfdfdfdfdfdfdf, SI
 	BTL          $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC          eq8
-	PINSRQ       $0x00, SI, X1
-	VPBROADCASTQ X1, Y1
+	PINSRQ       $0x00, SI, X4
+	VPBROADCASTQ X4, Y4
 
 eq64:
 	CMPQ      CX, $0x40
 	JB        eq32
-	VPAND     (AX)(DI*1), Y1, Y0
-	VPAND     (DX)(DI*1), Y1, Y2
-	VPCMPEQB  Y2, Y0, Y0
-	VPAND     32(AX)(DI*1), Y1, Y2
-	VPAND     32(DX)(DI*1), Y1, Y3
+	VPAND     (AX)(DI*1), Y4, Y0
+	VPAND     (DX)(DI*1), Y4, Y1
+	VPCMPEQB  Y1, Y0, Y0
+	VPAND     32(AX)(DI*1), Y4, Y2
+	VPAND     32(DX)(DI*1), Y4, Y3
 	VPCMPEQB  Y3, Y2, Y2
 	VPAND     Y2, Y0, Y0
 	VPMOVMSKB Y0, BX
@@ -41,7 +41,7 @@ eq32:
 	VPXOR   (DX)(DI*1), Y0, Y0
 	ADDQ    $0x20, DI
 	SUBQ    $0x20, CX
-	VPTEST  Y1, Y0
+	VPTEST  Y4, Y0
 	JNE     done
 
 eq16:
@@ -51,7 +51,7 @@ eq16:
 	VPXOR   (DX)(DI*1), X0, X0
 	ADDQ    $0x10, DI
 	SUBQ    $0x10, CX
-	VPTEST  X1, X0
+	VPTEST  X4, X0
 	JNE     done
 
 eq8:
