@@ -165,11 +165,11 @@ func EQ8(a, b Mem, n, mask Register) {
 }
 
 func EQ16(a, b Mem, n, mask Register) {
-	EQAVX(a, b, n, XMM(), mask, 16)
+	EQAVX(a, b, n, mask, 16)
 }
 
 func EQ32(a, b Mem, n, mask Register) {
-	EQAVX(a, b, n, YMM(), mask, 32)
+	EQAVX(a, b, n, mask, 32)
 }
 
 func EQ64(a, b Mem, n, mask Register) {
@@ -180,7 +180,14 @@ func EQ128(a, b Mem, n, mask Register) {
 	EQAVXSIMD(a, b, n, mask, 4)
 }
 
-func EQAVX(a, b Mem, n, eq, mask Register, size uint8) {
+func EQAVX(a, b Mem, n, mask Register, size uint8) {
+	var eq VecVirtual
+	if size == 32 {
+		eq = YMM()
+	} else {
+		eq = XMM()
+	}
+
 	VMOVDQU(a, eq)          // eq = a[i:i+32]
 	VPXOR(b, eq, eq)        // eq = b[i:i+32] ^ eq
 	ADDQ(U8(size), a.Index) // i += size
