@@ -8,7 +8,7 @@ import (
 	"unicode/utf8"
 )
 
-var testValues = [...]string{
+var testStrings = [...]string{
 	"",
 	"a",
 	"ab",
@@ -37,18 +37,27 @@ var testValues = [...]string{
 	strings.Repeat("1234567890", 1000),
 }
 
-var testValeusUTF8 []string
+var testStringsUTF8 []string
 
 func init() {
-	for _, test := range testValues {
+	for _, test := range testStrings {
 		if utf8.ValidString(test) {
-			testValeusUTF8 = append(testValeusUTF8, test)
+			testStringsUTF8 = append(testStringsUTF8, test)
 		}
 	}
 }
 
+func testString(s string, f func(byte) bool) bool {
+	for i := range s {
+		if !f(s[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 func TestHasPrefixFoldString(t *testing.T) {
-	for _, test := range testValeusUTF8 {
+	for _, test := range testStringsUTF8 {
 		t.Run(limit(test), func(t *testing.T) {
 			prefix := test
 			if len(prefix) > 0 {
@@ -73,7 +82,7 @@ func TestHasPrefixFoldString(t *testing.T) {
 }
 
 func TestHasSuffixFoldString(t *testing.T) {
-	for _, test := range testValeusUTF8 {
+	for _, test := range testStringsUTF8 {
 		t.Run(limit(test), func(t *testing.T) {
 			suffix := test
 			if len(suffix) > 0 {
@@ -101,7 +110,7 @@ func TestEqualFoldString(t *testing.T) {
 	// Only test valid UTF-8 otherwise ToUpper/ToLower will convert invalid
 	// characters to UTF-8 placeholders, which breaks the case-insensitive
 	// equality.
-	for _, test := range testValeusUTF8 {
+	for _, test := range testStringsUTF8 {
 		t.Run(limit(test), func(t *testing.T) {
 			upper := strings.ToUpper(test)
 			lower := strings.ToLower(test)
@@ -174,12 +183,15 @@ func TestEqualFold(t *testing.T) {
 	}
 }
 
-func genEqualStrings(n int) (l string, u string) {
+func genValidString(n int, ch byte) (s string) {
 	for i := 0; i < n; i++ {
-		l += string(byte(i%26) + 'A')
-		u += string(byte(i%26) + 'a')
+		s += string(byte(i%26) + ch)
 	}
 	return
+}
+
+func genEqualStrings(n int) (l string, u string) {
+	return genValidString(n, 'A'), genValidString(n, 'a')
 }
 
 func BenchmarkEqualFoldString(b *testing.B) {
@@ -191,6 +203,7 @@ func BenchmarkEqualFoldString(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				EqualFoldString(lower, upper)
 			}
+			b.SetBytes(int64(len(lower) + len(upper)))
 		})
 	}
 }

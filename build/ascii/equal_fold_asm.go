@@ -53,32 +53,32 @@ func main() {
 	CMPQ(n, U8(64))       // if n < 64:
 	JB(LabelRef("eq32"))  //   goto eq32
 	EQ64(a, b, n, maskY)  // ZF = [compare 64 bytes]
-	JNE(LabelRef("done")) // return if ZF == 0
+	JNE(LabelRef("done")) // return ZF if ZF == 0
 
 	Label("eq32")
 	CMPQ(n, U8(32))       // if n < 32:
 	JB(LabelRef("eq16"))  //   goto eq16
 	EQ32(a, b, n, maskY)  // ZF = [compare 32 bytes]
-	JNE(LabelRef("done")) // return if ZF == 0
+	JNE(LabelRef("done")) // return ZF if ZF == 0
 
 	Label("eq16")
 	CMPQ(n, U8(16))       // if n < 16:
 	JB(LabelRef("eq8"))   //   goto eq8
 	EQ16(a, b, n, maskX)  // ZF = [compare 16 bytes]
-	JNE(LabelRef("done")) // return if ZF == 0
+	JNE(LabelRef("done")) // return ZF if ZF == 0
 
 	Label("eq8")
 	CMPQ(n, U8(8))        // if n < 8:
 	JB(LabelRef("eq4"))   //   goto eq4
 	EQ8(a, b, n, maskG)   // ZF = [compare 8 bytes]
-	JNE(LabelRef("done")) // return if ZF == 0
+	JNE(LabelRef("done")) // return ZF if ZF == 0
 	JMP(LabelRef("eq8"))  // loop eq8
 
 	Label("eq4")
 	CMPQ(n, U8(4))        // if n < 4:
 	JB(LabelRef("eq3"))   //   goto eq3
 	EQ4(a, b, n)          // ZF = [compare 4 bytes]
-	JNE(LabelRef("done")) // return if ZF == 0
+	JNE(LabelRef("done")) // return ZF if ZF == 0
 
 	Label("eq3")
 	CMPQ(n, U8(3))        // if n < 3:
@@ -116,7 +116,7 @@ func EQ1(a, b Mem) {
 
 	MOVB(a, eq)         // eq = a[i:i+1]
 	XORB(b, eq)         // eq = b[i:i+1] ^ eq
-	TESTB(U8(0xDF), eq) // ZF = (mask & eq)
+	TESTB(U8(0xDF), eq) // ZF = (mask & eq) == 0
 }
 
 func EQ2(a, b Mem) {
@@ -124,7 +124,7 @@ func EQ2(a, b Mem) {
 
 	MOVW(a, eq)            // eq = a[i:i+2]
 	XORW(b, eq)            // eq = b[i:i+2] ^ eq
-	TESTW(U16(0xDFDF), eq) // ZF = (mask & eq)
+	TESTW(U16(0xDFDF), eq) // ZF = (mask & eq) == 0
 }
 
 func EQ3(a, b Mem) {
@@ -141,7 +141,7 @@ func EQ3(a, b Mem) {
 	SHLL(U8(16), eqb)         // eqb <<= 16
 	ORL(eq, eqb)              // eqb = eq | eqb
 	XORL(eqa, eqb)            // eqb = eqa ^ eqb
-	TESTL(U32(0xDFDFDF), eqb) // ZF = (mask & eqb)
+	TESTL(U32(0xDFDFDF), eqb) // ZF = (mask & eqb) == 0
 }
 
 func EQ4(a, b Mem, n Register) {
@@ -151,7 +151,7 @@ func EQ4(a, b Mem, n Register) {
 	XORL(b, eq)                // eq = b[i:i+4] ^ eq
 	ADDQ(U8(4), a.Index)       // i += 4
 	SUBQ(U8(4), n)             // n -= 4
-	TESTL(U32(0xDFDFDFDF), eq) // ZF = (mask & eq)
+	TESTL(U32(0xDFDFDFDF), eq) // ZF = (mask & eq) == 0
 }
 
 func EQ8(a, b Mem, n, mask Register) {
@@ -161,7 +161,7 @@ func EQ8(a, b Mem, n, mask Register) {
 	XORQ(b, eq)          // eq = b[i:i+8] ^ eq
 	ADDQ(U8(8), a.Index) // i += 8
 	SUBQ(U8(8), n)       // n -= 8
-	TESTQ(mask, eq)      // ZF = (mask & eq)
+	TESTQ(mask, eq)      // ZF = (mask & eq) == 0
 }
 
 func EQ16(a, b Mem, n, mask Register) {
@@ -192,7 +192,7 @@ func EQAVX(a, b Mem, n, mask Register, size uint8) {
 	VPXOR(b, eq, eq)        // eq = b[i:i+32] ^ eq
 	ADDQ(U8(size), a.Index) // i += size
 	SUBQ(U8(size), n)       // n -= size
-	VPTEST(mask, eq)        // ZF = (mask & eq)
+	VPTEST(mask, eq)        // ZF = (mask & eq) == 0
 }
 
 func EQAVXSIMD(a, b Mem, n, mask Register, lanes int) {
