@@ -1,15 +1,12 @@
 package sortedset
 
 import (
-	"bytes"
 	"fmt"
 	"math/rand"
-	"reflect"
-	"sort"
 	"testing"
 )
 
-var specializationSizes = []int{16, 32}
+var dedupeSpecializationSizes = []int{16, 32}
 
 var repeatChances = []float64{0, 0.1, 0.5, 1.0}
 
@@ -45,14 +42,12 @@ func TestDedupe(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			actual := Dedupe(test.b, test.size)
-			if !reflect.DeepEqual(actual, test.expect) {
-				t.Fatalf("not equal: %v vs expected %v", actual, test.expect)
-			}
+			assertArraysEqual(t, test.expect, actual, test.size)
 		})
 	}
 
 	// Test the specializations.
-	for _, size := range specializationSizes {
+	for _, size := range dedupeSpecializationSizes {
 		t.Run(fmt.Sprintf("size %d, random", size), func(t *testing.T) {
 			const maxCount = 100
 			const iterations = 1000
@@ -64,9 +59,7 @@ func TestDedupe(t *testing.T) {
 				for _, p := range repeatChances {
 					array, uniques := randomSortedArray(prng, size, count, p)
 					result := Dedupe(array, size)
-					if !reflect.DeepEqual(result, uniques) {
-						t.Fatal("unexpected result")
-					}
+					assertArraysEqual(t, uniques, result, size)
 				}
 			}
 		})
@@ -74,7 +67,7 @@ func TestDedupe(t *testing.T) {
 }
 
 func BenchmarkDedupe(b *testing.B) {
-	for _, size := range specializationSizes {
+	for _, size := range dedupeSpecializationSizes {
 		for _, p := range repeatChances {
 			b.Run(fmt.Sprintf("size %d, with %d%% chance of repeat", size, int(p*100)), func(b *testing.B) {
 				const bytes = 64 * 1024
@@ -94,62 +87,4 @@ func BenchmarkDedupe(b *testing.B) {
 			})
 		}
 	}
-}
-
-func randomSortedArray(prng *rand.Rand, size int, count int, repeatChance float64) (array []byte, uniques []byte) {
-	if count == 0 {
-		return nil, nil
-	}
-
-	pool := make([]byte, size*count)
-	prng.Read(pool)
-	sort.Sort(&chunks{b: pool, size: size})
-
-	// Sanity checks:
-	for i := size; i < len(pool); i += size {
-		switch bytes.Compare(pool[i-size:i], pool[i:i+size]) {
-		case 0:
-			panic("duplicate item in pool")
-		case 1:
-			panic("not sorted correctly")
-		}
-	}
-
-	array = make([]byte, 0, size*count)
-
-	uniq := size
-	for i := 0; i < count; i++ {
-		array = append(array, pool[uniq-size:uniq]...)
-		if prng.Float64() < repeatChance && i != count-1 {
-			uniq += size
-		}
-	}
-
-	uniques = pool[:uniq]
-	return
-}
-
-type chunks struct {
-	b    []byte
-	size int
-	tmp  []byte
-}
-
-func (s *chunks) Len() int {
-	return len(s.b) / s.size
-}
-
-func (s *chunks) Less(i, j int) bool {
-	return bytes.Compare(s.slice(i), s.slice(j)) < 0
-}
-
-func (s *chunks) Swap(i, j int) {
-	tmp := make([]byte, s.size)
-	copy(tmp, s.slice(j))
-	copy(s.slice(j), s.slice(i))
-	copy(s.slice(i), tmp)
-}
-
-func (s *chunks) slice(i int) []byte {
-	return s.b[i*s.size : (i+1)*s.size]
 }

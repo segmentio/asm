@@ -31,4 +31,5 @@ done:
 	MOVQ b_base+0(FP), AX
 	SUBQ AX, CX
 	MOVQ CX, pos+24(FP)
+	VZEROUPPER
 	RET
