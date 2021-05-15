@@ -1,6 +1,10 @@
 package sortedset
 
-import "bytes"
+import (
+	"bytes"
+
+	"github.com/segmentio/asm/cpu"
+)
 
 func Union(dst, a, b []byte, size int) []byte {
 	if size <= 0 || len(a)%size != 0 || len(b)%size != 0 {
@@ -26,17 +30,25 @@ func Union(dst, a, b []byte, size int) []byte {
 		return dst[:k]
 	}
 
-	var pos int
-	switch size {
+	i, j, k := 0, 0, 0
+	switch {
+	case size == 16 && cpu.X86.Has(cpu.AVX):
+		i, j, k = union16(dst, a, b)
 	default:
-		pos = unionGeneric(dst, a, b, size)
+		i, j, k = unionGeneric(dst, a, b, size)
 	}
 
-	return dst[:pos]
+	if i < len(a) {
+		k += copy(dst[k:k+len(a)-i], a[i:])
+	} else if j < len(b) {
+		k += copy(dst[k:k+len(b)-j], b[j:])
+	}
+
+	return dst[:k]
 }
 
-func unionGeneric(dst, a, b []byte, size int) int {
-	i, j, k := 0, 0, 0
+func unionGeneric(dst, a, b []byte, size int) (i, j, k int) {
+	i, j, k = 0, 0, 0
 	for i < len(a) && j < len(b) {
 		itemA := a[i : i+size]
 		itemB := b[j : j+size]
@@ -54,10 +66,5 @@ func unionGeneric(dst, a, b []byte, size int) int {
 		}
 		k += size
 	}
-	if i < len(a) {
-		k += copy(dst[k:k+len(a)-i], a[i:])
-	} else if j < len(b) {
-		k += copy(dst[k:k+len(b)-j], b[j:])
-	}
-	return k
+	return
 }
