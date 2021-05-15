@@ -1,6 +1,10 @@
 package sortedset
 
-import "bytes"
+import (
+	"bytes"
+
+	"github.com/segmentio/asm/cpu"
+)
 
 func Intersect(dst, a, b []byte, size int) []byte {
 	if size <= 0 || len(a)%size != 0 || len(b)%size != 0 {
@@ -16,7 +20,9 @@ func Intersect(dst, a, b []byte, size int) []byte {
 	}
 
 	var pos int
-	switch size {
+	switch {
+	case size == 16 && cpu.X86.Has(cpu.AVX):
+		pos = intersect16(dst, a, b)
 	default:
 		pos = intersectGeneric(dst, a, b, size)
 	}
