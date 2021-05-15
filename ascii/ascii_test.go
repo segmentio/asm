@@ -56,6 +56,81 @@ func testString(s string, f func(byte) bool) bool {
 	return true
 }
 
+func testValid(s string) bool {
+	return testString(s, ValidByte)
+}
+
+/*
+func testValidPrint(s string) bool {
+	return testString(s, ValidPrintByte)
+}
+*/
+
+func TestValid(t *testing.T) {
+	input := make([]byte, 256)
+
+	for i := 0; i < len(input); i++ {
+		in := input[:i+1]
+
+		for b := 0; b <= 0xFF; b++ {
+			in[i] = byte(b)
+			if b < 0x80 {
+				if !Valid(in) {
+					t.Errorf("should be valid: %v", in)
+				}
+			} else {
+				if Valid(in) {
+					t.Errorf("should not be valid: %v", in)
+				}
+			}
+			in[i] = 'x'
+		}
+	}
+}
+
+func TestValidString(t *testing.T) {
+	testValidationFunction(t, testValid, ValidString)
+}
+
+/*
+func TestValidPrint(t *testing.T) {
+	testValidationFunction(t, testValidPrint, ValidPrintString)
+}
+*/
+
+func testValidationFunction(t *testing.T, reference, function func(string) bool) {
+	for _, test := range testStrings {
+		t.Run(limit(test), func(t *testing.T) {
+			expect := reference(test)
+
+			if valid := function(test); expect != valid {
+				t.Errorf("expected %t but got %t", expect, valid)
+			}
+		})
+	}
+}
+
+func BenchmarkValid(b *testing.B) {
+	benchmarkValidationFunction(b, ValidString)
+}
+
+/*
+func BenchmarkValidPrint(b *testing.B) {
+	benchmarkValidationFunction(b, ValidPrintString)
+}
+*/
+
+func benchmarkValidationFunction(b *testing.B, function func(string) bool) {
+	for _, test := range testStrings {
+		b.Run(limit(test), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = function(test)
+			}
+			b.SetBytes(int64(len(test)))
+		})
+	}
+}
+
 func TestHasPrefixFoldString(t *testing.T) {
 	for _, test := range testStringsUTF8 {
 		t.Run(limit(test), func(t *testing.T) {
@@ -204,6 +279,20 @@ func BenchmarkEqualFoldString(b *testing.B) {
 				EqualFoldString(lower, upper)
 			}
 			b.SetBytes(int64(len(lower) + len(upper)))
+		})
+	}
+}
+
+func BenchmarkValidString(b *testing.B) {
+	sizes := [...]int{7, 8, 9, 15, 16, 17, 31, 32, 33, 512, 2000}
+
+	for _, s := range sizes {
+		str := genValidString(s, 'a')
+		b.Run(fmt.Sprintf("%04d", s), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				ValidString(str)
+			}
+			b.SetBytes(int64(s))
 		})
 	}
 }
