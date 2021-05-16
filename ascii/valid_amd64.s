@@ -9,15 +9,15 @@ TEXT ·ValidString(SB), NOSPLIT, $0-17
 	MOVQ         s_len+8(FP), CX
 	MOVQ         $0x8080808080808080, DX
 	BTL          $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCC          eq8
+	JCC          cmp8
 	PINSRQ       $0x00, DX, X4
 	VPBROADCASTQ X4, Y4
 	CMPQ         CX, $0x00000100
-	JNB          eq256
+	JNB          cmp256
 
-eq64:
+cmp64:
 	CMPQ    CX, $0x40
-	JB      eq32
+	JB      cmp32
 	VMOVDQU (AX), Y0
 	VPOR    32(AX), Y0, Y0
 	VPTEST  Y0, Y4
@@ -25,42 +25,42 @@ eq64:
 	ADDQ    $0x40, AX
 	SUBQ    $0x40, CX
 
-eq32:
+cmp32:
 	CMPQ   CX, $0x20
-	JB     eq16
+	JB     cmp16
 	VPTEST (AX), Y4
 	JNZ    invalid
 	ADDQ   $0x20, AX
 	SUBQ   $0x20, CX
 
-eq16:
+cmp16:
 	CMPQ   CX, $0x10
-	JB     eq8
+	JB     cmp8
 	VPTEST (AX), X4
 	JNZ    invalid
 	ADDQ   $0x10, AX
 	SUBQ   $0x10, CX
 
-eq8:
+cmp8:
 	CMPQ  CX, $0x08
-	JB    eq4
+	JB    cmp4
 	TESTQ DX, (AX)
 	JNZ   invalid
 	ADDQ  $0x08, AX
 	SUBQ  $0x08, CX
-	JMP   eq8
+	JMP   cmp8
 
-eq4:
+cmp4:
 	CMPQ  CX, $0x04
-	JB    eq3
+	JB    cmp3
 	TESTL $0x80808080, (AX)
 	JNZ   invalid
 	ADDQ  $0x04, AX
 	SUBQ  $0x04, CX
 
-eq3:
+cmp3:
 	CMPQ    CX, $0x03
-	JB      eq2
+	JB      cmp2
 	MOVWLZX (AX), CX
 	MOVBLZX 2(AX), AX
 	SHLL    $0x10, AX
@@ -68,13 +68,13 @@ eq3:
 	TESTL   $0x80808080, AX
 	JMP     done
 
-eq2:
+cmp2:
 	CMPQ  CX, $0x02
-	JB    eq1
+	JB    cmp1
 	TESTW $0x8080, (AX)
 	JMP   done
 
-eq1:
+cmp1:
 	CMPQ  CX, $0x00
 	JE    done
 	TESTB $0x80, (AX)
@@ -87,7 +87,7 @@ invalid:
 	MOVB $0x00, ret+16(FP)
 	RET
 
-eq256:
+cmp256:
 	VMOVDQU (AX), Y0
 	VPOR    32(AX), Y0, Y0
 	VMOVDQU 64(AX), Y1
@@ -104,12 +104,12 @@ eq256:
 	ADDQ    $0x00000100, AX
 	SUBQ    $0x00000100, CX
 	CMPQ    CX, $0x00000100
-	JB      eq128
-	JMP     eq256
+	JB      cmp128
+	JMP     cmp256
 
-eq128:
+cmp128:
 	CMPQ    CX, $0x80
-	JB      eq64
+	JB      cmp64
 	VMOVDQU (AX), Y0
 	VPOR    32(AX), Y0, Y0
 	VMOVDQU 64(AX), Y1
@@ -119,4 +119,4 @@ eq128:
 	JNZ     invalid
 	ADDQ    $0x80, AX
 	SUBQ    $0x80, CX
-	JMP     eq64
+	JMP     cmp64

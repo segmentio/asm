@@ -40,59 +40,59 @@ func main() {
 	XORQ(i, i)                           // i = 0
 	MOVQ(U64(0xDFDFDFDFDFDFDFDF), maskG) // maskG = 0xDFDFDFDFDFDFDFDF
 
-	JumpUnlessFeature("eq8", cpu.AVX2)
+	JumpUnlessFeature("cmp8", cpu.AVX2)
 
 	PINSRQ(Imm(0), maskG, maskX) // maskX[0:8] = maskG
 	VPBROADCASTQ(maskX, maskY)   // maskY[0:32] = [maskX[0:8],maskX[0:8],maskX[0:8],maskX[0:8]]
 
 	// Moving the 128-byte scanning helps the branch predictor for small inputs
-	CMPQ(n, U8(128))       // if n >= 128:
-	JNB(LabelRef("eq128")) //   goto eq128
+	CMPQ(n, U8(128))        // if n >= 128:
+	JNB(LabelRef("cmp128")) //   goto cmp128
 
-	Label("eq64")
+	Label("cmp64")
 	CMPQ(n, U8(64))       // if n < 64:
-	JB(LabelRef("eq32"))  //   goto eq32
+	JB(LabelRef("cmp32")) //   goto cmp32
 	EQ64(a, b, n, maskY)  // ZF = [compare 64 bytes]
 	JNE(LabelRef("done")) // return ZF if ZF == 0
 
-	Label("eq32")
+	Label("cmp32")
 	CMPQ(n, U8(32))       // if n < 32:
-	JB(LabelRef("eq16"))  //   goto eq16
+	JB(LabelRef("cmp16")) //   goto cmp16
 	EQ32(a, b, n, maskY)  // ZF = [compare 32 bytes]
 	JNE(LabelRef("done")) // return ZF if ZF == 0
 
-	Label("eq16")
+	Label("cmp16")
 	CMPQ(n, U8(16))       // if n < 16:
-	JB(LabelRef("eq8"))   //   goto eq8
+	JB(LabelRef("cmp8"))  //   goto cmp8
 	EQ16(a, b, n, maskX)  // ZF = [compare 16 bytes]
 	JNE(LabelRef("done")) // return ZF if ZF == 0
 
-	Label("eq8")
+	Label("cmp8")
 	CMPQ(n, U8(8))        // if n < 8:
-	JB(LabelRef("eq4"))   //   goto eq4
+	JB(LabelRef("cmp4"))  //   goto cmp4
 	EQ8(a, b, n, maskG)   // ZF = [compare 8 bytes]
 	JNE(LabelRef("done")) // return ZF if ZF == 0
-	JMP(LabelRef("eq8"))  // loop eq8
+	JMP(LabelRef("cmp8")) // loop cmp8
 
-	Label("eq4")
+	Label("cmp4")
 	CMPQ(n, U8(4))        // if n < 4:
-	JB(LabelRef("eq3"))   //   goto eq3
+	JB(LabelRef("cmp3"))  //   goto cmp3
 	EQ4(a, b, n)          // ZF = [compare 4 bytes]
 	JNE(LabelRef("done")) // return ZF if ZF == 0
 
-	Label("eq3")
+	Label("cmp3")
 	CMPQ(n, U8(3))        // if n < 3:
-	JB(LabelRef("eq2"))   //   goto eq2
+	JB(LabelRef("cmp2"))  //   goto cmp2
 	EQ3(a, b)             // ZF = [compare 3 bytes]
 	JMP(LabelRef("done")) // return ZF
 
-	Label("eq2")
+	Label("cmp2")
 	CMPQ(n, U8(2))        // if n < 2:
-	JB(LabelRef("eq1"))   //   goto eq1
+	JB(LabelRef("cmp1"))  //   goto cmp1
 	EQ2(a, b)             // ZF = [compare 2 bytes]
 	JMP(LabelRef("done")) // return ZF
 
-	Label("eq1")
+	Label("cmp1")
 	CMPQ(n, U8(0))       // if n == 0:
 	JE(LabelRef("done")) //   return true
 	EQ1(a, b)            // ZF = [compare 1 byte]
@@ -101,12 +101,12 @@ func main() {
 	SETEQ(ret.Addr) // return ZF
 	RET()           // ...
 
-	Label("eq128")
-	EQ128(a, b, n, maskY)  // ZF = [compare 128 bytes]
-	JNE(LabelRef("done"))  // return if ZF == 0
-	CMPQ(n, U8(128))       // if n < 128:
-	JB(LabelRef("eq64"))   //   goto eq64
-	JMP(LabelRef("eq128")) // loop eq128
+	Label("cmp128")
+	EQ128(a, b, n, maskY)   // ZF = [compare 128 bytes]
+	JNE(LabelRef("done"))   // return if ZF == 0
+	CMPQ(n, U8(128))        // if n < 128:
+	JB(LabelRef("cmp64"))   //   goto cmp64
+	JMP(LabelRef("cmp128")) // loop cmp128
 
 	Generate()
 }

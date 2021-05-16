@@ -13,15 +13,15 @@ TEXT ·EqualFoldString(SB), NOSPLIT, $0-33
 	XORQ         AX, AX
 	MOVQ         $0xdfdfdfdfdfdfdfdf, SI
 	BTL          $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCC          eq8
+	JCC          cmp8
 	PINSRQ       $0x00, SI, X8
 	VPBROADCASTQ X8, Y8
 	CMPQ         DX, $0x80
-	JNB          eq128
+	JNB          cmp128
 
-eq64:
+cmp64:
 	CMPQ      DX, $0x40
-	JB        eq32
+	JB        cmp32
 	VPAND     (CX)(AX*1), Y8, Y0
 	VPAND     (BX)(AX*1), Y8, Y1
 	VPCMPEQB  Y1, Y0, Y0
@@ -35,9 +35,9 @@ eq64:
 	CMPL      DI, $0xffffffff
 	JNE       done
 
-eq32:
+cmp32:
 	CMPQ    DX, $0x20
-	JB      eq16
+	JB      cmp16
 	VMOVDQU (CX)(AX*1), Y0
 	VPXOR   (BX)(AX*1), Y0, Y0
 	ADDQ    $0x20, AX
@@ -45,9 +45,9 @@ eq32:
 	VPTEST  Y8, Y0
 	JNE     done
 
-eq16:
+cmp16:
 	CMPQ    DX, $0x10
-	JB      eq8
+	JB      cmp8
 	VMOVDQU (CX)(AX*1), X0
 	VPXOR   (BX)(AX*1), X0, X0
 	ADDQ    $0x10, AX
@@ -55,20 +55,20 @@ eq16:
 	VPTEST  X8, X0
 	JNE     done
 
-eq8:
+cmp8:
 	CMPQ  DX, $0x08
-	JB    eq4
+	JB    cmp4
 	MOVQ  (CX)(AX*1), DI
 	XORQ  (BX)(AX*1), DI
 	ADDQ  $0x08, AX
 	SUBQ  $0x08, DX
 	TESTQ SI, DI
 	JNE   done
-	JMP   eq8
+	JMP   cmp8
 
-eq4:
+cmp4:
 	CMPQ  DX, $0x04
-	JB    eq3
+	JB    cmp3
 	MOVL  (CX)(AX*1), SI
 	XORL  (BX)(AX*1), SI
 	ADDQ  $0x04, AX
@@ -76,9 +76,9 @@ eq4:
 	TESTL $0xdfdfdfdf, SI
 	JNE   done
 
-eq3:
+cmp3:
 	CMPQ    DX, $0x03
-	JB      eq2
+	JB      cmp2
 	MOVWLZX (CX)(AX*1), DX
 	MOVBLZX 2(CX)(AX*1), CX
 	SHLL    $0x10, CX
@@ -91,15 +91,15 @@ eq3:
 	TESTL   $0x00dfdfdf, AX
 	JMP     done
 
-eq2:
+cmp2:
 	CMPQ  DX, $0x02
-	JB    eq1
+	JB    cmp1
 	MOVW  (CX)(AX*1), CX
 	XORW  (BX)(AX*1), CX
 	TESTW $0xdfdf, CX
 	JMP   done
 
-eq1:
+cmp1:
 	CMPQ  DX, $0x00
 	JE    done
 	MOVB  (CX)(AX*1), CL
@@ -110,7 +110,7 @@ done:
 	SETEQ ret+32(FP)
 	RET
 
-eq128:
+cmp128:
 	VPAND     (CX)(AX*1), Y8, Y0
 	VPAND     (BX)(AX*1), Y8, Y1
 	VPCMPEQB  Y1, Y0, Y0
@@ -132,5 +132,5 @@ eq128:
 	CMPL      DI, $0xffffffff
 	JNE       done
 	CMPQ      DX, $0x80
-	JB        eq64
-	JMP       eq128
+	JB        cmp64
+	JMP       cmp128
