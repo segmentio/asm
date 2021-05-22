@@ -6,6 +6,9 @@ import (
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
+	. "github.com/segmentio/asm/build/internal/x86"
+
+	"github.com/segmentio/asm/cpu"
 )
 
 func main() {
@@ -25,6 +28,38 @@ func main() {
 	MOVQ(U64(0x0101010101010101), m2)
 	MOVQ(U64(0x8080808080808080), m3)
 
+	JumpUnlessFeature("cmp8", cpu.AVX2)
+
+	minG := GP64()
+	maxG := GP64()
+	minY := YMM()
+	maxY := YMM()
+	minX := minY.AsX()
+	maxX := maxY.AsX()
+
+	MOVQ(U64(0x1F1F1F1F1F1F1F1F), minG) // minG = 0x1F1F1F1F1F1F1F1F
+	PINSRQ(Imm(0), minG, minX)          // minX[0:8] = minG
+	VPBROADCASTQ(minX, minY)            // minY[0:32] = [minX[0:8],minX[0:8],minX[0:8],minX[0:8]]
+	MOVQ(U64(0x7E7E7E7E7E7E7E7E), maxG) // maxG = 0x7E7E7E7E7E7E7E7E
+	PINSRQ(Imm(0), maxG, maxX)          // maxX[0:8] = maxG
+	VPBROADCASTQ(maxX, maxY)            // maxY[0:32] = [maxX[0:8],maxX[0:8],maxX[0:8],maxX[0:8]]
+
+	// Moving the 128-byte scanning helps the branch predictor for small inputs
+	CMPQ(n, U8(128))        // if n >= 128:
+	JNB(LabelRef("cmp128")) //   goto cmp128
+
+	Label("cmp64")
+	CMPQ(n, U8(64))               // if n < 64:
+	JB(LabelRef("cmp32"))         //   goto cmp32
+	validAVX(p, n, minY, maxY, 2) // ZF = [compare 64 bytes]
+	JNE(LabelRef("done"))         // return ZF if ZF == 0
+
+	Label("cmp32")
+	CMPQ(n, U8(32))               // if n < 32:
+	JB(LabelRef("cmp8"))          //   goto cmp8
+	validAVX(p, n, minY, maxY, 1) // ZF = [compare 32 bytes]
+	JNE(LabelRef("done"))         // return ZF if ZF == 0
+
 	Label("cmp8")
 	CMPQ(n, U8(8))           // if n < 8:
 	JB(LabelRef("cmp4"))     //   goto cmp4
@@ -41,8 +76,8 @@ func main() {
 	Label("cmp3")
 	CMPQ(n, U8(3))            // if n < 3:
 	JB(LabelRef("cmp2"))      //   goto cmp2
-	MOVWLZX(p, tmp)           // tmp = a[i:i+2]
-	MOVBLZX(p.Offset(2), val) // val = a[i+2:i+3]
+	MOVWLZX(p, tmp)           // tmp = p[0:2]
+	MOVBLZX(p.Offset(2), val) // val = p[2:3]
 	SHLL(U8(16), val)         // val <<= 16
 	ORL(tmp, val)             // val = tmp | val
 	ORL(U32(0x20000000), val) // val = 0x20000000 | val
@@ -51,14 +86,14 @@ func main() {
 	Label("cmp2")
 	CMPQ(n, U8(2))            // if n < 2:
 	JB(LabelRef("cmp1"))      //   goto cmp1
-	MOVWLZX(p, val)           // val = a[i:i+2]
+	MOVWLZX(p, val)           // val = p[0:2]
 	ORL(U32(0x20200000), val) // val = 0x20200000 | val
 	JMP(LabelRef("final"))
 
 	Label("cmp1")
 	CMPQ(n, U8(0))            // if n == 0:
 	JE(LabelRef("done"))      //   return true
-	MOVBLZX(p, val)           // val = a[i:i+2]
+	MOVBLZX(p, val)           // val = p[0:1]
 	ORL(U32(0x20202000), val) // val = 0x20202000 | val
 
 	Label("final")
@@ -69,13 +104,20 @@ func main() {
 	SETEQ(ret.Addr) // return ZF
 	RET()           // ...
 
+	Label("cmp128")
+	validAVX(p, n, minY, maxY, 4) // ZF = [compare 128 bytes]
+	JNE(LabelRef("done"))         // return if ZF == 0
+	CMPQ(n, U8(128))              // if n < 128:
+	JB(LabelRef("cmp64"))         //   goto cmp64
+	JMP(LabelRef("cmp128"))       // loop cmp128
+
 	Generate()
 }
 
 func valid4(p Mem, n Register) {
 	val := GP32()
 
-	MOVL(p, val)                // val = a[i:i+8]
+	MOVL(p, val)                // val = p[0:4]
 	setup4(val)                 // [update val register]
 	ADDQ(U8(4), p.Base)         // p += 4
 	SUBQ(U8(4), n)              // n -= 4
@@ -102,7 +144,7 @@ func valid8(p Mem, n, m1, m2, m3 Register) {
 	tmp1 := GP64()
 	tmp2 := GP64()
 
-	MOVQ(p, val)                                    // val = a[i:i+8]
+	MOVQ(p, val)                                    // val = p[0:8]
 	MOVQ(val, nval)                                 // nval = val
 	LEAQ(Mem{Base: val, Index: m1, Scale: 1}, tmp1) // tmp1 = val + m1
 	NOTQ(nval)                                      // nval = ^nval
@@ -113,4 +155,34 @@ func valid8(p Mem, n, m1, m2, m3 Register) {
 	ADDQ(U8(8), p.Base)                             // p += 8
 	SUBQ(U8(8), n)                                  // n -= 8
 	TESTQ(m3, val)                                  // ZF = (m3 & val) == 0
+}
+
+func validAVX(p Mem, n, min, max Register, lanes int) {
+	msk := GP32()
+	out := make([]VecPhysical, 0)
+	ymm := []VecPhysical{Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8, Y9, Y10, Y11, Y12, Y13, Y14, Y15}
+
+	for i := 0; i < lanes; i++ {
+		y0 := ymm[2*i]
+		y1 := ymm[2*i+1]
+		out = append(out, y0)
+
+		VMOVDQU(p.Offset(32*i), y0) // y0 = p[i:i+32]
+		VPCMPGTB(min, y0, y1)       // y1 = bytes that are greater than the min-1 (i.e. valid at lower end)
+		VPCMPGTB(max, y0, y0)       // y0 = bytes that are greater than the max (i.e. invalid at upper end)
+		VPANDN(y1, y0, y0)          // y2 & ~y3 mask should be full unless there's an invalid byte
+	}
+
+	for len(out) > 1 {
+		y0 := out[0]
+		y1 := out[1]
+		out = append(out[2:], y0)
+
+		VPAND(y1, y0, y0)
+	}
+
+	ADDQ(Imm(uint64(32*lanes)), p.Base) // p += 32*lanes
+	SUBQ(Imm(uint64(32*lanes)), n)      // n -= 32*lanes
+	VPMOVMSKB(out[0], msk)              // msk[0,1,2,...] = y0[0,8,16,...]
+	XORL(U32(0xFFFFFFFF), msk)          // check for a zero somewhere
 }

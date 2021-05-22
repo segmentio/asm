@@ -3,12 +3,54 @@
 #include "textflag.h"
 
 // func ValidPrintString(s string) bool
+// Requires: AVX, AVX2, SSE4.1
 TEXT ·ValidPrintString(SB), NOSPLIT, $0-17
-	MOVQ s_base+0(FP), AX
-	MOVQ s_len+8(FP), CX
-	MOVQ $0xdfdfdfdfdfdfdfe0, DX
-	MOVQ $0x0101010101010101, BX
-	MOVQ $0x8080808080808080, SI
+	MOVQ         s_base+0(FP), AX
+	MOVQ         s_len+8(FP), CX
+	MOVQ         $0xdfdfdfdfdfdfdfe0, DX
+	MOVQ         $0x0101010101010101, BX
+	MOVQ         $0x8080808080808080, SI
+	BTL          $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCC          cmp8
+	MOVQ         $0x1f1f1f1f1f1f1f1f, DI
+	PINSRQ       $0x00, DI, X8
+	VPBROADCASTQ X8, Y8
+	MOVQ         $0x7e7e7e7e7e7e7e7e, DI
+	PINSRQ       $0x00, DI, X9
+	VPBROADCASTQ X9, Y9
+	CMPQ         CX, $0x80
+	JNB          cmp128
+
+cmp64:
+	CMPQ      CX, $0x40
+	JB        cmp32
+	VMOVDQU   (AX), Y0
+	VPCMPGTB  Y8, Y0, Y1
+	VPCMPGTB  Y9, Y0, Y0
+	VPANDN    Y1, Y0, Y0
+	VMOVDQU   32(AX), Y2
+	VPCMPGTB  Y8, Y2, Y3
+	VPCMPGTB  Y9, Y2, Y2
+	VPANDN    Y3, Y2, Y2
+	VPAND     Y2, Y0, Y0
+	ADDQ      $0x40, AX
+	SUBQ      $0x40, CX
+	VPMOVMSKB Y0, DI
+	XORL      $0xffffffff, DI
+	JNE       done
+
+cmp32:
+	CMPQ      CX, $0x20
+	JB        cmp8
+	VMOVDQU   (AX), Y0
+	VPCMPGTB  Y8, Y0, Y1
+	VPCMPGTB  Y9, Y0, Y0
+	VPANDN    Y1, Y0, Y0
+	ADDQ      $0x20, AX
+	SUBQ      $0x20, CX
+	VPMOVMSKB Y0, DI
+	XORL      $0xffffffff, DI
+	JNE       done
 
 cmp8:
 	CMPQ  CX, $0x08
@@ -79,3 +121,32 @@ final:
 done:
 	SETEQ ret+16(FP)
 	RET
+
+cmp128:
+	VMOVDQU   (AX), Y0
+	VPCMPGTB  Y8, Y0, Y1
+	VPCMPGTB  Y9, Y0, Y0
+	VPANDN    Y1, Y0, Y0
+	VMOVDQU   32(AX), Y2
+	VPCMPGTB  Y8, Y2, Y3
+	VPCMPGTB  Y9, Y2, Y2
+	VPANDN    Y3, Y2, Y2
+	VMOVDQU   64(AX), Y4
+	VPCMPGTB  Y8, Y4, Y5
+	VPCMPGTB  Y9, Y4, Y4
+	VPANDN    Y5, Y4, Y4
+	VMOVDQU   96(AX), Y6
+	VPCMPGTB  Y8, Y6, Y7
+	VPCMPGTB  Y9, Y6, Y6
+	VPANDN    Y7, Y6, Y6
+	VPAND     Y2, Y0, Y0
+	VPAND     Y6, Y4, Y4
+	VPAND     Y4, Y0, Y0
+	ADDQ      $0x80, AX
+	SUBQ      $0x80, CX
+	VPMOVMSKB Y0, DI
+	XORL      $0xffffffff, DI
+	JNE       done
+	CMPQ      CX, $0x80
+	JB        cmp64
+	JMP       cmp128
