@@ -60,14 +60,12 @@ func testValid(s string) bool {
 	return testString(s, ValidByte)
 }
 
-/*
 func testValidPrint(s string) bool {
 	return testString(s, ValidPrintByte)
 }
-*/
 
 func TestValid(t *testing.T) {
-	input := make([]byte, 256)
+	input := make([]byte, 1024)
 
 	for i := 0; i < len(input); i++ {
 		in := input[:i+1]
@@ -88,15 +86,35 @@ func TestValid(t *testing.T) {
 	}
 }
 
+func TestValidPrint(t *testing.T) {
+	input := make([]byte, 1024)
+
+	for i := 0; i < len(input); i++ {
+		in := input[:i+1]
+
+		for b := 0; b <= 0xFF; b++ {
+			in[i] = byte(b)
+			if ' ' <= b && b <= '~' {
+				if !ValidPrint(in) {
+					t.Errorf("should be valid: %v", in)
+				}
+			} else {
+				if ValidPrint(in) {
+					t.Errorf("should not be valid: %v", in)
+				}
+			}
+			in[i] = 'x'
+		}
+	}
+}
+
 func TestValidString(t *testing.T) {
 	testValidationFunction(t, testValid, ValidString)
 }
 
-/*
-func TestValidPrint(t *testing.T) {
+func TestValidPrintString(t *testing.T) {
 	testValidationFunction(t, testValidPrint, ValidPrintString)
 }
-*/
 
 func testValidationFunction(t *testing.T, reference, function func(string) bool) {
 	for _, test := range testStrings {
@@ -114,11 +132,9 @@ func BenchmarkValid(b *testing.B) {
 	benchmarkValidationFunction(b, ValidString)
 }
 
-/*
 func BenchmarkValidPrint(b *testing.B) {
 	benchmarkValidationFunction(b, ValidPrintString)
 }
-*/
 
 func benchmarkValidationFunction(b *testing.B, function func(string) bool) {
 	for _, test := range testStrings {

@@ -32,8 +32,8 @@ func main() {
 	PINSRQ(Imm(0), maskG, maskX) // maskX[0:8] = maskG
 	VPBROADCASTQ(maskX, maskY)   // maskY[0:32] = [maskX[0:8],maskX[0:8],maskX[0:8],maskX[0:8]]
 
-	// Moving the 256-byte scanning helps the branch predictor for small inputs
-	CMPQ(n, U32(256))       // if n >= 256:
+	// Moving the 128+ scanning helps the branch predictor for small inputs
+	CMPQ(n, U8(128))        // if n >= 128:
 	JNB(LabelRef("cmp256")) //   goto cmp256
 
 	Label("cmp64")
@@ -109,6 +109,8 @@ func main() {
 	RET()
 
 	Label("cmp256")
+	CMPQ(n, U32(256))           // if n < 256:
+	JB(LabelRef("cmp128"))      //   goto cmp128
 	VMOVDQU(p.Offset(0), Y0)    // Y0 = p[0:32]
 	VPOR(p.Offset(32), Y0, Y0)  // Y0 = p[32:64] | Y0
 	VMOVDQU(p.Offset(64), Y1)   // Y1 = p[64:96]
@@ -124,8 +126,6 @@ func main() {
 	JNZ(LabelRef("invalid"))    //   return false
 	ADDQ(U32(256), p.Base)      // p += 256
 	SUBQ(U32(256), n)           // n -= 256
-	CMPQ(n, U32(256))           // if n < 256:
-	JB(LabelRef("cmp128"))      //   goto cmp128
 	JMP(LabelRef("cmp256"))     // loop cmp256
 
 	Label("cmp128")

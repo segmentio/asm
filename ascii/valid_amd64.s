@@ -12,7 +12,7 @@ TEXT ·ValidString(SB), NOSPLIT, $0-17
 	JCC          cmp8
 	PINSRQ       $0x00, DX, X4
 	VPBROADCASTQ X4, Y4
-	CMPQ         CX, $0x00000100
+	CMPQ         CX, $0x80
 	JNB          cmp256
 
 cmp64:
@@ -88,6 +88,8 @@ invalid:
 	RET
 
 cmp256:
+	CMPQ    CX, $0x00000100
+	JB      cmp128
 	VMOVDQU (AX), Y0
 	VPOR    32(AX), Y0, Y0
 	VMOVDQU 64(AX), Y1
@@ -103,8 +105,6 @@ cmp256:
 	JNZ     invalid
 	ADDQ    $0x00000100, AX
 	SUBQ    $0x00000100, CX
-	CMPQ    CX, $0x00000100
-	JB      cmp128
 	JMP     cmp256
 
 cmp128:
