@@ -50,68 +50,68 @@ func main() {
 	JNB(LabelRef("cmp128")) //   goto cmp128
 
 	Label("cmp64")
-	CMPQ(n, U8(64))       // if n < 64:
-	JB(LabelRef("cmp32")) //   goto cmp32
-	EQ64(a, b, n, maskY)  // ZF = [compare 64 bytes]
-	JNE(LabelRef("done")) // return ZF if ZF == 0
+	CMPQ(n, U8(64))         // if n < 64:
+	JB(LabelRef("cmp32"))   //   goto cmp32
+	equal64(a, b, n, maskY) // ZF = [compare 64 bytes]
+	JNE(LabelRef("done"))   // return ZF if ZF == 0
 
 	Label("cmp32")
-	CMPQ(n, U8(32))       // if n < 32:
-	JB(LabelRef("cmp16")) //   goto cmp16
-	EQ32(a, b, n, maskY)  // ZF = [compare 32 bytes]
-	JNE(LabelRef("done")) // return ZF if ZF == 0
+	CMPQ(n, U8(32))         // if n < 32:
+	JB(LabelRef("cmp16"))   //   goto cmp16
+	equal32(a, b, n, maskY) // ZF = [compare 32 bytes]
+	JNE(LabelRef("done"))   // return ZF if ZF == 0
 
 	Label("cmp16")
-	CMPQ(n, U8(16))       // if n < 16:
-	JB(LabelRef("cmp8"))  //   goto cmp8
-	EQ16(a, b, n, maskX)  // ZF = [compare 16 bytes]
-	JNE(LabelRef("done")) // return ZF if ZF == 0
+	CMPQ(n, U8(16))         // if n < 16:
+	JB(LabelRef("cmp8"))    //   goto cmp8
+	equal16(a, b, n, maskX) // ZF = [compare 16 bytes]
+	JNE(LabelRef("done"))   // return ZF if ZF == 0
 
 	Label("cmp8")
-	CMPQ(n, U8(8))        // if n < 8:
-	JB(LabelRef("cmp4"))  //   goto cmp4
-	EQ8(a, b, n, maskG)   // ZF = [compare 8 bytes]
-	JNE(LabelRef("done")) // return ZF if ZF == 0
-	JMP(LabelRef("cmp8")) // loop cmp8
+	CMPQ(n, U8(8))         // if n < 8:
+	JB(LabelRef("cmp4"))   //   goto cmp4
+	equal8(a, b, n, maskG) // ZF = [compare 8 bytes]
+	JNE(LabelRef("done"))  // return ZF if ZF == 0
+	JMP(LabelRef("cmp8"))  // loop cmp8
 
 	Label("cmp4")
 	CMPQ(n, U8(4))        // if n < 4:
 	JB(LabelRef("cmp3"))  //   goto cmp3
-	EQ4(a, b, n)          // ZF = [compare 4 bytes]
+	equal4(a, b, n)       // ZF = [compare 4 bytes]
 	JNE(LabelRef("done")) // return ZF if ZF == 0
 
 	Label("cmp3")
 	CMPQ(n, U8(3))        // if n < 3:
 	JB(LabelRef("cmp2"))  //   goto cmp2
-	EQ3(a, b)             // ZF = [compare 3 bytes]
+	equal3(a, b)          // ZF = [compare 3 bytes]
 	JMP(LabelRef("done")) // return ZF
 
 	Label("cmp2")
 	CMPQ(n, U8(2))        // if n < 2:
 	JB(LabelRef("cmp1"))  //   goto cmp1
-	EQ2(a, b)             // ZF = [compare 2 bytes]
+	equal2(a, b)          // ZF = [compare 2 bytes]
 	JMP(LabelRef("done")) // return ZF
 
 	Label("cmp1")
 	CMPQ(n, U8(0))       // if n == 0:
 	JE(LabelRef("done")) //   return true
-	EQ1(a, b)            // ZF = [compare 1 byte]
+	equal1(a, b)         // ZF = [compare 1 byte]
 
 	Label("done")
 	SETEQ(ret.Addr) // return ZF
 	RET()           // ...
 
 	Label("cmp128")
-	EQ128(a, b, n, maskY)   // ZF = [compare 128 bytes]
-	JNE(LabelRef("done"))   // return if ZF == 0
-	CMPQ(n, U8(128))        // if n < 128:
-	JB(LabelRef("cmp64"))   //   goto cmp64
-	JMP(LabelRef("cmp128")) // loop cmp128
+	equal128(a, b, n, maskY) // ZF = [compare 128 bytes]
+	JNE(LabelRef("done"))    // return if ZF == 0
+	CMPQ(n, U8(128))         // if n < 128:
+	JB(LabelRef("cmp64"))    //   goto cmp64
+	JMP(LabelRef("cmp128"))  // loop cmp128
 
 	Generate()
 }
 
-func EQ1(a, b Mem) {
+func equal1(a, b Mem) {
 	eq := GP8()
 
 	MOVB(a, eq)         // eq = a[i:i+1]
@@ -119,7 +119,7 @@ func EQ1(a, b Mem) {
 	TESTB(U8(0xDF), eq) // ZF = (mask & eq) == 0
 }
 
-func EQ2(a, b Mem) {
+func equal2(a, b Mem) {
 	eq := GP16()
 
 	MOVW(a, eq)            // eq = a[i:i+2]
@@ -127,7 +127,7 @@ func EQ2(a, b Mem) {
 	TESTW(U16(0xDFDF), eq) // ZF = (mask & eq) == 0
 }
 
-func EQ3(a, b Mem) {
+func equal3(a, b Mem) {
 	eq := GP32()
 	eqa := GP32()
 	eqb := GP32()
@@ -144,7 +144,7 @@ func EQ3(a, b Mem) {
 	TESTL(U32(0xDFDFDF), eqb) // ZF = (mask & eqb) == 0
 }
 
-func EQ4(a, b Mem, n Register) {
+func equal4(a, b Mem, n Register) {
 	eq := GP32()
 
 	MOVL(a, eq)                // eq = a[i:i+4]
@@ -154,7 +154,7 @@ func EQ4(a, b Mem, n Register) {
 	TESTL(U32(0xDFDFDFDF), eq) // ZF = (mask & eq) == 0
 }
 
-func EQ8(a, b Mem, n, mask Register) {
+func equal8(a, b Mem, n, mask Register) {
 	eq := GP64()
 
 	MOVQ(a, eq)          // eq = a[i:i+8]
@@ -164,23 +164,23 @@ func EQ8(a, b Mem, n, mask Register) {
 	TESTQ(mask, eq)      // ZF = (mask & eq) == 0
 }
 
-func EQ16(a, b Mem, n, mask Register) {
-	EQAVX(a, b, n, mask, 16)
+func equal16(a, b Mem, n, mask Register) {
+	equalAVX(a, b, n, mask, 16)
 }
 
-func EQ32(a, b Mem, n, mask Register) {
-	EQAVX(a, b, n, mask, 32)
+func equal32(a, b Mem, n, mask Register) {
+	equalAVX(a, b, n, mask, 32)
 }
 
-func EQ64(a, b Mem, n, mask Register) {
-	EQAVXSIMD(a, b, n, mask, 2)
+func equal64(a, b Mem, n, mask Register) {
+	equalAVXSIMD(a, b, n, mask, 2)
 }
 
-func EQ128(a, b Mem, n, mask Register) {
-	EQAVXSIMD(a, b, n, mask, 4)
+func equal128(a, b Mem, n, mask Register) {
+	equalAVXSIMD(a, b, n, mask, 4)
 }
 
-func EQAVX(a, b Mem, n, mask Register, size uint8) {
+func equalAVX(a, b Mem, n, mask Register, size uint8) {
 	var eq VecVirtual
 	if size == 32 {
 		eq = YMM()
@@ -195,7 +195,7 @@ func EQAVX(a, b Mem, n, mask Register, size uint8) {
 	VPTEST(mask, eq)        // ZF = (mask & eq) == 0
 }
 
-func EQAVXSIMD(a, b Mem, n, mask Register, lanes int) {
+func equalAVXSIMD(a, b Mem, n, mask Register, lanes int) {
 	eq := GP32()
 	and := make([]VecPhysical, 0)
 	ymm := []VecPhysical{Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8, Y9, Y10, Y11, Y12, Y13, Y14, Y15}
