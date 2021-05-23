@@ -41,7 +41,7 @@ cmp64:
 
 cmp32:
 	CMPQ      CX, $0x20
-	JB        cmp8
+	JB        cmp16
 	VMOVDQU   (AX), Y0
 	VPCMPGTB  Y8, Y0, Y1
 	VPCMPGTB  Y9, Y0, Y0
@@ -50,6 +50,19 @@ cmp32:
 	SUBQ      $0x20, CX
 	VPMOVMSKB Y0, DI
 	XORL      $0xffffffff, DI
+	JNE       done
+
+cmp16:
+	CMPQ      CX, $0x10
+	JB        cmp8
+	VMOVDQU   (AX), X0
+	VPCMPGTB  X8, X0, X1
+	VPCMPGTB  X9, X0, X0
+	VPANDN    X1, X0, X0
+	ADDQ      $0x10, AX
+	SUBQ      $0x10, CX
+	VPMOVMSKB X0, DI
+	XORL      $0x0000ffff, DI
 	JNE       done
 
 cmp8:

@@ -49,16 +49,22 @@ func main() {
 	JNB(LabelRef("cmp128")) //   goto cmp128
 
 	Label("cmp64")
-	CMPQ(n, U8(64))               // if n < 64:
-	JB(LabelRef("cmp32"))         //   goto cmp32
-	validAVX(p, n, minY, maxY, 2) // ZF = [compare 64 bytes]
-	JNE(LabelRef("done"))         // return ZF if ZF == 0
+	CMPQ(n, U8(64))                     // if n < 64:
+	JB(LabelRef("cmp32"))               //   goto cmp32
+	validAVX(p, n, minY, maxY, 2, S256) // ZF = [compare 64 bytes]
+	JNE(LabelRef("done"))               // return ZF if ZF == 0
 
 	Label("cmp32")
-	CMPQ(n, U8(32))               // if n < 32:
-	JB(LabelRef("cmp8"))          //   goto cmp8
-	validAVX(p, n, minY, maxY, 1) // ZF = [compare 32 bytes]
-	JNE(LabelRef("done"))         // return ZF if ZF == 0
+	CMPQ(n, U8(32))                     // if n < 32:
+	JB(LabelRef("cmp16"))               //   goto cmp16
+	validAVX(p, n, minY, maxY, 1, S256) // ZF = [compare 32 bytes]
+	JNE(LabelRef("done"))               // return ZF if ZF == 0
+
+	Label("cmp16")
+	CMPQ(n, U8(16))                     // if n < 16:
+	JB(LabelRef("cmp8"))                //   goto cmp8
+	validAVX(p, n, minX, maxX, 1, S128) // ZF = [compare 16 bytes]
+	JNE(LabelRef("done"))               // return ZF if ZF == 0
 
 	Label("cmp8")
 	CMPQ(n, U8(8))           // if n < 8:
@@ -105,11 +111,11 @@ func main() {
 	RET()           // ...
 
 	Label("cmp128")
-	validAVX(p, n, minY, maxY, 4) // ZF = [compare 128 bytes]
-	JNE(LabelRef("done"))         // return if ZF == 0
-	CMPQ(n, U8(128))              // if n < 128:
-	JB(LabelRef("cmp64"))         //   goto cmp64
-	JMP(LabelRef("cmp128"))       // loop cmp128
+	validAVX(p, n, minY, maxY, 4, S256) // ZF = [compare 128 bytes]
+	JNE(LabelRef("done"))               // return if ZF == 0
+	CMPQ(n, U8(128))                    // if n < 128:
+	JB(LabelRef("cmp64"))               //   goto cmp64
+	JMP(LabelRef("cmp128"))             // loop cmp128
 
 	Generate()
 }
@@ -157,32 +163,43 @@ func valid8(p Mem, n, m1, m2, m3 Register) {
 	TESTQ(m3, val)                                  // ZF = (m3 & val) == 0
 }
 
-func validAVX(p Mem, n, min, max Register, lanes int) {
+func validAVX(p Mem, n, min, max Register, lanes int, s Spec) {
 	msk := GP32()
 	out := make([]VecPhysical, 0)
-	ymm := []VecPhysical{Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8, Y9, Y10, Y11, Y12, Y13, Y14, Y15}
+
+	var mm []VecPhysical
+	switch s {
+	case S256:
+		mm = []VecPhysical{Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8, Y9, Y10, Y11, Y12, Y13, Y14, Y15}
+	case S128:
+		mm = []VecPhysical{X0, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10, X11, X12, X13, X14, X15}
+	default:
+		panic("unsupported register size")
+	}
+
+	sz := int(s.Size())
 
 	for i := 0; i < lanes; i++ {
-		y0 := ymm[2*i]
-		y1 := ymm[2*i+1]
-		out = append(out, y0)
+		m0 := mm[2*i]
+		m1 := mm[2*i+1]
+		out = append(out, m0)
 
-		VMOVDQU(p.Offset(32*i), y0) // y0 = p[i:i+32]
-		VPCMPGTB(min, y0, y1)       // y1 = bytes that are greater than the min-1 (i.e. valid at lower end)
-		VPCMPGTB(max, y0, y0)       // y0 = bytes that are greater than the max (i.e. invalid at upper end)
-		VPANDN(y1, y0, y0)          // y2 & ~y3 mask should be full unless there's an invalid byte
+		VMOVDQU(p.Offset(sz*i), m0) // m0 = p[i*sz:i*sz+sz]
+		VPCMPGTB(min, m0, m1)       // m1 = bytes that are greater than the min-1 (i.e. valid at lower end)
+		VPCMPGTB(max, m0, m0)       // m0 = bytes that are greater than the max (i.e. invalid at upper end)
+		VPANDN(m1, m0, m0)          // y2 & ~y3 mask should be full unless there's an invalid byte
 	}
 
 	for len(out) > 1 {
-		y0 := out[0]
-		y1 := out[1]
-		out = append(out[2:], y0)
+		m0 := out[0]
+		m1 := out[1]
+		out = append(out[2:], m0)
 
-		VPAND(y1, y0, y0)
+		VPAND(m1, m0, m0)
 	}
 
-	ADDQ(Imm(uint64(32*lanes)), p.Base) // p += 32*lanes
-	SUBQ(Imm(uint64(32*lanes)), n)      // n -= 32*lanes
-	VPMOVMSKB(out[0], msk)              // msk[0,1,2,...] = y0[0,8,16,...]
-	XORL(U32(0xFFFFFFFF), msk)          // check for a zero somewhere
+	ADDQ(Imm(uint64(sz*lanes)), p.Base) // p += sz*lanes
+	SUBQ(Imm(uint64(sz*lanes)), n)      // n -= sz*lanes
+	VPMOVMSKB(out[0], msk)              // msk[0,1,2,...] = m0[0,8,16,...]
+	XORL(U32(^uint32(0)>>(32-sz)), msk) // check for a zero somewhere
 }

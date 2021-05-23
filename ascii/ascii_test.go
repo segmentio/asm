@@ -313,6 +313,20 @@ func BenchmarkValidString(b *testing.B) {
 	}
 }
 
+func BenchmarkValidPrintString(b *testing.B) {
+	sizes := [...]int{7, 8, 9, 15, 16, 17, 31, 32, 33, 512, 2000}
+
+	for _, s := range sizes {
+		str := genValidString(s, 'a')
+		b.Run(fmt.Sprintf("%04d", s), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				ValidPrintString(str)
+			}
+			b.SetBytes(int64(s))
+		})
+	}
+}
+
 func limit(s string) string {
 	if len(s) > 17 {
 		return s[:17] + "..."
