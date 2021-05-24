@@ -32,194 +32,104 @@ func main() {
 
 	CMPQ(n, bn.Addr)      // if len(a) != len(b):
 	JNE(LabelRef("done")) //   return false
+	XORQ(i, i)            // i = 0
 
-	maskG := GP64()
-	maskY := YMM()
-	maskX := maskY.AsX() // use the lower half of maskY
-
-	XORQ(i, i)                           // i = 0
-	MOVQ(U64(0xDFDFDFDFDFDFDFDF), maskG) // maskG = 0xDFDFDFDFDFDFDFDF
-
-	JumpUnlessFeature("cmp8", cpu.AVX2)
-
-	PINSRQ(Imm(0), maskG, maskX) // maskX[0:8] = maskG
-	VPBROADCASTQ(maskX, maskY)   // maskY[0:32] = [maskX[0:8],maskX[0:8],maskX[0:8],maskX[0:8]]
-
-	// Moving the 128-byte scanning helps the branch predictor for small inputs
-	CMPQ(n, U8(128))        // if n >= 128:
-	JNB(LabelRef("cmp128")) //   goto cmp128
-
-	Label("cmp64")
-	CMPQ(n, U8(64))         // if n < 64:
-	JB(LabelRef("cmp32"))   //   goto cmp32
-	equal64(a, b, n, maskY) // ZF = [compare 64 bytes]
-	JNE(LabelRef("done"))   // return ZF if ZF == 0
-
-	Label("cmp32")
-	CMPQ(n, U8(32))         // if n < 32:
-	JB(LabelRef("cmp16"))   //   goto cmp16
-	equal32(a, b, n, maskY) // ZF = [compare 32 bytes]
-	JNE(LabelRef("done"))   // return ZF if ZF == 0
-
-	Label("cmp16")
-	CMPQ(n, U8(16))         // if n < 16:
-	JB(LabelRef("cmp8"))    //   goto cmp8
-	equal16(a, b, n, maskX) // ZF = [compare 16 bytes]
-	JNE(LabelRef("done"))   // return ZF if ZF == 0
+	CMPQ(n, U8(16))                // if n < 16:
+	JB(LabelRef("cmp8"))           //   goto cmp8
+	JumpIfFeature("avx", cpu.AVX2) // goto avx if supported
 
 	Label("cmp8")
-	CMPQ(n, U8(8))         // if n < 8:
-	JB(LabelRef("cmp4"))   //   goto cmp4
-	equal8(a, b, n, maskG) // ZF = [compare 8 bytes]
-	JNE(LabelRef("done"))  // return ZF if ZF == 0
-	JMP(LabelRef("cmp8"))  // loop cmp8
-
-	Label("cmp4")
-	CMPQ(n, U8(4))        // if n < 4:
-	JB(LabelRef("cmp3"))  //   goto cmp3
-	equal4(a, b, n)       // ZF = [compare 4 bytes]
-	JNE(LabelRef("done")) // return ZF if ZF == 0
-
-	Label("cmp3")
-	CMPQ(n, U8(3))        // if n < 3:
-	JB(LabelRef("cmp2"))  //   goto cmp2
-	equal3(a, b)          // ZF = [compare 3 bytes]
-	JMP(LabelRef("done")) // return ZF
-
-	Label("cmp2")
-	CMPQ(n, U8(2))        // if n < 2:
-	JB(LabelRef("cmp1"))  //   goto cmp1
-	equal2(a, b)          // ZF = [compare 2 bytes]
-	JMP(LabelRef("done")) // return ZF
-
-	Label("cmp1")
-	CMPQ(n, U8(0))       // if n == 0:
-	JE(LabelRef("done")) //   return true
-	equal1(a, b)         // ZF = [compare 1 byte]
+	// TODO: add fallback
+	t := GP64()
+	XORQ(t, t)
 
 	Label("done")
 	SETEQ(ret.Addr) // return ZF
 	RET()           // ...
 
+	Label("avx")
+
+	maskY := [...]Register{
+		VecBroadcast(U8(0x20), YMM()), // "case" bit
+		VecBroadcast(U8(0x1F), YMM()), // 0b10000000 - 'a'
+		VecBroadcast(U8(0x9A), YMM()), // 'z' - 'a' + 1 - 0x80 (overflowed 8-bits)
+		VecBroadcast(U8(0x01), YMM()), // 1-bit for testing
+	}
+
+	maskX := [...]Register{
+		maskY[0].(Vec).AsX(),
+		maskY[1].(Vec).AsX(),
+		maskY[2].(Vec).AsX(),
+		maskY[3].(Vec).AsX(),
+	}
+
 	Label("cmp128")
-	equal128(a, b, n, maskY) // ZF = [compare 128 bytes]
-	JNE(LabelRef("done"))    // return if ZF == 0
-	CMPQ(n, U8(128))         // if n < 128:
-	JB(LabelRef("cmp64"))    //   goto cmp64
-	JMP(LabelRef("cmp128"))  // loop cmp128
+	CMPQ(n, U8(128))                  // if n < 128:
+	JB(LabelRef("cmp64"))             //   goto cmp64
+	equalAVX(a, b, n, maskY, 4, S256) // ZF = [compare 128 bytes]
+	JNE(LabelRef("done"))             // return if ZF == 0
+	JMP(LabelRef("cmp128"))           // loop cmp128
+
+	Label("cmp64")
+	CMPQ(n, U8(64))                   // if n < 64:
+	JB(LabelRef("cmp32"))             //   goto cmp32
+	equalAVX(a, b, n, maskY, 2, S256) // ZF = [compare 64 bytes]
+	JNE(LabelRef("done"))             // return ZF if ZF == 0
+
+	Label("cmp32")
+	CMPQ(n, U8(32))                   // if n < 32:
+	JB(LabelRef("cmp16"))             //   goto cmp16
+	equalAVX(a, b, n, maskY, 1, S256) // ZF = [compare 32 bytes]
+	JNE(LabelRef("done"))             // return ZF if ZF == 0
+
+	Label("cmp16")
+	CMPQ(n, U8(16))                   // if n < 16:
+	JB(LabelRef("cmp8"))              //   goto cmp8
+	equalAVX(a, b, n, maskX, 1, S128) // ZF = [compare 16 bytes]
+	JNE(LabelRef("done"))             // return ZF if ZF == 0
+
+	CMPQ(n, U8(0))        // if n == 0:
+	JE(LabelRef("done"))  //   goto done
+	JMP(LabelRef("cmp8")) // gpto cmp8
 
 	Generate()
 }
 
-func equal1(a, b Mem) {
-	eq := GP8()
-
-	MOVB(a, eq)         // eq = a[i:i+1]
-	XORB(b, eq)         // eq = b[i:i+1] ^ eq
-	TESTB(U8(0xDF), eq) // ZF = (mask & eq) == 0
-}
-
-func equal2(a, b Mem) {
-	eq := GP16()
-
-	MOVW(a, eq)            // eq = a[i:i+2]
-	XORW(b, eq)            // eq = b[i:i+2] ^ eq
-	TESTW(U16(0xDFDF), eq) // ZF = (mask & eq) == 0
-}
-
-func equal3(a, b Mem) {
-	eq := GP32()
-	eqa := GP32()
-	eqb := GP32()
-
-	MOVWLZX(a, eq)            // eq = a[i:i+2]
-	MOVBLZX(a.Offset(2), eqa) // eqa = a[i+2:i+3]
-	SHLL(U8(16), eqa)         // eqa <<= 16
-	ORL(eq, eqa)              // eqa = eq | eqa
-	MOVWLZX(b, eq)            // eq = b[i:i+2]
-	MOVBLZX(b.Offset(2), eqb) // eqb = b[i+2:i+3]
-	SHLL(U8(16), eqb)         // eqb <<= 16
-	ORL(eq, eqb)              // eqb = eq | eqb
-	XORL(eqa, eqb)            // eqb = eqa ^ eqb
-	TESTL(U32(0xDFDFDF), eqb) // ZF = (mask & eqb) == 0
-}
-
-func equal4(a, b Mem, n Register) {
-	eq := GP32()
-
-	MOVL(a, eq)                // eq = a[i:i+4]
-	XORL(b, eq)                // eq = b[i:i+4] ^ eq
-	ADDQ(U8(4), a.Index)       // i += 4
-	SUBQ(U8(4), n)             // n -= 4
-	TESTL(U32(0xDFDFDFDF), eq) // ZF = (mask & eq) == 0
-}
-
-func equal8(a, b Mem, n, mask Register) {
-	eq := GP64()
-
-	MOVQ(a, eq)          // eq = a[i:i+8]
-	XORQ(b, eq)          // eq = b[i:i+8] ^ eq
-	ADDQ(U8(8), a.Index) // i += 8
-	SUBQ(U8(8), n)       // n -= 8
-	TESTQ(mask, eq)      // ZF = (mask & eq) == 0
-}
-
-func equal16(a, b Mem, n, mask Register) {
-	equalAVX(a, b, n, mask, 16)
-}
-
-func equal32(a, b Mem, n, mask Register) {
-	equalAVX(a, b, n, mask, 32)
-}
-
-func equal64(a, b Mem, n, mask Register) {
-	equalAVXSIMD(a, b, n, mask, 2)
-}
-
-func equal128(a, b Mem, n, mask Register) {
-	equalAVXSIMD(a, b, n, mask, 4)
-}
-
-func equalAVX(a, b Mem, n, mask Register, size uint8) {
-	var eq VecVirtual
-	if size == 32 {
-		eq = YMM()
-	} else {
-		eq = XMM()
-	}
-
-	VMOVDQU(a, eq)          // eq = a[i:i+32]
-	VPXOR(b, eq, eq)        // eq = b[i:i+32] ^ eq
-	ADDQ(U8(size), a.Index) // i += size
-	SUBQ(U8(size), n)       // n -= size
-	VPTEST(mask, eq)        // ZF = (mask & eq) == 0
-}
-
-func equalAVXSIMD(a, b Mem, n, mask Register, lanes int) {
-	eq := GP32()
-	and := make([]VecPhysical, 0)
-	ymm := VecList(S256, 16)
+func equalAVX(a, b Mem, n Register, mask [4]Register, lanes int, s Spec) {
+	msk := GP32()
+	out := make([]VecPhysical, 0)
+	vec := VecList(s, 12)
+	sz := int(s.Size())
 
 	for i := 0; i < lanes; i++ {
-		y0 := ymm[2*i]
-		y1 := ymm[2*i+1]
-		and = append(and, y0)
+		v0 := vec[3*i]
+		v1 := vec[3*i+1]
+		v2 := vec[3*i+2]
+		out = append(out, v0)
 
-		VPAND(a.Offset(32*i), mask, y0) // y0 = a[i:i+32] & mask
-		VPAND(b.Offset(32*i), mask, y1) // y1 = b[i:i+32] & mask
-		VPCMPEQB(y1, y0, y0)            // y0 = y1 == y0
+		VLDDQU(a.Offset(sz*i), v0) // load 32 bytes from a
+		VLDDQU(b.Offset(sz*i), v1) // load 32 bytes from b
+		VXORPD(v0, v1, v1)         // calculate difference between a and b
+		VPCMPEQB(mask[0], v1, v2)  // check if above difference is the 6th bit
+		VORPD(mask[0], v0, v0)     // set the 6th bit for a
+		VPADDB(mask[1], v0, v0)    // add 0x1f to each byte to set top bit for letters
+		VPCMPGTB(v0, mask[2], v0)  // compare if not letter: v - 'a' < 'z' - 'a' + 1
+		VPAND(v2, v0, v0)          // combine 6th-bit difference with letter range
+		VPAND(mask[3], v0, v0)     // merge test mask
+		VPSLLW(Imm(5), v0, v0)     // shift into case bit position
+		VPCMPEQB(v1, v0, v0)       // compare original difference with case-only difference
 	}
 
-	for len(and) > 1 {
-		y0 := and[0]
-		y1 := and[1]
-		and = append(and[2:], y0)
+	for len(out) > 1 {
+		v0 := out[0]
+		v1 := out[1]
+		out = append(out[2:], v0)
 
-		VPAND(y1, y0, y0)
+		VPAND(v1, v0, v0) // merge all comparisons together
 	}
 
-	VPMOVMSKB(and[0], eq)                // eq[0,1,2,...] = y0[0,8,16,...]
-	ADDQ(Imm(32*uint64(lanes)), a.Index) // i += 32*lanes
-	SUBQ(Imm(32*uint64(lanes)), n)       // n -= 32*lanes
-	CMPL(eq, U32(0xFFFFFFFF))            // ZF = (eq == 0xFFFFFFFF)
+	ADDQ(Imm(uint64(sz*lanes)), a.Index) // i += sz*lanes
+	SUBQ(Imm(uint64(sz*lanes)), n)       // n -= sz*lanes
+	VPMOVMSKB(out[0], msk)               // msk[0,1,2,...] = y0[0,8,16,...]
+	XORL(U32(^uint32(0)>>(32-sz)), msk)  // ZF = (msk == 0xFFFFFFFF)
 }

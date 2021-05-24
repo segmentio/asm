@@ -5,132 +5,166 @@
 // func EqualFoldString(a string, b string) bool
 // Requires: AVX, AVX2, SSE4.1
 TEXT ·EqualFoldString(SB), NOSPLIT, $0-33
-	MOVQ         a_base+0(FP), CX
-	MOVQ         a_len+8(FP), DX
-	MOVQ         b_base+16(FP), BX
-	CMPQ         DX, b_len+24(FP)
-	JNE          done
-	XORQ         AX, AX
-	MOVQ         $0xdfdfdfdfdfdfdfdf, SI
-	BTL          $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCC          cmp8
-	PINSRQ       $0x00, SI, X8
-	VPBROADCASTQ X8, Y8
-	CMPQ         DX, $0x80
-	JNB          cmp128
-
-cmp64:
-	CMPQ      DX, $0x40
-	JB        cmp32
-	VPAND     (CX)(AX*1), Y8, Y0
-	VPAND     (BX)(AX*1), Y8, Y1
-	VPCMPEQB  Y1, Y0, Y0
-	VPAND     32(CX)(AX*1), Y8, Y2
-	VPAND     32(BX)(AX*1), Y8, Y3
-	VPCMPEQB  Y3, Y2, Y2
-	VPAND     Y2, Y0, Y0
-	VPMOVMSKB Y0, DI
-	ADDQ      $0x40, AX
-	SUBQ      $0x40, DX
-	CMPL      DI, $0xffffffff
-	JNE       done
-
-cmp32:
-	CMPQ    DX, $0x20
-	JB      cmp16
-	VMOVDQU (CX)(AX*1), Y0
-	VPXOR   (BX)(AX*1), Y0, Y0
-	ADDQ    $0x20, AX
-	SUBQ    $0x20, DX
-	VPTEST  Y8, Y0
-	JNE     done
-
-cmp16:
-	CMPQ    DX, $0x10
-	JB      cmp8
-	VMOVDQU (CX)(AX*1), X0
-	VPXOR   (BX)(AX*1), X0, X0
-	ADDQ    $0x10, AX
-	SUBQ    $0x10, DX
-	VPTEST  X8, X0
-	JNE     done
+	MOVQ a_base+0(FP), CX
+	MOVQ a_len+8(FP), DX
+	MOVQ b_base+16(FP), BX
+	CMPQ DX, b_len+24(FP)
+	JNE  done
+	XORQ AX, AX
+	CMPQ DX, $0x10
+	JB   cmp8
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS  avx
 
 cmp8:
-	CMPQ  DX, $0x08
-	JB    cmp4
-	MOVQ  (CX)(AX*1), DI
-	XORQ  (BX)(AX*1), DI
-	ADDQ  $0x08, AX
-	SUBQ  $0x08, DX
-	TESTQ SI, DI
-	JNE   done
-	JMP   cmp8
-
-cmp4:
-	CMPQ  DX, $0x04
-	JB    cmp3
-	MOVL  (CX)(AX*1), SI
-	XORL  (BX)(AX*1), SI
-	ADDQ  $0x04, AX
-	SUBQ  $0x04, DX
-	TESTL $0xdfdfdfdf, SI
-	JNE   done
-
-cmp3:
-	CMPQ    DX, $0x03
-	JB      cmp2
-	MOVWLZX (CX)(AX*1), DX
-	MOVBLZX 2(CX)(AX*1), CX
-	SHLL    $0x10, CX
-	ORL     DX, CX
-	MOVWLZX (BX)(AX*1), DX
-	MOVBLZX 2(BX)(AX*1), AX
-	SHLL    $0x10, AX
-	ORL     DX, AX
-	XORL    CX, AX
-	TESTL   $0x00dfdfdf, AX
-	JMP     done
-
-cmp2:
-	CMPQ  DX, $0x02
-	JB    cmp1
-	MOVW  (CX)(AX*1), CX
-	XORW  (BX)(AX*1), CX
-	TESTW $0xdfdf, CX
-	JMP   done
-
-cmp1:
-	CMPQ  DX, $0x00
-	JE    done
-	MOVB  (CX)(AX*1), CL
-	XORB  (BX)(AX*1), CL
-	TESTB $0xdf, CL
+	XORQ AX, AX
 
 done:
 	SETEQ ret+32(FP)
 	RET
 
+avx:
+	MOVB         $0x20, SI
+	PINSRB       $0x00, SI, X12
+	VPBROADCASTB X12, Y12
+	MOVB         $0x1f, SI
+	PINSRB       $0x00, SI, X13
+	VPBROADCASTB X13, Y13
+	MOVB         $0x9a, SI
+	PINSRB       $0x00, SI, X14
+	VPBROADCASTB X14, Y14
+	MOVB         $0x01, SI
+	PINSRB       $0x00, SI, X15
+	VPBROADCASTB X15, Y15
+
 cmp128:
-	VPAND     (CX)(AX*1), Y8, Y0
-	VPAND     (BX)(AX*1), Y8, Y1
-	VPCMPEQB  Y1, Y0, Y0
-	VPAND     32(CX)(AX*1), Y8, Y2
-	VPAND     32(BX)(AX*1), Y8, Y3
-	VPCMPEQB  Y3, Y2, Y2
-	VPAND     64(CX)(AX*1), Y8, Y4
-	VPAND     64(BX)(AX*1), Y8, Y5
-	VPCMPEQB  Y5, Y4, Y4
-	VPAND     96(CX)(AX*1), Y8, Y6
-	VPAND     96(BX)(AX*1), Y8, Y7
-	VPCMPEQB  Y7, Y6, Y6
-	VPAND     Y2, Y0, Y0
-	VPAND     Y6, Y4, Y4
-	VPAND     Y4, Y0, Y0
-	VPMOVMSKB Y0, DI
-	ADDQ      $0x80, AX
-	SUBQ      $0x80, DX
-	CMPL      DI, $0xffffffff
-	JNE       done
 	CMPQ      DX, $0x80
 	JB        cmp64
+	VLDDQU    (CX)(AX*1), Y0
+	VLDDQU    (BX)(AX*1), Y1
+	VXORPD    Y0, Y1, Y1
+	VPCMPEQB  Y12, Y1, Y2
+	VORPD     Y12, Y0, Y0
+	VPADDB    Y13, Y0, Y0
+	VPCMPGTB  Y0, Y14, Y0
+	VPAND     Y2, Y0, Y0
+	VPAND     Y15, Y0, Y0
+	VPSLLW    $0x05, Y0, Y0
+	VPCMPEQB  Y1, Y0, Y0
+	VLDDQU    32(CX)(AX*1), Y3
+	VLDDQU    32(BX)(AX*1), Y4
+	VXORPD    Y3, Y4, Y4
+	VPCMPEQB  Y12, Y4, Y5
+	VORPD     Y12, Y3, Y3
+	VPADDB    Y13, Y3, Y3
+	VPCMPGTB  Y3, Y14, Y3
+	VPAND     Y5, Y3, Y3
+	VPAND     Y15, Y3, Y3
+	VPSLLW    $0x05, Y3, Y3
+	VPCMPEQB  Y4, Y3, Y3
+	VLDDQU    64(CX)(AX*1), Y6
+	VLDDQU    64(BX)(AX*1), Y7
+	VXORPD    Y6, Y7, Y7
+	VPCMPEQB  Y12, Y7, Y8
+	VORPD     Y12, Y6, Y6
+	VPADDB    Y13, Y6, Y6
+	VPCMPGTB  Y6, Y14, Y6
+	VPAND     Y8, Y6, Y6
+	VPAND     Y15, Y6, Y6
+	VPSLLW    $0x05, Y6, Y6
+	VPCMPEQB  Y7, Y6, Y6
+	VLDDQU    96(CX)(AX*1), Y9
+	VLDDQU    96(BX)(AX*1), Y10
+	VXORPD    Y9, Y10, Y10
+	VPCMPEQB  Y12, Y10, Y11
+	VORPD     Y12, Y9, Y9
+	VPADDB    Y13, Y9, Y9
+	VPCMPGTB  Y9, Y14, Y9
+	VPAND     Y11, Y9, Y9
+	VPAND     Y15, Y9, Y9
+	VPSLLW    $0x05, Y9, Y9
+	VPCMPEQB  Y10, Y9, Y9
+	VPAND     Y3, Y0, Y0
+	VPAND     Y9, Y6, Y6
+	VPAND     Y6, Y0, Y0
+	ADDQ      $0x80, AX
+	SUBQ      $0x80, DX
+	VPMOVMSKB Y0, SI
+	XORL      $0xffffffff, SI
+	JNE       done
 	JMP       cmp128
+
+cmp64:
+	CMPQ      DX, $0x40
+	JB        cmp32
+	VLDDQU    (CX)(AX*1), Y0
+	VLDDQU    (BX)(AX*1), Y1
+	VXORPD    Y0, Y1, Y1
+	VPCMPEQB  Y12, Y1, Y2
+	VORPD     Y12, Y0, Y0
+	VPADDB    Y13, Y0, Y0
+	VPCMPGTB  Y0, Y14, Y0
+	VPAND     Y2, Y0, Y0
+	VPAND     Y15, Y0, Y0
+	VPSLLW    $0x05, Y0, Y0
+	VPCMPEQB  Y1, Y0, Y0
+	VLDDQU    32(CX)(AX*1), Y3
+	VLDDQU    32(BX)(AX*1), Y4
+	VXORPD    Y3, Y4, Y4
+	VPCMPEQB  Y12, Y4, Y5
+	VORPD     Y12, Y3, Y3
+	VPADDB    Y13, Y3, Y3
+	VPCMPGTB  Y3, Y14, Y3
+	VPAND     Y5, Y3, Y3
+	VPAND     Y15, Y3, Y3
+	VPSLLW    $0x05, Y3, Y3
+	VPCMPEQB  Y4, Y3, Y3
+	VPAND     Y3, Y0, Y0
+	ADDQ      $0x40, AX
+	SUBQ      $0x40, DX
+	VPMOVMSKB Y0, SI
+	XORL      $0xffffffff, SI
+	JNE       done
+
+cmp32:
+	CMPQ      DX, $0x20
+	JB        cmp16
+	VLDDQU    (CX)(AX*1), Y0
+	VLDDQU    (BX)(AX*1), Y1
+	VXORPD    Y0, Y1, Y1
+	VPCMPEQB  Y12, Y1, Y2
+	VORPD     Y12, Y0, Y0
+	VPADDB    Y13, Y0, Y0
+	VPCMPGTB  Y0, Y14, Y0
+	VPAND     Y2, Y0, Y0
+	VPAND     Y15, Y0, Y0
+	VPSLLW    $0x05, Y0, Y0
+	VPCMPEQB  Y1, Y0, Y0
+	ADDQ      $0x20, AX
+	SUBQ      $0x20, DX
+	VPMOVMSKB Y0, SI
+	XORL      $0xffffffff, SI
+	JNE       done
+
+cmp16:
+	CMPQ      DX, $0x10
+	JB        cmp8
+	VLDDQU    (CX)(AX*1), X0
+	VLDDQU    (BX)(AX*1), X1
+	VXORPD    X0, X1, X1
+	VPCMPEQB  X12, X1, X2
+	VORPD     X12, X0, X0
+	VPADDB    X13, X0, X0
+	VPCMPGTB  X0, X14, X0
+	VPAND     X2, X0, X0
+	VPAND     X15, X0, X0
+	VPSLLW    $0x05, X0, X0
+	VPCMPEQB  X1, X0, X0
+	ADDQ      $0x10, AX
+	SUBQ      $0x10, DX
+	VPMOVMSKB X0, AX
+	XORL      $0x0000ffff, AX
+	JNE       done
+	CMPQ      DX, $0x00
+	JE        done
+	JMP       cmp8
