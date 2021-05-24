@@ -90,12 +90,12 @@ done:
 	RET
 
 avx:
-	MOVQ         $0x1f1f1f1f1f1f1f1f, DX
-	PINSRQ       $0x00, DX, X8
-	VPBROADCASTQ X8, Y8
-	MOVQ         $0x7e7e7e7e7e7e7e7e, DX
-	PINSRQ       $0x00, DX, X9
-	VPBROADCASTQ X9, Y9
+	MOVB         $0x1f, DL
+	PINSRB       $0x00, DX, X8
+	VPBROADCASTB X8, Y8
+	MOVB         $0x7e, DL
+	PINSRB       $0x00, DX, X9
+	VPBROADCASTB X9, Y9
 
 cmp128:
 	CMPQ      CX, $0x80

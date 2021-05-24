@@ -26,12 +26,6 @@ func main() {
 	m3 := GP64()
 	val := GP32()
 	tmp := GP32()
-	minG := GP64()
-	maxG := GP64()
-	minY := YMM()
-	maxY := YMM()
-	minX := minY.AsX()
-	maxX := maxY.AsX()
 
 	CMPQ(n, U8(16))                // if n < 16:
 	JB(LabelRef("init"))           //   goto init
@@ -90,12 +84,10 @@ func main() {
 
 	Label("avx")
 
-	MOVQ(U64(0x1F1F1F1F1F1F1F1F), minG) // minG = 0x1F1F1F1F1F1F1F1F
-	PINSRQ(Imm(0), minG, minX)          // minX[0:8] = minG
-	VPBROADCASTQ(minX, minY)            // minY[0:32] = [minX[0:8],minX[0:8],minX[0:8],minX[0:8]]
-	MOVQ(U64(0x7E7E7E7E7E7E7E7E), maxG) // maxG = 0x7E7E7E7E7E7E7E7E
-	PINSRQ(Imm(0), maxG, maxX)          // maxX[0:8] = maxG
-	VPBROADCASTQ(maxX, maxY)            // maxY[0:32] = [maxX[0:8],maxX[0:8],maxX[0:8],maxX[0:8]]
+	minY := VecBroadcast(U8(0x1F), YMM())
+	maxY := VecBroadcast(U8(0x7E), YMM())
+	minX := minY.(Vec).AsX()
+	maxX := maxY.(Vec).AsX()
 
 	Label("cmp128")
 	CMPQ(n, U8(128))                    // if n < 128:
@@ -175,30 +167,30 @@ func valid8(p Mem, n, m1, m2, m3 Register) {
 func validAVX(p Mem, n, min, max Register, lanes int, s Spec) {
 	msk := GP32()
 	out := make([]VecPhysical, 0)
-	mm := VecList(s, 16)
+	vec := VecList(s, 14)
 	sz := int(s.Size())
 
 	for i := 0; i < lanes; i++ {
-		m0 := mm[2*i]
-		m1 := mm[2*i+1]
-		out = append(out, m0)
+		v0 := vec[2*i]
+		v1 := vec[2*i+1]
+		out = append(out, v0)
 
-		VMOVDQU(p.Offset(sz*i), m0) // m0 = p[i*sz:i*sz+sz]
-		VPCMPGTB(min, m0, m1)       // m1 = bytes that are greater than the min-1 (i.e. valid at lower end)
-		VPCMPGTB(max, m0, m0)       // m0 = bytes that are greater than the max (i.e. invalid at upper end)
-		VPANDN(m1, m0, m0)          // y2 & ~y3 mask should be full unless there's an invalid byte
+		VMOVDQU(p.Offset(sz*i), v0) // v0 = p[i*sz:i*sz+sz]
+		VPCMPGTB(min, v0, v1)       // v1 = bytes that are greater than the min-1 (i.e. valid at lower end)
+		VPCMPGTB(max, v0, v0)       // v0 = bytes that are greater than the max (i.e. invalid at upper end)
+		VPANDN(v1, v0, v0)          // y2 & ~y3 mask should be full unless there's an invalid byte
 	}
 
 	for len(out) > 1 {
-		m0 := out[0]
-		m1 := out[1]
-		out = append(out[2:], m0)
+		v0 := out[0]
+		v1 := out[1]
+		out = append(out[2:], v0)
 
-		VPAND(m1, m0, m0)
+		VPAND(v1, v0, v0)
 	}
 
 	ADDQ(Imm(uint64(sz*lanes)), p.Base) // p += sz*lanes
 	SUBQ(Imm(uint64(sz*lanes)), n)      // n -= sz*lanes
-	VPMOVMSKB(out[0], msk)              // msk[0,1,2,...] = m0[0,8,16,...]
-	XORL(U32(^uint32(0)>>(32-sz)), msk) // check for a zero somewhere
+	VPMOVMSKB(out[0], msk)              // msk[0,1,2,...] = v0[0,8,16,...]
+	XORL(U32(^uint32(0)>>(32-sz)), msk) // ZF = (msk == 0xFFFFFFFF)
 }

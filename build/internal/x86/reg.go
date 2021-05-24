@@ -1,6 +1,8 @@
 package x86
 
 import (
+	. "github.com/mmcloughlin/avo/build"
+	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
 )
 
@@ -12,4 +14,57 @@ var all = map[Spec][]VecPhysical{
 
 func VecList(s Spec, max int) []VecPhysical {
 	return all[s][:max]
+}
+
+func VecBroadcast(ir Op, xyz Register) Register {
+	vec := xyz.(Vec)
+	var reg Register
+	var size uint
+
+	switch v := ir.(type) {
+	default:
+		panic("unsupported input operand")
+	case U8, I8:
+		g := GP32()
+		MOVB(v, g.As8())
+		reg = g
+		size = 1
+	case U16, I16:
+		g := GP32()
+		MOVW(v, g.As16())
+		reg = g
+		size = 2
+	case U32, I32:
+		g := GP32()
+		MOVL(v, g)
+		reg = g
+		size = 4
+	case U64, I64:
+		g := GP64()
+		MOVQ(v, g)
+		reg = g
+		size = 8
+	case Register:
+		reg = v
+		size = v.Size()
+	}
+
+	switch size {
+	default:
+		panic("unsupported register size")
+	case 1:
+		PINSRB(Imm(0), reg, vec.AsX())
+		VPBROADCASTB(vec.AsX(), xyz)
+	case 2:
+		PINSRW(Imm(0), reg, vec.AsX())
+		VPBROADCASTW(vec.AsX(), xyz)
+	case 4:
+		PINSRD(Imm(0), reg, vec.AsX())
+		VPBROADCASTD(vec.AsX(), xyz)
+	case 8:
+		PINSRQ(Imm(0), reg, vec.AsX())
+		VPBROADCASTQ(vec.AsX(), xyz)
+	}
+
+	return xyz
 }
