@@ -172,13 +172,18 @@ func validAVX(p Mem, n, min, max Register, lanes int, s Spec) {
 
 	for i := 0; i < lanes; i++ {
 		v0 := vec[2*i]
+
+		VMOVDQU(p.Offset(sz*i), v0) // v0 = p[i*sz:i*sz+sz]
+	}
+
+	for i := 0; i < lanes; i++ {
+		v0 := vec[2*i]
 		v1 := vec[2*i+1]
 		out = append(out, v0)
 
-		VMOVDQU(p.Offset(sz*i), v0) // v0 = p[i*sz:i*sz+sz]
-		VPCMPGTB(min, v0, v1)       // v1 = bytes that are greater than the min-1 (i.e. valid at lower end)
-		VPCMPGTB(max, v0, v0)       // v0 = bytes that are greater than the max (i.e. invalid at upper end)
-		VPANDN(v1, v0, v0)          // y2 & ~y3 mask should be full unless there's an invalid byte
+		VPCMPGTB(min, v0, v1) // v1 = bytes that are greater than the min-1 (i.e. valid at lower end)
+		VPCMPGTB(max, v0, v0) // v0 = bytes that are greater than the max (i.e. invalid at upper end)
+		VPANDN(v1, v0, v0)    // y2 & ~y3 mask should be full unless there's an invalid byte
 	}
 
 	for len(out) > 1 {
