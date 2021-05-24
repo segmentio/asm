@@ -198,7 +198,7 @@ func equalAVX(a, b Mem, n, mask Register, size uint8) {
 func equalAVXSIMD(a, b Mem, n, mask Register, lanes int) {
 	eq := GP32()
 	and := make([]VecPhysical, 0)
-	ymm := []VecPhysical{Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8, Y9, Y10, Y11, Y12, Y13, Y14, Y15}
+	ymm := VecList(S256, 16)
 
 	for i := 0; i < lanes; i++ {
 		y0 := ymm[2*i]

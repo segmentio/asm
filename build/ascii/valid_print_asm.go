@@ -166,17 +166,7 @@ func valid8(p Mem, n, m1, m2, m3 Register) {
 func validAVX(p Mem, n, min, max Register, lanes int, s Spec) {
 	msk := GP32()
 	out := make([]VecPhysical, 0)
-
-	var mm []VecPhysical
-	switch s {
-	case S256:
-		mm = []VecPhysical{Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8, Y9, Y10, Y11, Y12, Y13, Y14, Y15}
-	case S128:
-		mm = []VecPhysical{X0, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10, X11, X12, X13, X14, X15}
-	default:
-		panic("unsupported register size")
-	}
-
+	mm := VecList(s, 16)
 	sz := int(s.Size())
 
 	for i := 0; i < lanes; i++ {
