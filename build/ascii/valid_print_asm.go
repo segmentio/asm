@@ -11,6 +11,8 @@ import (
 	"github.com/segmentio/asm/cpu"
 )
 
+const x = false
+
 func main() {
 	TEXT("ValidPrintString", NOSPLIT, "func(s string) bool")
 	Doc("ValidPrintString returns true if s contains only printable ASCII characters.")
@@ -18,18 +20,12 @@ func main() {
 	p := Mem{Base: Load(Param("s").Base(), GP64())}
 	n := Load(Param("s").Len(), GP64())
 	ret, _ := ReturnIndex(0).Resolve()
-	val := GP32()
-	tmp := GP32()
 
 	m1 := GP64()
 	m2 := GP64()
 	m3 := GP64()
-	MOVQ(U64(0xDFDFDFDFDFDFDFE0), m1)
-	MOVQ(U64(0x0101010101010101), m2)
-	MOVQ(U64(0x8080808080808080), m3)
-
-	JumpUnlessFeature("cmp8", cpu.AVX2)
-
+	val := GP32()
+	tmp := GP32()
 	minG := GP64()
 	maxG := GP64()
 	minY := YMM()
@@ -37,40 +33,22 @@ func main() {
 	minX := minY.AsX()
 	maxX := maxY.AsX()
 
-	MOVQ(U64(0x1F1F1F1F1F1F1F1F), minG) // minG = 0x1F1F1F1F1F1F1F1F
-	PINSRQ(Imm(0), minG, minX)          // minX[0:8] = minG
-	VPBROADCASTQ(minX, minY)            // minY[0:32] = [minX[0:8],minX[0:8],minX[0:8],minX[0:8]]
-	MOVQ(U64(0x7E7E7E7E7E7E7E7E), maxG) // maxG = 0x7E7E7E7E7E7E7E7E
-	PINSRQ(Imm(0), maxG, maxX)          // maxX[0:8] = maxG
-	VPBROADCASTQ(maxX, maxY)            // maxY[0:32] = [maxX[0:8],maxX[0:8],maxX[0:8],maxX[0:8]]
+	CMPQ(n, U8(16))                // if n < 16:
+	JB(LabelRef("init"))           //   goto init
+	JumpIfFeature("avx", cpu.AVX2) // goto avx if supported
 
-	// Moving the 128-byte scanning helps the branch predictor for small inputs
-	CMPQ(n, U8(128))        // if n >= 128:
-	JNB(LabelRef("cmp128")) //   goto cmp128
-
-	Label("cmp64")
-	CMPQ(n, U8(64))                     // if n < 64:
-	JB(LabelRef("cmp32"))               //   goto cmp32
-	validAVX(p, n, minY, maxY, 2, S256) // ZF = [compare 64 bytes]
-	JNE(LabelRef("done"))               // return ZF if ZF == 0
-
-	Label("cmp32")
-	CMPQ(n, U8(32))                     // if n < 32:
-	JB(LabelRef("cmp16"))               //   goto cmp16
-	validAVX(p, n, minY, maxY, 1, S256) // ZF = [compare 32 bytes]
-	JNE(LabelRef("done"))               // return ZF if ZF == 0
-
-	Label("cmp16")
-	CMPQ(n, U8(16))                     // if n < 16:
-	JB(LabelRef("cmp8"))                //   goto cmp8
-	validAVX(p, n, minX, maxX, 1, S128) // ZF = [compare 16 bytes]
-	JNE(LabelRef("done"))               // return ZF if ZF == 0
+	Label("init")
+	CMPQ(n, U8(8))       // if n < 8:
+	JB(LabelRef("cmp4")) //   goto cmp4
+	MOVQ(U64(0xDFDFDFDFDFDFDFE0), m1)
+	MOVQ(U64(0x0101010101010101), m2)
+	MOVQ(U64(0x8080808080808080), m3)
 
 	Label("cmp8")
-	CMPQ(n, U8(8))           // if n < 8:
-	JB(LabelRef("cmp4"))     //   goto cmp4
 	valid8(p, n, m1, m2, m3) // ZF = [compare 8 bytes]
 	JNE(LabelRef("done"))    // return ZF if ZF == 0
+	CMPQ(n, U8(8))           // if n < 8:
+	JB(LabelRef("cmp4"))     //   goto cmp4
 	JMP(LabelRef("cmp8"))    // loop cmp8
 
 	Label("cmp4")
@@ -110,12 +88,43 @@ func main() {
 	SETEQ(ret.Addr) // return ZF
 	RET()           // ...
 
+	Label("avx")
+
+	MOVQ(U64(0x1F1F1F1F1F1F1F1F), minG) // minG = 0x1F1F1F1F1F1F1F1F
+	PINSRQ(Imm(0), minG, minX)          // minX[0:8] = minG
+	VPBROADCASTQ(minX, minY)            // minY[0:32] = [minX[0:8],minX[0:8],minX[0:8],minX[0:8]]
+	MOVQ(U64(0x7E7E7E7E7E7E7E7E), maxG) // maxG = 0x7E7E7E7E7E7E7E7E
+	PINSRQ(Imm(0), maxG, maxX)          // maxX[0:8] = maxG
+	VPBROADCASTQ(maxX, maxY)            // maxY[0:32] = [maxX[0:8],maxX[0:8],maxX[0:8],maxX[0:8]]
+
 	Label("cmp128")
-	validAVX(p, n, minY, maxY, 4, S256) // ZF = [compare 128 bytes]
-	JNE(LabelRef("done"))               // return if ZF == 0
 	CMPQ(n, U8(128))                    // if n < 128:
 	JB(LabelRef("cmp64"))               //   goto cmp64
+	validAVX(p, n, minY, maxY, 4, S256) // ZF = [compare 128 bytes]
+	JNE(LabelRef("done"))               // return if ZF == 0
 	JMP(LabelRef("cmp128"))             // loop cmp128
+
+	Label("cmp64")
+	CMPQ(n, U8(64))                     // if n < 64:
+	JB(LabelRef("cmp32"))               //   goto cmp32
+	validAVX(p, n, minY, maxY, 2, S256) // ZF = [compare 64 bytes]
+	JNE(LabelRef("done"))               // return ZF if ZF == 0
+
+	Label("cmp32")
+	CMPQ(n, U8(32))                     // if n < 32:
+	JB(LabelRef("cmp16"))               //   goto cmp16
+	validAVX(p, n, minY, maxY, 1, S256) // ZF = [compare 32 bytes]
+	JNE(LabelRef("done"))               // return ZF if ZF == 0
+
+	Label("cmp16")
+	CMPQ(n, U8(16))                     // if n < 16:
+	JB(LabelRef("init"))                //   goto init
+	validAVX(p, n, minX, maxX, 1, S128) // ZF = [compare 16 bytes]
+	JNE(LabelRef("done"))               // return ZF if ZF == 0
+
+	CMPQ(n, U8(0))        // if n == 0:
+	JE(LabelRef("done"))  //   goto done
+	JMP(LabelRef("init")) // gpto init
 
 	Generate()
 }

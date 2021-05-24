@@ -5,69 +5,21 @@
 // func ValidPrintString(s string) bool
 // Requires: AVX, AVX2, SSE4.1
 TEXT ·ValidPrintString(SB), NOSPLIT, $0-17
-	MOVQ         s_base+0(FP), AX
-	MOVQ         s_len+8(FP), CX
-	MOVQ         $0xdfdfdfdfdfdfdfe0, DX
-	MOVQ         $0x0101010101010101, BX
-	MOVQ         $0x8080808080808080, SI
-	BTL          $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCC          cmp8
-	MOVQ         $0x1f1f1f1f1f1f1f1f, DI
-	PINSRQ       $0x00, DI, X8
-	VPBROADCASTQ X8, Y8
-	MOVQ         $0x7e7e7e7e7e7e7e7e, DI
-	PINSRQ       $0x00, DI, X9
-	VPBROADCASTQ X9, Y9
-	CMPQ         CX, $0x80
-	JNB          cmp128
+	MOVQ s_base+0(FP), AX
+	MOVQ s_len+8(FP), CX
+	CMPQ CX, $0x10
+	JB   init
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS  avx
 
-cmp64:
-	CMPQ      CX, $0x40
-	JB        cmp32
-	VMOVDQU   (AX), Y0
-	VPCMPGTB  Y8, Y0, Y1
-	VPCMPGTB  Y9, Y0, Y0
-	VPANDN    Y1, Y0, Y0
-	VMOVDQU   32(AX), Y2
-	VPCMPGTB  Y8, Y2, Y3
-	VPCMPGTB  Y9, Y2, Y2
-	VPANDN    Y3, Y2, Y2
-	VPAND     Y2, Y0, Y0
-	ADDQ      $0x40, AX
-	SUBQ      $0x40, CX
-	VPMOVMSKB Y0, DI
-	XORL      $0xffffffff, DI
-	JNE       done
-
-cmp32:
-	CMPQ      CX, $0x20
-	JB        cmp16
-	VMOVDQU   (AX), Y0
-	VPCMPGTB  Y8, Y0, Y1
-	VPCMPGTB  Y9, Y0, Y0
-	VPANDN    Y1, Y0, Y0
-	ADDQ      $0x20, AX
-	SUBQ      $0x20, CX
-	VPMOVMSKB Y0, DI
-	XORL      $0xffffffff, DI
-	JNE       done
-
-cmp16:
-	CMPQ      CX, $0x10
-	JB        cmp8
-	VMOVDQU   (AX), X0
-	VPCMPGTB  X8, X0, X1
-	VPCMPGTB  X9, X0, X0
-	VPANDN    X1, X0, X0
-	ADDQ      $0x10, AX
-	SUBQ      $0x10, CX
-	VPMOVMSKB X0, DI
-	XORL      $0x0000ffff, DI
-	JNE       done
+init:
+	CMPQ CX, $0x08
+	JB   cmp4
+	MOVQ $0xdfdfdfdfdfdfdfe0, DX
+	MOVQ $0x0101010101010101, BX
+	MOVQ $0x8080808080808080, SI
 
 cmp8:
-	CMPQ  CX, $0x08
-	JB    cmp4
 	MOVQ  (AX), DI
 	MOVQ  DI, R8
 	LEAQ  (DI)(DX*1), R9
@@ -80,6 +32,8 @@ cmp8:
 	SUBQ  $0x08, CX
 	TESTQ SI, DI
 	JNE   done
+	CMPQ  CX, $0x08
+	JB    cmp4
 	JMP   cmp8
 
 cmp4:
@@ -135,7 +89,17 @@ done:
 	SETEQ ret+16(FP)
 	RET
 
+avx:
+	MOVQ         $0x1f1f1f1f1f1f1f1f, DX
+	PINSRQ       $0x00, DX, X8
+	VPBROADCASTQ X8, Y8
+	MOVQ         $0x7e7e7e7e7e7e7e7e, DX
+	PINSRQ       $0x00, DX, X9
+	VPBROADCASTQ X9, Y9
+
 cmp128:
+	CMPQ      CX, $0x80
+	JB        cmp64
 	VMOVDQU   (AX), Y0
 	VPCMPGTB  Y8, Y0, Y1
 	VPCMPGTB  Y9, Y0, Y0
@@ -157,9 +121,54 @@ cmp128:
 	VPAND     Y4, Y0, Y0
 	ADDQ      $0x80, AX
 	SUBQ      $0x80, CX
-	VPMOVMSKB Y0, DI
-	XORL      $0xffffffff, DI
+	VPMOVMSKB Y0, DX
+	XORL      $0xffffffff, DX
 	JNE       done
-	CMPQ      CX, $0x80
-	JB        cmp64
 	JMP       cmp128
+
+cmp64:
+	CMPQ      CX, $0x40
+	JB        cmp32
+	VMOVDQU   (AX), Y0
+	VPCMPGTB  Y8, Y0, Y1
+	VPCMPGTB  Y9, Y0, Y0
+	VPANDN    Y1, Y0, Y0
+	VMOVDQU   32(AX), Y2
+	VPCMPGTB  Y8, Y2, Y3
+	VPCMPGTB  Y9, Y2, Y2
+	VPANDN    Y3, Y2, Y2
+	VPAND     Y2, Y0, Y0
+	ADDQ      $0x40, AX
+	SUBQ      $0x40, CX
+	VPMOVMSKB Y0, DX
+	XORL      $0xffffffff, DX
+	JNE       done
+
+cmp32:
+	CMPQ      CX, $0x20
+	JB        cmp16
+	VMOVDQU   (AX), Y0
+	VPCMPGTB  Y8, Y0, Y1
+	VPCMPGTB  Y9, Y0, Y0
+	VPANDN    Y1, Y0, Y0
+	ADDQ      $0x20, AX
+	SUBQ      $0x20, CX
+	VPMOVMSKB Y0, DX
+	XORL      $0xffffffff, DX
+	JNE       done
+
+cmp16:
+	CMPQ      CX, $0x10
+	JB        init
+	VMOVDQU   (AX), X0
+	VPCMPGTB  X8, X0, X1
+	VPCMPGTB  X9, X0, X0
+	VPANDN    X1, X0, X0
+	ADDQ      $0x10, AX
+	SUBQ      $0x10, CX
+	VPMOVMSKB X0, DX
+	XORL      $0x0000ffff, DX
+	JNE       done
+	CMPQ      CX, $0x00
+	JE        done
+	JMP       init
