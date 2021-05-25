@@ -12,10 +12,13 @@ var all = map[Spec][]VecPhysical{
 	S512: []VecPhysical{Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7, Z8, Z9, Z10, Z11, Z12, Z13, Z14, Z15, Z16, Z17, Z18, Z19, Z20, Z21, Z22, Z23, Z24, Z25, Z26, Z27, Z28, Z29, Z30, Z31},
 }
 
+// VecList returns a slice of vector registers for the given Spec.
 func VecList(s Spec, max int) []VecPhysical {
 	return all[s][:max]
 }
 
+// VecBroadcast broadcasts an immediate or general purpose register into a
+// vector register. The broadcast size is based on the input operand size.
 func VecBroadcast(ir Op, xyz Register) Register {
 	vec := xyz.(Vec)
 	var reg Register
@@ -67,4 +70,167 @@ func VecBroadcast(ir Op, xyz Register) Register {
 	}
 
 	return xyz
+}
+
+// VectorLane is an interface for abstracting allocating and loading memory into
+// vector registers. This is used during the map phase of the Vectorizer.
+type VectorLane interface {
+	Read(Mem) Register
+	Offset(Mem) Mem
+	Alloc() Register
+}
+
+// Vectorizer is a map/reduce-based helper for constructing parallelized
+// instruction pipelines.
+type Vectorizer struct {
+	max     int                          // total registers allowed
+	mapper  func(VectorLane) Register    // function to map the main operation to an output register
+	reducer func(a, b Register) Register // function to reduce the mapped output registers into one
+}
+
+// NewVectorizer creates a new vectorizing utility utilizing a max number of
+// registers and a mapper function.
+func NewVectorizer(max int, mapper func(VectorLane) Register) *Vectorizer {
+	return &Vectorizer{max: max, mapper: mapper}
+}
+
+// Reduce sets the reducer function in the Vectorizer.
+func (v *Vectorizer) Reduce(h func(a, b Register) Register) *Vectorizer {
+	v.reducer = h
+	return v
+}
+
+// Compile runs the map and reduce phases for the given register size and
+// parallel lane count. This can be called multiple times using different
+// configurations to produce separate execution strides. The returned slice
+// is dependent on the presence of a reducer. If no reducer is used, the
+// slice will be all of the output registers from the map phase. If a reducer
+// is defined, the result is slice containing the final reduced register.
+func (v *Vectorizer) Compile(spec Spec, lanes int) []Register {
+	alloc := NewVectorAlloc(VecList(spec, v.max), lanes)
+	var out []Register
+
+	for alloc.NextLane() {
+		r := v.mapper(alloc)
+		out = append(out, r)
+	}
+
+	if v.reducer != nil {
+		for len(out) > 1 {
+			r := v.reducer(out[0], out[1])
+			out = append(out[2:], r)
+		}
+	}
+
+	return out
+}
+
+// ReduceOr performs a bitwise OR between two registers and returns the result.
+// This can be used as the reducer for a Vectorizer.
+func ReduceOr(a, b Register) Register {
+	VPOR(b, a, a)
+	return a
+}
+
+// ReduceAnd performs a bitwise AND between two registers and returns the result.
+// This can be used as the reducer for a Vectorizer.
+func ReduceAnd(a, b Register) Register {
+	VPAND(b, a, a)
+	return a
+}
+
+// VectorAlloc is a lower-level lane-driven register allocator. This pulls
+// registers from a fixed list of physical registers for a given number of
+// lanes. Registers are allocated in distinct blocks; one block for each lane.
+type VectorAlloc struct {
+	vec   []VecPhysical   // all available physical registers
+	rd    map[Mem]vecRead // loaded register index
+	off   map[Mem]int     // offset index
+	lanes int             // number of lanes being compiled
+	lane  int             // current lane being compiled
+	size  int             // register size
+}
+
+type vecRead struct {
+	reg []Register
+	idx int
+}
+
+// NewVectorAlloc creates a new VectorAlloc instance.
+func NewVectorAlloc(vec []VecPhysical, lanes int) *VectorAlloc {
+	return &VectorAlloc{
+		vec:   vec,
+		rd:    map[Mem]vecRead{},
+		off:   map[Mem]int{},
+		lanes: lanes,
+		lane:  -1,
+		size:  int(vec[0].Size()),
+	}
+}
+
+// NextLane is used to advance the allocator to the next lane available lane.
+// This returns false when no more lanes are available.
+func (a *VectorAlloc) NextLane() bool {
+	next := a.lane + 1
+	if next < a.lanes {
+		a.lane = next
+		return true
+	}
+	return false
+}
+
+// Read implements the VectorLane interface. This reads the next register-sized
+// memory region. Each read within a single lane will load adjacent memory
+// regions. Subsequent lanes will read adjacent memory after the last read of
+// the prior lane. This has special handling so that all reads are batched
+// together. Because of this, Read calls should appear first in the mapper.
+func (a *VectorAlloc) Read(mem Mem) Register {
+	if _, ok := a.off[mem]; ok {
+		panic("Offset and Read cannot current be combined for the same memory region")
+	}
+
+	rd := a.rd[mem]
+
+	if a.lane == 0 {
+		for i := 0; i < a.lanes; i++ {
+			r := a.Alloc()
+			VMOVDQU(mem.Offset(len(rd.reg)*a.size), r)
+			rd.reg = append(rd.reg, r)
+		}
+	}
+
+	r := rd.reg[rd.idx]
+	rd.idx++
+
+	a.rd[mem] = rd
+
+	return r
+}
+
+// Offset implements the VectorLane interface. This calculates the next
+// register-sized memory offset. Each offset within a single lane will refer
+// to adjacent memory regions. Subsequent lanes will obtain an offset of
+// adjacent memory after the last offset of the prior lane.
+func (a *VectorAlloc) Offset(mem Mem) Mem {
+	if _, ok := a.rd[mem]; ok {
+		panic("Read and Offset cannot current be combined for the same memory region")
+	}
+
+	n := a.off[mem]
+	a.off[mem] = n + 1
+
+	return mem.Offset(n * a.size)
+}
+
+// Alloc implements the VectorLane interface. This allocates a register for the
+// current lane.
+func (a *VectorAlloc) Alloc() Register {
+	if len(a.vec) == 0 {
+		panic("not enough vector registers available")
+	}
+
+	r := a.vec[0]
+	a.vec = a.vec[1:]
+
+	return r
 }

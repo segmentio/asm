@@ -165,37 +165,24 @@ func valid8(p Mem, n, m1, m2, m3 Register) {
 }
 
 func validAVX(p Mem, n, min, max Register, lanes int, s Spec) {
-	msk := GP32()
-	out := make([]VecPhysical, 0)
-	vec := VecList(s, 14)
 	sz := int(s.Size())
+	msk := GP32()
 
-	for i := 0; i < lanes; i++ {
-		v0 := vec[2*i]
-
-		VMOVDQU(p.Offset(sz*i), v0) // v0 = p[i*sz:i*sz+sz]
-	}
-
-	for i := 0; i < lanes; i++ {
-		v0 := vec[2*i]
-		v1 := vec[2*i+1]
-		out = append(out, v0)
+	vec := NewVectorizer(14, func(l VectorLane) Register {
+		v0 := l.Read(p)
+		v1 := l.Alloc()
 
 		VPCMPGTB(min, v0, v1) // v1 = bytes that are greater than the min-1 (i.e. valid at lower end)
 		VPCMPGTB(max, v0, v0) // v0 = bytes that are greater than the max (i.e. invalid at upper end)
 		VPANDN(v1, v0, v0)    // y2 & ~y3 mask should be full unless there's an invalid byte
-	}
 
-	for len(out) > 1 {
-		v0 := out[0]
-		v1 := out[1]
-		out = append(out[2:], v0)
+		return v0
+	}).Reduce(ReduceAnd) // merge all comparisons together
 
-		VPAND(v1, v0, v0)
-	}
+	out := vec.Compile(s, lanes)
 
-	ADDQ(Imm(uint64(sz*lanes)), p.Base) // p += sz*lanes
-	SUBQ(Imm(uint64(sz*lanes)), n)      // n -= sz*lanes
+	ADDQ(Imm(uint64(lanes*sz)), p.Base) // p += lanes*sz
+	SUBQ(Imm(uint64(lanes*sz)), n)      // n -= lanes*sz
 	VPMOVMSKB(out[0], msk)              // msk[0,1,2,...] = v0[0,8,16,...]
 	XORL(U32(^uint32(0)>>(32-sz)), msk) // ZF = (msk == 0xFFFFFFFF)
 }

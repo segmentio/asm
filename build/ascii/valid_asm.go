@@ -25,6 +25,13 @@ func main() {
 	maskY := YMM()
 	maskX := maskY.AsX() // use the lower half of maskY
 
+	vec := NewVectorizer(15, func(l VectorLane) Register {
+		r := l.Alloc()
+		VMOVDQU(l.Offset(p), r)
+		VPOR(l.Offset(p), r, r)
+		return r
+	}).Reduce(ReduceOr)
+
 	MOVQ(U64(0x8080808080808080), maskG) // maskG = 0x8080808080808080
 
 	JumpUnlessFeature("cmp8", cpu.AVX2)
@@ -37,14 +44,12 @@ func main() {
 	JNB(LabelRef("cmp256")) //   goto cmp256
 
 	Label("cmp64")
-	CMPQ(n, U8(64))            // if n < 64:
-	JB(LabelRef("cmp32"))      //   goto cmp32
-	VMOVDQU(p, Y0)             // Y0 = p[0:32]
-	VPOR(p.Offset(32), Y0, Y0) // Y0 = p[32:64] | Y0
-	VPTEST(Y0, maskY)          // if (Y0 & maskY) != 0:
-	JNZ(LabelRef("invalid"))   //   return false
-	ADDQ(U8(64), p.Base)       // p += 64
-	SUBQ(U8(64), n)            // n -= 64
+	CMPQ(n, U8(64))                        // if n < 64:
+	JB(LabelRef("cmp32"))                  //   goto cmp32
+	VPTEST(vec.Compile(S256, 1)[0], maskY) // if (OR & maskY) != 0:
+	JNZ(LabelRef("invalid"))               //   return false
+	ADDQ(U8(64), p.Base)                   // p += 64
+	SUBQ(U8(64), n)                        // n -= 64
 
 	Label("cmp32")
 	CMPQ(n, U8(32))          // if n < 32:
@@ -109,38 +114,22 @@ func main() {
 	RET()
 
 	Label("cmp256")
-	CMPQ(n, U32(256))           // if n < 256:
-	JB(LabelRef("cmp128"))      //   goto cmp128
-	VMOVDQU(p.Offset(0), Y0)    // Y0 = p[0:32]
-	VPOR(p.Offset(32), Y0, Y0)  // Y0 = p[32:64] | Y0
-	VMOVDQU(p.Offset(64), Y1)   // Y1 = p[64:96]
-	VPOR(p.Offset(96), Y1, Y1)  // Y1 = p[96:126] | Y1
-	VMOVDQU(p.Offset(128), Y2)  // Y2 = p[128:160]
-	VPOR(p.Offset(160), Y2, Y2) // Y2 = p[160:192] | Y2
-	VMOVDQU(p.Offset(192), Y3)  // Y3 = p[192:224]
-	VPOR(p.Offset(224), Y3, Y3) // Y3 = p[224:256] | Y3
-	VPOR(Y1, Y0, Y0)            // Y0 = Y1 | Y0
-	VPOR(Y3, Y2, Y2)            // Y2 = Y3 | Y2
-	VPOR(Y2, Y0, Y0)            // Y0 = Y2 | Y0
-	VPTEST(Y0, maskY)           // if (Y0 & maskY) != 0:
-	JNZ(LabelRef("invalid"))    //   return false
-	ADDQ(U32(256), p.Base)      // p += 256
-	SUBQ(U32(256), n)           // n -= 256
-	JMP(LabelRef("cmp256"))     // loop cmp256
+	CMPQ(n, U32(256))                      // if n < 256:
+	JB(LabelRef("cmp128"))                 //   goto cmp128
+	VPTEST(vec.Compile(S256, 4)[0], maskY) // if (OR & maskY) != 0:
+	JNZ(LabelRef("invalid"))               //   return false
+	ADDQ(U32(256), p.Base)                 // p += 256
+	SUBQ(U32(256), n)                      // n -= 256
+	JMP(LabelRef("cmp256"))                // loop cmp256
 
 	Label("cmp128")
-	CMPQ(n, U8(128))           // if n < 128:
-	JB(LabelRef("cmp64"))      //   goto cmp64
-	VMOVDQU(p.Offset(0), Y0)   // Y0 = p[0:32]
-	VPOR(p.Offset(32), Y0, Y0) // Y0 = p[32:64] | Y0
-	VMOVDQU(p.Offset(64), Y1)  // Y1 = p[64:96]
-	VPOR(p.Offset(96), Y1, Y1) // Y1 = p[96:126] | Y1
-	VPOR(Y1, Y0, Y0)           // Y0 = Y1 | Y0
-	VPTEST(Y0, maskY)          // if (Y0 & maskY) != 0:
-	JNZ(LabelRef("invalid"))   //   return false
-	ADDQ(U8(128), p.Base)      // p += 128
-	SUBQ(U8(128), n)           // n -= 128
-	JMP(LabelRef("cmp64"))     // goto cmp64
+	CMPQ(n, U8(128))                       // if n < 128:
+	JB(LabelRef("cmp64"))                  //   goto cmp64
+	VPTEST(vec.Compile(S256, 2)[0], maskY) // if (OR & maskY) != 0:
+	JNZ(LabelRef("invalid"))               //   return false
+	ADDQ(U8(128), p.Base)                  // p += 128
+	SUBQ(U8(128), n)                       // n -= 128
+	JMP(LabelRef("cmp64"))                 // goto cmp64
 
 	Generate()
 }
