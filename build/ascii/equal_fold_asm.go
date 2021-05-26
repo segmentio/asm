@@ -31,7 +31,6 @@ func main() {
 	b := Mem{Base: Load(Param("b").Base(), GP64()), Index: i, Scale: 1}
 	bn, _ := Param("b").Len().Resolve()
 	ret, _ := ReturnIndex(0).Resolve()
-	tmp := GP32()
 
 	CMPQ(n, bn.Addr)      // if len(a) != len(b):
 	JNE(LabelRef("done")) //   return false
@@ -118,6 +117,7 @@ func main() {
 
 	cmpAVX := func(spec Spec, lanes int, incr bool) {
 		sz := int(spec.Size())
+		tmp := GP32()
 		out := vec.Compile(spec, lanes)[0] // [compare sz*lanes bytes]
 		if incr {
 			ADDQ(U8(sz*lanes), a.Index) // i += sz*lanes

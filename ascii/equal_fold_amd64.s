@@ -296,6 +296,6 @@ cmp_tail:
 	VPAND     X15, X0, X0
 	VPSLLW    $0x05, X0, X0
 	VPCMPEQB  X1, X0, X0
-	VPMOVMSKB X0, SI
-	XORL      $0x0000ffff, SI
+	VPMOVMSKB X0, AX
+	XORL      $0x0000ffff, AX
 	JMP       done
