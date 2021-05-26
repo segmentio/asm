@@ -22,50 +22,12 @@ func main() {
 	v := GP32()
 	vl := GP32()
 	maskG := GP64()
-	maskY := YMM()
-	maskX := maskY.AsX() // use the lower half of maskY
-
-	vec := NewVectorizer(15, func(l VectorLane) Register {
-		r := l.Alloc()
-		VMOVDQU(l.Offset(p), r)
-		VPOR(l.Offset(p), r, r)
-		return r
-	}).Reduce(ReduceOr)
 
 	MOVQ(U64(0x8080808080808080), maskG) // maskG = 0x8080808080808080
 
-	JumpUnlessFeature("cmp8", cpu.AVX2)
-
-	PINSRQ(Imm(0), maskG, maskX) // maskX[0:8] = maskG
-	VPBROADCASTQ(maskX, maskY)   // maskY[0:32] = [maskX[0:8],maskX[0:8],maskX[0:8],maskX[0:8]]
-
-	// Moving the 128+ scanning helps the branch predictor for small inputs
-	CMPQ(n, U8(128))        // if n >= 128:
-	JNB(LabelRef("cmp256")) //   goto cmp256
-
-	Label("cmp64")
-	CMPQ(n, U8(64))                        // if n < 64:
-	JB(LabelRef("cmp32"))                  //   goto cmp32
-	VPTEST(vec.Compile(S256, 1)[0], maskY) // if (OR & maskY) != 0:
-	JNZ(LabelRef("invalid"))               //   return false
-	ADDQ(U8(64), p.Base)                   // p += 64
-	SUBQ(U8(64), n)                        // n -= 64
-
-	Label("cmp32")
-	CMPQ(n, U8(32))          // if n < 32:
-	JB(LabelRef("cmp16"))    //   goto cmp16
-	VPTEST(p, maskY)         // if (p[0:32] & maskY) != 0:
-	JNZ(LabelRef("invalid")) //   return false
-	ADDQ(U8(32), p.Base)     // p += 32
-	SUBQ(U8(32), n)          // n -= 32
-
-	Label("cmp16")
-	CMPQ(n, U8(16))          // if n < 16:
-	JB(LabelRef("cmp8"))     //   goto cmp8
-	VPTEST(p, maskX)         // if (p[0:16] & maskX) != 0:
-	JNZ(LabelRef("invalid")) //   return false
-	ADDQ(U8(16), p.Base)     // p += 16
-	SUBQ(U8(16), n)          // n -= 16
+	CMPQ(n, U8(16))      // if n < 16:
+	JB(LabelRef("cmp8")) //   goto cmp8
+	JumpIfFeature("init_avx", cpu.AVX2)
 
 	Label("cmp8")
 	CMPQ(n, U8(8))           // if n < 8:
@@ -113,6 +75,18 @@ func main() {
 	MOVB(U8(0), ret.Addr)
 	RET()
 
+	Label("init_avx")
+
+	maskY := VecBroadcast(maskG, YMM())
+	maskX := maskY.(Vec).AsX()
+
+	vec := NewVectorizer(15, func(l VectorLane) Register {
+		r := l.Alloc()
+		VMOVDQU(l.Offset(p), r)
+		VPOR(l.Offset(p), r, r)
+		return r
+	}).Reduce(ReduceOr)
+
 	Label("cmp256")
 	CMPQ(n, U32(256))                      // if n < 256:
 	JB(LabelRef("cmp128"))                 //   goto cmp128
@@ -130,6 +104,39 @@ func main() {
 	ADDQ(U8(128), p.Base)                  // p += 128
 	SUBQ(U8(128), n)                       // n -= 128
 	JMP(LabelRef("cmp64"))                 // goto cmp64
+
+	Label("cmp64")
+	CMPQ(n, U8(64))                        // if n < 64:
+	JB(LabelRef("cmp32"))                  //   goto cmp32
+	VPTEST(vec.Compile(S256, 1)[0], maskY) // if (OR & maskY) != 0:
+	JNZ(LabelRef("invalid"))               //   return false
+	ADDQ(U8(64), p.Base)                   // p += 64
+	SUBQ(U8(64), n)                        // n -= 64
+
+	Label("cmp32")
+	CMPQ(n, U8(32))          // if n < 32:
+	JB(LabelRef("cmp16"))    //   goto cmp16
+	VPTEST(p, maskY)         // if (p[0:32] & maskY) != 0:
+	JNZ(LabelRef("invalid")) //   return false
+	ADDQ(U8(32), p.Base)     // p += 32
+	SUBQ(U8(32), n)          // n -= 32
+
+	Label("cmp16")
+	CMPQ(n, U8(16))           // if n <= 16:
+	JLE(LabelRef("cmp_tail")) //   goto cmp_tail
+	VPTEST(p, maskX)          // if (p[0:16] & maskX) != 0:
+	JNZ(LabelRef("invalid"))  //   return false
+	ADDQ(U8(16), p.Base)      // p += 16
+	SUBQ(U8(16), n)           // n -= 16
+
+	Label("cmp_tail")
+	// At this point, we have <= 16 bytes to compare, but we know the total input
+	// is >= 16 bytes. Move the pointer to the *last* 16 bytes of the input so we
+	// can skip the fallback.
+	SUBQ(Imm(16), n)      // n -= 16
+	ADDQ(n, p.Base)       // p += n
+	VPTEST(p, maskX)      // ZF = (p[0:16] & maskX) == 0
+	JMP(LabelRef("done")) // return ZF
 
 	Generate()
 }

@@ -8,11 +8,11 @@ TEXT ·ValidPrintString(SB), NOSPLIT, $0-17
 	MOVQ s_base+0(FP), AX
 	MOVQ s_len+8(FP), CX
 	CMPQ CX, $0x10
-	JB   init
+	JB   init_x86
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCS  avx
+	JCS  init_avx
 
-init:
+init_x86:
 	CMPQ CX, $0x08
 	JB   cmp4
 	MOVQ $0xdfdfdfdfdfdfdfe0, DX
@@ -55,10 +55,10 @@ cmp4:
 cmp3:
 	CMPQ    CX, $0x03
 	JB      cmp2
-	MOVWLZX (AX), CX
+	MOVWLZX (AX), DX
 	MOVBLZX 2(AX), AX
 	SHLL    $0x10, AX
-	ORL     CX, AX
+	ORL     DX, AX
 	ORL     $0x20000000, AX
 	JMP     final
 
@@ -89,7 +89,7 @@ done:
 	SETEQ ret+16(FP)
 	RET
 
-avx:
+init_avx:
 	MOVB         $0x1f, DL
 	PINSRB       $0x00, DX, X8
 	VPBROADCASTB X8, Y8
@@ -159,7 +159,7 @@ cmp32:
 
 cmp16:
 	CMPQ      CX, $0x10
-	JB        init
+	JLE       cmp_tail
 	VMOVDQU   (AX), X0
 	VPCMPGTB  X8, X0, X1
 	VPCMPGTB  X9, X0, X0
@@ -169,6 +169,14 @@ cmp16:
 	VPMOVMSKB X0, DX
 	XORL      $0x0000ffff, DX
 	JNE       done
-	CMPQ      CX, $0x00
-	JE        done
-	JMP       init
+
+cmp_tail:
+	SUBQ      $0x10, CX
+	ADDQ      CX, AX
+	VMOVDQU   (AX), X0
+	VPCMPGTB  X8, X0, X1
+	VPCMPGTB  X9, X0, X0
+	VPANDN    X1, X0, X0
+	VPMOVMSKB X0, DX
+	XORL      $0x0000ffff, DX
+	JMP       done

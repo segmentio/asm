@@ -5,41 +5,13 @@
 // func ValidString(s string) bool
 // Requires: AVX, AVX2, SSE4.1
 TEXT ·ValidString(SB), NOSPLIT, $0-17
-	MOVQ         s_base+0(FP), AX
-	MOVQ         s_len+8(FP), CX
-	MOVQ         $0x8080808080808080, DX
-	BTL          $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCC          cmp8
-	PINSRQ       $0x00, DX, X4
-	VPBROADCASTQ X4, Y4
-	CMPQ         CX, $0x80
-	JNB          cmp256
-
-cmp64:
-	CMPQ    CX, $0x40
-	JB      cmp32
-	VMOVDQU (AX), Y0
-	VPOR    32(AX), Y0, Y0
-	VPTEST  Y0, Y4
-	JNZ     invalid
-	ADDQ    $0x40, AX
-	SUBQ    $0x40, CX
-
-cmp32:
-	CMPQ   CX, $0x20
-	JB     cmp16
-	VPTEST (AX), Y4
-	JNZ    invalid
-	ADDQ   $0x20, AX
-	SUBQ   $0x20, CX
-
-cmp16:
-	CMPQ   CX, $0x10
-	JB     cmp8
-	VPTEST (AX), X4
-	JNZ    invalid
-	ADDQ   $0x10, AX
-	SUBQ   $0x10, CX
+	MOVQ s_base+0(FP), AX
+	MOVQ s_len+8(FP), CX
+	MOVQ $0x8080808080808080, DX
+	CMPQ CX, $0x10
+	JB   cmp8
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS  init_avx
 
 cmp8:
 	CMPQ  CX, $0x08
@@ -87,6 +59,10 @@ invalid:
 	MOVB $0x00, ret+16(FP)
 	RET
 
+init_avx:
+	PINSRQ       $0x00, DX, X4
+	VPBROADCASTQ X4, Y4
+
 cmp256:
 	CMPQ    CX, $0x00000100
 	JB      cmp128
@@ -119,4 +95,35 @@ cmp128:
 	JNZ     invalid
 	ADDQ    $0x80, AX
 	SUBQ    $0x80, CX
-	JMP     cmp64
+
+cmp64:
+	CMPQ    CX, $0x40
+	JB      cmp32
+	VMOVDQU (AX), Y0
+	VPOR    32(AX), Y0, Y0
+	VPTEST  Y0, Y4
+	JNZ     invalid
+	ADDQ    $0x40, AX
+	SUBQ    $0x40, CX
+
+cmp32:
+	CMPQ   CX, $0x20
+	JB     cmp16
+	VPTEST (AX), Y4
+	JNZ    invalid
+	ADDQ   $0x20, AX
+	SUBQ   $0x20, CX
+
+cmp16:
+	CMPQ   CX, $0x10
+	JLE    cmp_tail
+	VPTEST (AX), X4
+	JNZ    invalid
+	ADDQ   $0x10, AX
+	SUBQ   $0x10, CX
+
+cmp_tail:
+	SUBQ   $0x10, CX
+	ADDQ   CX, AX
+	VPTEST (AX), X4
+	JMP    done

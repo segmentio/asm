@@ -27,11 +27,11 @@ func main() {
 	val := GP32()
 	tmp := GP32()
 
-	CMPQ(n, U8(16))                // if n < 16:
-	JB(LabelRef("init"))           //   goto init
-	JumpIfFeature("avx", cpu.AVX2) // goto avx if supported
+	CMPQ(n, U8(16))                     // if n < 16:
+	JB(LabelRef("init_x86"))            //   goto init_x86
+	JumpIfFeature("init_avx", cpu.AVX2) // goto init_avx if supported
 
-	Label("init")
+	Label("init_x86")
 	CMPQ(n, U8(8))       // if n < 8:
 	JB(LabelRef("cmp4")) //   goto cmp4
 	MOVQ(U64(0xDFDFDFDFDFDFDFE0), m1)
@@ -82,41 +82,71 @@ func main() {
 	SETEQ(ret.Addr) // return ZF
 	RET()           // ...
 
-	Label("avx")
+	Label("init_avx")
 
-	minY := VecBroadcast(U8(0x1F), YMM())
-	maxY := VecBroadcast(U8(0x7E), YMM())
-	minX := minY.(Vec).AsX()
-	maxX := maxY.(Vec).AsX()
+	min := VecBroadcast(U8(0x1F), YMM())
+	max := VecBroadcast(U8(0x7E), YMM())
+
+	vec := NewVectorizer(14, func(l VectorLane) Register {
+		v0 := l.Read(p)
+		v1 := l.Alloc()
+
+		VPCMPGTB(min, v0, v1) // v1 = bytes that are greater than the min-1 (i.e. valid at lower end)
+		VPCMPGTB(max, v0, v0) // v0 = bytes that are greater than the max (i.e. invalid at upper end)
+		VPANDN(v1, v0, v0)    // y2 & ~y3 mask should be full unless there's an invalid byte
+
+		return v0
+	}).Reduce(ReduceAnd) // merge all comparisons together
+
+	cmpAVX := func(spec Spec, lanes int, incr bool) {
+		sz := int(spec.Size())
+		out := vec.Compile(spec, lanes)[0] // [compare sz*lanes bytes]
+		if incr {
+			ADDQ(U8(sz*lanes), p.Base) // p += sz*lanes
+			SUBQ(U8(sz*lanes), n)      // n -= sz*lanes
+		}
+		VPMOVMSKB(out, tmp)                 // tmp[0,1,2,...] = y0[0,8,16,...]
+		XORL(U32(^uint32(0)>>(32-sz)), tmp) // ZF = (tmp == 0xFFFFFFFF)
+	}
 
 	Label("cmp128")
-	CMPQ(n, U8(128))                    // if n < 128:
-	JB(LabelRef("cmp64"))               //   goto cmp64
-	validAVX(p, n, minY, maxY, 4, S256) // ZF = [compare 128 bytes]
-	JNE(LabelRef("done"))               // return if ZF == 0
-	JMP(LabelRef("cmp128"))             // loop cmp128
+	CMPQ(n, U8(128))        // if n < 128:
+	JB(LabelRef("cmp64"))   //   goto cmp64
+	cmpAVX(S256, 4, true)   // ZF = [compare 128 bytes]
+	JNE(LabelRef("done"))   // return if ZF == 0
+	JMP(LabelRef("cmp128")) // loop cmp128
 
 	Label("cmp64")
-	CMPQ(n, U8(64))                     // if n < 64:
-	JB(LabelRef("cmp32"))               //   goto cmp32
-	validAVX(p, n, minY, maxY, 2, S256) // ZF = [compare 64 bytes]
-	JNE(LabelRef("done"))               // return ZF if ZF == 0
+	CMPQ(n, U8(64))       // if n < 64:
+	JB(LabelRef("cmp32")) //   goto cmp32
+	cmpAVX(S256, 2, true) // ZF = [compare 64 bytes]
+	JNE(LabelRef("done")) // return if ZF == 0
 
 	Label("cmp32")
-	CMPQ(n, U8(32))                     // if n < 32:
-	JB(LabelRef("cmp16"))               //   goto cmp16
-	validAVX(p, n, minY, maxY, 1, S256) // ZF = [compare 32 bytes]
-	JNE(LabelRef("done"))               // return ZF if ZF == 0
+	CMPQ(n, U8(32))       // if n < 32:
+	JB(LabelRef("cmp16")) //   goto cmp16
+	cmpAVX(S256, 1, true) // ZF = [compare 32 bytes]
+	JNE(LabelRef("done")) // return if ZF == 0
 
 	Label("cmp16")
-	CMPQ(n, U8(16))                     // if n < 16:
-	JB(LabelRef("init"))                //   goto init
-	validAVX(p, n, minX, maxX, 1, S128) // ZF = [compare 16 bytes]
-	JNE(LabelRef("done"))               // return ZF if ZF == 0
 
-	CMPQ(n, U8(0))        // if n == 0:
-	JE(LabelRef("done"))  //   goto done
-	JMP(LabelRef("init")) // gpto init
+	// Convert YMM masks to XMM
+	min = min.(Vec).AsX()
+	max = max.(Vec).AsX()
+
+	CMPQ(n, U8(16))           // if n <= 16:
+	JLE(LabelRef("cmp_tail")) //   goto cmp_tail
+	cmpAVX(S128, 1, true)     // ZF = [compare 16 bytes]
+	JNE(LabelRef("done"))     // return if ZF == 0
+
+	Label("cmp_tail")
+	// At this point, we have <= 16 bytes to compare, but we know the total input
+	// is >= 16 bytes. Move the pointer to the *last* 16 bytes of the input so we
+	// can skip the fallback.
+	SUBQ(Imm(16), n)       // n -= 16
+	ADDQ(n, p.Base)        // p += n
+	cmpAVX(S128, 1, false) // ZF = [compare 16 bytes]
+	JMP(LabelRef("done"))  // return ZF
 
 	Generate()
 }
@@ -162,27 +192,4 @@ func valid8(p Mem, n, m1, m2, m3 Register) {
 	ADDQ(U8(8), p.Base)                             // p += 8
 	SUBQ(U8(8), n)                                  // n -= 8
 	TESTQ(m3, val)                                  // ZF = (m3 & val) == 0
-}
-
-func validAVX(p Mem, n, min, max Register, lanes int, s Spec) {
-	sz := int(s.Size())
-	msk := GP32()
-
-	vec := NewVectorizer(14, func(l VectorLane) Register {
-		v0 := l.Read(p)
-		v1 := l.Alloc()
-
-		VPCMPGTB(min, v0, v1) // v1 = bytes that are greater than the min-1 (i.e. valid at lower end)
-		VPCMPGTB(max, v0, v0) // v0 = bytes that are greater than the max (i.e. invalid at upper end)
-		VPANDN(v1, v0, v0)    // y2 & ~y3 mask should be full unless there's an invalid byte
-
-		return v0
-	}).Reduce(ReduceAnd) // merge all comparisons together
-
-	out := vec.Compile(s, lanes)
-
-	ADDQ(Imm(uint64(lanes*sz)), p.Base) // p += lanes*sz
-	SUBQ(Imm(uint64(lanes*sz)), n)      // n -= lanes*sz
-	VPMOVMSKB(out[0], msk)              // msk[0,1,2,...] = v0[0,8,16,...]
-	XORL(U32(^uint32(0)>>(32-sz)), msk) // ZF = (msk == 0xFFFFFFFF)
 }
