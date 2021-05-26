@@ -65,7 +65,7 @@ func testValidPrint(s string) bool {
 }
 
 func TestValid(t *testing.T) {
-	input := make([]byte, 1024)
+	var input [1024]byte
 
 	for i := 0; i < len(input); i++ {
 		in := input[:i+1]
@@ -87,7 +87,7 @@ func TestValid(t *testing.T) {
 }
 
 func TestValidPrint(t *testing.T) {
-	input := make([]byte, 1024)
+	var input [1024]byte
 
 	for i := 0; i < len(input); i++ {
 		in := input[:i+1]
@@ -233,31 +233,32 @@ func TestEqualFoldString(t *testing.T) {
 }
 
 func TestEqualFold(t *testing.T) {
-	lower := make([]byte, 260)
-	upper := make([]byte, len(lower))
-	mixed := make([]byte, len(lower))
+	var upper, lower, mixed [1024]byte
 
-	for i := 0; i < len(lower); i++ {
-		l := lower[:i+1]
+	for i := 0; i < len(upper); i++ {
 		u := upper[:i+1]
+		l := lower[:i+1]
 		m := mixed[:i+1]
 
+		u[i] = 'Z'
 		l[i] = 'a'
-		u[i] = 'z'
 		if EqualFold(l, u) {
 			t.Errorf("%q matches %q", l, u)
 		}
 
-		l[i] = byte(i%26) + 'A'
-		u[i] = byte(i%26) + 'a'
+		u[i] = byte(i % 128)
+		l[i] = byte(i % 128)
+		if 'A' <= l[i] && l[i] <= 'Z' {
+			l[i] += 32
+		}
+		if 'a' <= u[i] && u[i] <= 'z' {
+			u[i] -= 32
+		}
+
 		if rand.Int()%2 == 0 {
 			m[i] = l[i]
 		} else {
 			m[i] = u[i]
-		}
-
-		if EqualFold(l[:len(l)-1], u) {
-			t.Errorf("%q matches %q", l[:len(l)-1], u)
 		}
 
 		if !EqualFold(l, u) {
