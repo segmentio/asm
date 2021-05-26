@@ -2,8 +2,6 @@
 
 package ascii
 
-import "unsafe"
-
 // EqualFoldString is a version of strings.EqualFold designed to work on ASCII
 // input instead of UTF-8.
 //
@@ -14,46 +12,48 @@ func EqualFoldString(a, b string) bool {
 		return false
 	}
 
-	n := uintptr(len(a))
-	p := *(*unsafe.Pointer)(unsafe.Pointer(&a))
-	q := *(*unsafe.Pointer)(unsafe.Pointer(&b))
+	var cmp byte
 
-	for n >= 8 {
-		const mask = 0xDFDFDFDFDFDFDFDF
+	for len(a) >= 8 {
+		cmp |= lowerCase[a[0]] ^ lowerCase[b[0]]
+		cmp |= lowerCase[a[1]] ^ lowerCase[b[1]]
+		cmp |= lowerCase[a[2]] ^ lowerCase[b[2]]
+		cmp |= lowerCase[a[3]] ^ lowerCase[b[3]]
+		cmp |= lowerCase[a[4]] ^ lowerCase[b[4]]
+		cmp |= lowerCase[a[5]] ^ lowerCase[b[5]]
+		cmp |= lowerCase[a[6]] ^ lowerCase[b[6]]
+		cmp |= lowerCase[a[7]] ^ lowerCase[b[7]]
 
-		if (*(*uint64)(p) & mask) != (*(*uint64)(q) & mask) {
+		if cmp != 0 {
 			return false
 		}
 
-		p = unsafe.Pointer(uintptr(p) + 8)
-		q = unsafe.Pointer(uintptr(q) + 8)
-		n -= 8
+		a = a[8:]
+		b = b[8:]
 	}
 
-	if n > 4 {
-		const mask = 0xDFDFDFDF
-
-		if (*(*uint32)(p) & mask) != (*(*uint32)(q) & mask) {
-			return false
-		}
-
-		p = unsafe.Pointer(uintptr(p) + 4)
-		q = unsafe.Pointer(uintptr(q) + 4)
-		n -= 4
-	}
-
-	switch n {
+	switch len(a) {
+	case 7:
+		cmp |= lowerCase[a[6]] ^ lowerCase[b[6]]
+		fallthrough
+	case 6:
+		cmp |= lowerCase[a[5]] ^ lowerCase[b[5]]
+		fallthrough
+	case 5:
+		cmp |= lowerCase[a[4]] ^ lowerCase[b[4]]
+		fallthrough
 	case 4:
-		return (*(*uint32)(p) & 0xDFDFDFDF) == (*(*uint32)(q) & 0xDFDFDFDF)
+		cmp |= lowerCase[a[3]] ^ lowerCase[b[3]]
+		fallthrough
 	case 3:
-		x := uint32(*(*uint16)(p)) | uint32(*(*uint8)(unsafe.Pointer(uintptr(p) + 2)))<<16
-		y := uint32(*(*uint16)(q)) | uint32(*(*uint8)(unsafe.Pointer(uintptr(q) + 2)))<<16
-		return (x & 0xDFDFDF) == (y & 0xDFDFDF)
+		cmp |= lowerCase[a[2]] ^ lowerCase[b[2]]
+		fallthrough
 	case 2:
-		return (*(*uint16)(p) & 0xDFDF) == (*(*uint16)(q) & 0xDFDF)
+		cmp |= lowerCase[a[1]] ^ lowerCase[b[1]]
+		fallthrough
 	case 1:
-		return (*(*uint8)(p) & 0xDF) == (*(*uint8)(q) & 0xDF)
-	default:
-		return true
+		cmp |= lowerCase[a[0]] ^ lowerCase[b[0]]
 	}
+
+	return cmp == 0
 }

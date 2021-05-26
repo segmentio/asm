@@ -14,15 +14,6 @@ import (
 )
 
 func main() {
-	var caseMapData [256]byte
-	for i := range caseMapData {
-		b := byte(i)
-		if 'A' <= b && b <= 'Z' {
-			b += 'a' - 'A'
-		}
-		caseMapData[i] = b
-	}
-
 	TEXT("EqualFoldString", NOSPLIT, "func(a, b string) bool")
 	Doc(
 		"EqualFoldString is a version of strings.EqualFold designed to work on ASCII",
@@ -57,19 +48,19 @@ func main() {
 	bv := GP32()
 
 	// Map to convert ASCII upper characters to lower case.
-	caseMap := Mem{Base: GP64(), Scale: 1}
-	LEAQ(ConstData("caseMap", String(caseMapData[:])), caseMap.Base)
+	lowerCase := Mem{Base: GP64(), Scale: 1}
+	LEAQ(NewDataAddr(Symbol{Name: "github·com∕segmentio∕asm∕ascii·lowerCase"}, 0), lowerCase.Base)
 	XORL(cmp, cmp)
 
 	Label("cmp8")
 	CMPQ(n, U8(8))       // if n < 0:
 	JB(LabelRef("cmp7")) //   goto cmp7
 	for i := 0; i < 8; i++ {
-		MOVBLZX(a.Offset(i), av)           // av = a[i]
-		MOVBLZX(b.Offset(i), bv)           // bv = b[i]
-		MOVB(caseMap.Idx(av, 1), av.As8()) // av = caseMap[av]
-		XORB(caseMap.Idx(bv, 1), av.As8()) // av = caseMap[bv] ^ av
-		ORB(av.As8(), cmp.As8())           // cmp |= av
+		MOVBLZX(a.Offset(i), av)             // av = a[i]
+		MOVBLZX(b.Offset(i), bv)             // bv = b[i]
+		MOVB(lowerCase.Idx(av, 1), av.As8()) // av = lowerCase[av]
+		XORB(lowerCase.Idx(bv, 1), av.As8()) // av = lowerCase[bv] ^ av
+		ORB(av.As8(), cmp.As8())             // cmp |= av
 	}
 	JNE(LabelRef("done")) // return false if ZF == 0
 	ADDQ(Imm(8), a.Index) // i += 8
@@ -83,13 +74,13 @@ func main() {
 			next = fmt.Sprintf("cmp%d", i)
 		}
 
-		CMPQ(n, U8(i+1))                   // if n < i:
-		JB(LabelRef(next))                 //   goto cmp${i-1}
-		MOVBLZX(a.Offset(i), av)           // av = a[i]
-		MOVBLZX(b.Offset(i), bv)           // bv = b[i]
-		MOVB(caseMap.Idx(av, 1), av.As8()) // av = caseMap[av]
-		XORB(caseMap.Idx(bv, 1), av.As8()) // av = caseMap[bv] ^ av
-		ORB(av.As8(), cmp.As8())           // cmp |= av
+		CMPQ(n, U8(i+1))                     // if n < i:
+		JB(LabelRef(next))                   //   goto cmp${i-1}
+		MOVBLZX(a.Offset(i), av)             // av = a[i]
+		MOVBLZX(b.Offset(i), bv)             // bv = b[i]
+		MOVB(lowerCase.Idx(av, 1), av.As8()) // av = lowerCase[av]
+		XORB(lowerCase.Idx(bv, 1), av.As8()) // av = lowerCase[bv] ^ av
+		ORB(av.As8(), cmp.As8())             // cmp |= av
 	}
 
 	Label("done")
