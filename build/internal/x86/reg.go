@@ -12,6 +12,42 @@ var all = map[Spec][]VecPhysical{
 	S512: []VecPhysical{Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7, Z8, Z9, Z10, Z11, Z12, Z13, Z14, Z15, Z16, Z17, Z18, Z19, Z20, Z21, Z22, Z23, Z24, Z25, Z26, Z27, Z28, Z29, Z30, Z31},
 }
 
+func gp(c func() GPVirtual, g ...Register) Register {
+	if len(g) == 0 {
+		return c()
+	}
+	return g[0]
+}
+
+// load either emits a size-specific MOV operation based on the input immediate
+// value, or returns the existing register. The optional destination register
+// must be a general purpose register if provided. If not provided, a virtual
+// register will be allocated if needed.
+func load(ir Op, dst ...Register) (Register, uint) {
+	switch v := ir.(type) {
+	default:
+		panic("unsupported input operand")
+	case U8, I8:
+		g := gp(GP32, dst...)
+		MOVB(v, g.(GP).As8())
+		return g, 1
+	case U16, I16:
+		g := gp(GP32, dst...)
+		MOVW(v, g.(GP).As16())
+		return g, 2
+	case U32, I32:
+		g := gp(GP32, dst...)
+		MOVL(v, g)
+		return g, 4
+	case U64, I64:
+		g := gp(GP64, dst...)
+		MOVQ(v, g)
+		return g, 8
+	case Register:
+		return v, v.Size()
+	}
+}
+
 // VecList returns a slice of vector registers for the given Spec.
 func VecList(s Spec, max int) []VecPhysical {
 	return all[s][:max]
@@ -19,38 +55,19 @@ func VecList(s Spec, max int) []VecPhysical {
 
 // VecBroadcast broadcasts an immediate or general purpose register into a
 // vector register. The broadcast size is based on the input operand size.
+// If the input is a register, it may be necessary to convert it to the
+// desired size. For example:
+//    reg := GP32()
+//    XORL(reg, reg)
+//    MOVB(U8(0x7F), reg.As8())
+//    mask := VecBroadcast(reg, XMM())       // will broadcast 0x0000007F0000007F0000007F0000007F
+//    mask := VecBroadcast(reg.As8(), XMM()) // will broadcast 0x7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F
+//
+// If the `reg` register isn't needed, it would preferrable to use:
+//    mask := VecBroadcast(U8(0x7F), XMM())
 func VecBroadcast(ir Op, xyz Register) Register {
 	vec := xyz.(Vec)
-	var reg Register
-	var size uint
-
-	switch v := ir.(type) {
-	default:
-		panic("unsupported input operand")
-	case U8, I8:
-		g := GP32()
-		MOVB(v, g.As8())
-		reg = g
-		size = 1
-	case U16, I16:
-		g := GP32()
-		MOVW(v, g.As16())
-		reg = g
-		size = 2
-	case U32, I32:
-		g := GP32()
-		MOVL(v, g)
-		reg = g
-		size = 4
-	case U64, I64:
-		g := GP64()
-		MOVQ(v, g)
-		reg = g
-		size = 8
-	case Register:
-		reg = v
-		size = v.Size()
-	}
+	reg, size := load(ir)
 
 	switch size {
 	default:
