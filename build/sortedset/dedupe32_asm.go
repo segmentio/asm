@@ -62,6 +62,7 @@ func main() {
 	SUBQ(base, dst)
 	Store(dst, Return("pos"))
 
+	VZEROUPPER()
 	RET()
 	Generate()
 }
