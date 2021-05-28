@@ -2,6 +2,8 @@
 
 package ascii
 
+import "unsafe"
+
 // ValidString returns true if s contains only printable ASCII characters.
 func ValidPrintString(s string) bool {
 	p := *(*unsafe.Pointer)(unsafe.Pointer(&s))
