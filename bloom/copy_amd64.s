@@ -3,7 +3,7 @@
 #include "textflag.h"
 
 // func Copy(dst []byte, src []byte) int
-// Requires: CMOV
+// Requires: AVX, AVX2, CMOV
 TEXT ·Copy(SB), NOSPLIT, $0-56
 	MOVQ    dst_base+0(FP), AX
 	MOVQ    src_base+24(FP), CX
@@ -12,6 +12,8 @@ TEXT ·Copy(SB), NOSPLIT, $0-56
 	CMPQ    BX, DX
 	CMOVQGT BX, DX
 	MOVQ    DX, BX
+	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS     avx2
 
 cmp8:
 	CMPQ BX, $0x08
@@ -50,3 +52,54 @@ cmp1:
 done:
 	MOVQ DX, ret+48(FP)
 	RET
+
+avx2:
+cmp128:
+	CMPQ    BX, $0x80
+	JB      cmp64
+	VMOVDQU (CX), Y0
+	VMOVDQU 32(CX), Y1
+	VMOVDQU 64(CX), Y2
+	VMOVDQU 96(CX), Y3
+	VPOR    (AX), Y0, Y0
+	VPOR    32(AX), Y1, Y1
+	VPOR    64(AX), Y2, Y2
+	VPOR    96(AX), Y3, Y3
+	VMOVDQU Y0, (AX)
+	VMOVDQU Y1, 32(AX)
+	VMOVDQU Y2, 64(AX)
+	VMOVDQU Y3, 96(AX)
+	ADDQ    $0x80, AX
+	ADDQ    $0x80, CX
+	SUBQ    $0x80, BX
+	JMP     cmp128
+
+cmp64:
+	CMPQ    BX, $0x40
+	JB      cmp32
+	VMOVDQU (CX), Y0
+	VMOVDQU 32(CX), Y1
+	VPOR    (AX), Y0, Y0
+	VPOR    32(AX), Y1, Y1
+	VMOVDQU Y0, (AX)
+	VMOVDQU Y1, 32(AX)
+	ADDQ    $0x40, AX
+	ADDQ    $0x40, CX
+	SUBQ    $0x40, BX
+
+cmp32:
+	CMPQ    BX, $0x20
+	JB      cmp8
+	MOVQ    AX, SI
+	MOVQ    CX, DI
+	ADDQ    BX, SI
+	ADDQ    BX, DI
+	SUBQ    $0x20, SI
+	SUBQ    $0x20, DI
+	VMOVDQU (CX), Y0
+	VMOVDQU (DI), Y1
+	VPOR    (AX), Y0, Y0
+	VPOR    (SI), Y1, Y1
+	VMOVDQU Y0, (AX)
+	VMOVDQU Y1, (SI)
+	JMP     done

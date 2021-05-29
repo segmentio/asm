@@ -9,7 +9,7 @@ import (
 )
 
 func TestCopy(t *testing.T) {
-	for _, N := range []int{0, 1, 2, 3, 4, 8, 10, 32, 100, 1024, 4096} {
+	for _, N := range []int{0, 1, 2, 3, 4, 8, 10, 31, 32, 100, 1024, 4096} {
 		t.Run(fmt.Sprintf("N=%d", N), func(t *testing.T) {
 			src := make([]byte, N)
 			dst := make([]byte, N)
@@ -40,15 +40,18 @@ func TestCopy(t *testing.T) {
 }
 
 func BenchmarkCopy(b *testing.B) {
-	const N = 4096
-	dst := make([]byte, N)
-	src := make([]byte, N)
-	io.ReadFull(rand.New(rand.NewSource(0)), src)
-	b.SetBytes(N)
-	b.ResetTimer()
+	for _, N := range []int{7, 10, 31, 32, 100, 1024, 4096} {
+		b.Run(fmt.Sprintf("N=%d", N), func(b *testing.B) {
+			dst := make([]byte, N)
+			src := make([]byte, N)
+			io.ReadFull(rand.New(rand.NewSource(0)), src)
+			b.SetBytes(int64(N))
+			b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
-		Copy(dst, src)
+			for i := 0; i < b.N; i++ {
+				Copy(dst, src)
+			}
+		})
 	}
 }
 
