@@ -90,14 +90,12 @@ cmp64:
 cmp32:
 	CMPQ    BX, $0x20
 	JB      cmp8
-	MOVQ    AX, SI
-	MOVQ    CX, DI
-	ADDQ    BX, SI
-	ADDQ    BX, DI
+	LEAQ    (AX)(BX*1), SI
+	LEAQ    (CX)(BX*1), BX
 	SUBQ    $0x20, SI
-	SUBQ    $0x20, DI
+	SUBQ    $0x20, BX
 	VMOVDQU (CX), Y0
-	VMOVDQU (DI), Y1
+	VMOVDQU (BX), Y1
 	VPOR    (AX), Y0, Y0
 	VPOR    (SI), Y1, Y1
 	VMOVDQU Y0, (AX)

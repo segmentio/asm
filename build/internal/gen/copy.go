@@ -129,10 +129,8 @@ func (c *Copy) Generate(name, doc string) {
 
 	dstTail := GP64()
 	srcTail := GP64()
-	MOVQ(dst, dstTail)
-	MOVQ(src, srcTail)
-	ADDQ(n, dstTail)
-	ADDQ(n, srcTail)
+	LEAQ(Mem{Base: dst, Index: n, Scale: 1}, dstTail)
+	LEAQ(Mem{Base: src, Index: n, Scale: 1}, srcTail)
 	SUBQ(Imm(32), dstTail)
 	SUBQ(Imm(32), srcTail)
 
