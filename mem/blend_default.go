@@ -1,10 +1,10 @@
 // +build !amd64
 
-package bloom
+package mem
 
-// Copy performs a OR of src and dst into dst, returning the number of bytes
+// Blend performs a OR of src and dst into dst, returning the number of bytes
 // written to dst.
-func Copy(dst, src []byte) int {
+func Blend(dst, src []byte) int {
 	switch {
 	case len(dst) < len(src):
 		src = src[:len(dst)]
