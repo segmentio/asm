@@ -2,32 +2,51 @@
 
 #include "textflag.h"
 
-// func copyAVX2(dst *byte, src *byte, n int)
-// Requires: AVX, AVX2
-TEXT ·copyAVX2(SB), NOSPLIT, $0-24
-	MOVQ dst+0(FP), AX
-	MOVQ src+8(FP), CX
-	MOVQ n+16(FP), DX
-	MOVQ AX, BX
-	ADDQ DX, BX
+// func Copy(dst []byte, src []byte) int
+// Requires: CMOV
+TEXT ·Copy(SB), NOSPLIT, $0-56
+	MOVQ    dst_base+0(FP), AX
+	MOVQ    src_base+24(FP), CX
+	MOVQ    dst_len+8(FP), DX
+	MOVQ    src_len+32(FP), BX
+	CMPQ    BX, DX
+	CMOVQGT BX, DX
+	MOVQ    DX, BX
 
-loop:
-	// Loop until we reach the end.
-	CMPQ AX, BX
-	JE   done
+cmp8:
+	CMPQ BX, $0x08
+	JB   cmp4
+	MOVQ (CX), SI
+	ORQ  SI, (AX)
+	ADDQ $0x08, AX
+	ADDQ $0x08, CX
+	SUBQ $0x08, BX
+	JMP  cmp8
 
-	// Load operands in registers, apply the OR operation, assign the result.
-	VMOVUPS (AX), Y0
-	VMOVUPS 32(AX), Y1
-	VPOR    (CX), Y0, Y0
-	VPOR    32(CX), Y1, Y1
-	VMOVUPS Y0, (AX)
-	VMOVUPS Y1, 32(AX)
+cmp4:
+	CMPQ BX, $0x04
+	JB   cmp2
+	MOVL (CX), SI
+	ORL  SI, (AX)
+	ADDQ $0x04, AX
+	ADDQ $0x04, CX
+	SUBQ $0x04, BX
 
-	// Advance pointers.
-	ADDQ $0x40, AX
-	ADDQ $0x40, CX
-	JMP  loop
+cmp2:
+	CMPQ BX, $0x02
+	JB   cmp1
+	MOVW (CX), SI
+	ORW  SI, (AX)
+	ADDQ $0x02, AX
+	ADDQ $0x02, CX
+	SUBQ $0x02, BX
+
+cmp1:
+	CMPQ BX, $0x01
+	JB   done
+	MOVB (CX), CL
+	ORB  CL, (AX)
 
 done:
+	MOVQ DX, ret+48(FP)
 	RET

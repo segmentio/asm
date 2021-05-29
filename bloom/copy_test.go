@@ -31,9 +31,9 @@ func TestCopy(t *testing.T) {
 
 			if !bytes.Equal(dst, exp) {
 				t.Error("copying produced the wrong output")
-				t.Logf("expected: %08b", exp[:8])
-				t.Logf("found:    %08b", dst[:8])
-				t.Logf("source:   %08b", src[:8])
+				t.Logf("expected: %08b", limit(exp, 8))
+				t.Logf("found:    %08b", limit(dst, 8))
+				t.Logf("source:   %08b", limit(src, 8))
 			}
 		})
 	}
@@ -50,4 +50,11 @@ func BenchmarkCopy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Copy(dst, src)
 	}
+}
+
+func limit(b []byte, n int) []byte {
+	if len(b) > n {
+		b = b[:n]
+	}
+	return b
 }
