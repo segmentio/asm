@@ -1,6 +1,6 @@
 // +build !amd64
 
-package main
+package mem
 
 // Mask performs a AND of src and dst into dst, returning the number of bytes
 // written to dst.
