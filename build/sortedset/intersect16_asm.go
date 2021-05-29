@@ -21,16 +21,11 @@ func main() {
 	bEnd := Load(Param("b").Len(), GP64())
 	ADDQ(b, bEnd)
 
-	// Loop until we're at the end of either a or b.
-	Label("loop")
-	CMPQ(a, aEnd)
-	JE(LabelRef("done"))
-	CMPQ(b, bEnd)
-	JE(LabelRef("done"))
-
-	// Load the next item from one side.
+	// Load the first item from either side.
 	item := XMM()
 	VMOVUPS(Mem{Base: a}, item)
+
+	Label("loop")
 
 	// Compare bytes from each side and extract an equality mask.
 	result := XMM()
@@ -46,6 +41,11 @@ func main() {
 	ADDQ(Imm(16), dst)
 	ADDQ(Imm(16), a)
 	ADDQ(Imm(16), b)
+	CMPQ(a, aEnd)
+	JE(LabelRef("done"))
+	CMPQ(b, bEnd)
+	JE(LabelRef("done"))
+	VMOVUPS(Mem{Base: a}, item)
 	JMP(LabelRef("loop"))
 
 	// Otherwise, if a>b, advance b.
@@ -61,18 +61,22 @@ func main() {
 	CMPB(aByte, bByte)
 	JB(LabelRef("less"))
 	ADDQ(Imm(16), b)
+	CMPQ(b, bEnd)
+	JE(LabelRef("done"))
 	JMP(LabelRef("loop"))
 
 	// Otherwise (if a<b), advance a.
 	Label("less")
 	ADDQ(Imm(16), a)
+	CMPQ(a, aEnd)
+	JE(LabelRef("done"))
+	VMOVUPS(Mem{Base: a}, item)
 	JMP(LabelRef("loop"))
 
 	// Calculate and return byte offset of the dst pointer.
 	Label("done")
 	SUBQ(Load(Param("dst").Base(), GP64()), dst)
 	Store(dst, ReturnIndex(0))
-	VZEROUPPER()
 	RET()
 	Generate()
 }
