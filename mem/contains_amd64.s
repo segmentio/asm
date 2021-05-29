@@ -9,28 +9,25 @@ TEXT ·containsByteAVX2(SB), NOSPLIT, $0-33
 	MOVQ         haystack_len+8(FP), CX
 	MOVQ         AX, DX
 	ADDQ         CX, DX
-	MOVB         needle+24(FP), CL
+	MOVB         needle+24(FP), BL
+	PINSRB       $0x00, BX, X8
+	VPBROADCASTB X8, Y8
 	MOVB         $0x00, ret+32(FP)
-	MOVQ         $0x0000000000000000, BX
-	PINSRQ       $0x00, BX, X8
-	VPBROADCASTQ X8, Y8
-	MOVBLZX      CL, BX
-	PINSRB       $0x00, BX, X9
-	VPBROADCASTB X9, Y9
-	MOVQ         AX, BX
+	VPXOR        Y9, Y9, Y9
+	MOVQ         AX, CX
 
 avx2_loop:
-	ADDQ     $0x00000100, BX
-	CMPQ     BX, DX
+	ADDQ     $0x00000100, CX
+	CMPQ     CX, DX
 	JA       tail_loop
-	VPCMPEQB (AX), Y9, Y0
-	VPCMPEQB 32(AX), Y9, Y1
-	VPCMPEQB 64(AX), Y9, Y2
-	VPCMPEQB 96(AX), Y9, Y3
-	VPCMPEQB 128(AX), Y9, Y4
-	VPCMPEQB 160(AX), Y9, Y5
-	VPCMPEQB 192(AX), Y9, Y6
-	VPCMPEQB 224(AX), Y9, Y7
+	VPCMPEQB (AX), Y8, Y0
+	VPCMPEQB 32(AX), Y8, Y1
+	VPCMPEQB 64(AX), Y8, Y2
+	VPCMPEQB 96(AX), Y8, Y3
+	VPCMPEQB 128(AX), Y8, Y4
+	VPCMPEQB 160(AX), Y8, Y5
+	VPCMPEQB 192(AX), Y8, Y6
+	VPCMPEQB 224(AX), Y8, Y7
 	VPOR     Y1, Y0, Y0
 	VPOR     Y3, Y2, Y2
 	VPOR     Y5, Y4, Y4
@@ -38,16 +35,16 @@ avx2_loop:
 	VPOR     Y2, Y0, Y0
 	VPOR     Y6, Y4, Y4
 	VPOR     Y4, Y0, Y0
-	VPTEST   Y0, Y8
+	VPTEST   Y0, Y9
 	JCC      found
-	MOVQ     BX, AX
+	MOVQ     CX, AX
 	JMP      avx2_loop
 
 tail_loop:
 	CMPQ AX, DX
 	JE   done
-	MOVB (AX), BL
-	CMPB CL, BL
+	MOVB (AX), CL
+	CMPB BL, CL
 	JE   found
 	ADDQ $0x01, AX
 	JMP  tail_loop

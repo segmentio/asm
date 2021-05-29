@@ -19,12 +19,13 @@ func main() {
 	ADDQ(length, end)
 
 	needle := Load(Param("needle"), GP8())
+	needleVec := VecBroadcast(needle, YMM())
 
 	ret, _ := ReturnIndex(0).Resolve()
 	MOVB(U8(0), ret.Addr)
 
-	zeroVec := VecBroadcast(U64(0), YMM())
-	needleVec := VecBroadcast(needle, YMM())
+	zero := YMM()
+	VPXOR(zero, zero, zero)
 
 	vec := NewVectorizer(15, func(l VectorLane) Register {
 		r := l.Alloc()
@@ -40,7 +41,7 @@ func main() {
 	ADDQ(U32(32 * lanes), next)
 	CMPQ(next, end)
 	JA(LabelRef("tail_loop"))
-	VPTEST(vec.Compile(S256, lanes)[0], zeroVec)
+	VPTEST(vec.Compile(S256, lanes)[0], zero)
 	JCC(LabelRef("found"))
 	MOVQ(next, haystack)
 	JMP(LabelRef("avx2_loop"))
