@@ -12,8 +12,8 @@ import (
 )
 
 func main() {
-	TEXT("Copy", NOSPLIT, "func(dst, src []byte) int")
-	Doc("Copy copies the one-bits of src to dst, returning the number of bytes written.")
+	TEXT("Blend", NOSPLIT, "func(dst, src []byte) int")
+	Doc("Blend copies the one-bits of src to dst, returning the number of bytes written.")
 
 	dst := Load(Param("dst").Base(), GP64())
 	src := Load(Param("src").Base(), GP64())
