@@ -2,5 +2,5 @@
 
 package bloom
 
-// Copies the one-bits of src to dst, using SIMD instructions as an optimization.
-func copyAVX2(dst *byte, src *byte, n int)
+// Copy copies the one-bits of src to dst, returning the number of bytes written.
+func Copy(dst []byte, src []byte) int
