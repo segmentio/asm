@@ -21,18 +21,14 @@ func main() {
 	bEnd := Load(Param("b").Len(), GP64())
 	ADDQ(b, bEnd)
 
-	// Loop until we're at the end of either a or b.
-	Label("loop")
-	CMPQ(a, aEnd)
-	JE(LabelRef("done"))
-	CMPQ(b, bEnd)
-	JE(LabelRef("done"))
-
-	// Load the next item from one side.
+	// Load the first item from a/b. We know that each has at least
+	// one item (this is enforced in the wrapper).
 	aItem := XMM()
 	bItem := XMM()
 	VMOVUPS(Mem{Base: a}, aItem)
 	VMOVUPS(Mem{Base: b}, bItem)
+
+	Label("loop")
 
 	// Compare bytes from each side and extract an equality mask.
 	result := XMM()
@@ -48,6 +44,12 @@ func main() {
 	ADDQ(Imm(16), dst)
 	ADDQ(Imm(16), a)
 	ADDQ(Imm(16), b)
+	CMPQ(a, aEnd)
+	JE(LabelRef("done"))
+	CMPQ(b, bEnd)
+	JE(LabelRef("done"))
+	VMOVUPS(Mem{Base: a}, aItem)
+	VMOVUPS(Mem{Base: b}, bItem)
 	JMP(LabelRef("loop"))
 
 	// Otherwise, if a>b, copy and advance b.
@@ -65,6 +67,9 @@ func main() {
 	VMOVUPS(bItem, Mem{Base: dst})
 	ADDQ(Imm(16), dst)
 	ADDQ(Imm(16), b)
+	CMPQ(b, bEnd)
+	JE(LabelRef("done"))
+	VMOVUPS(Mem{Base: b}, bItem)
 	JMP(LabelRef("loop"))
 
 	// Otherwise (if a<b), copy and advance a.
@@ -72,6 +77,9 @@ func main() {
 	VMOVUPS(aItem, Mem{Base: dst})
 	ADDQ(Imm(16), dst)
 	ADDQ(Imm(16), a)
+	CMPQ(a, aEnd)
+	JE(LabelRef("done"))
+	VMOVUPS(Mem{Base: a}, aItem)
 	JMP(LabelRef("loop"))
 
 	// Calculate and return byte offsets of the each pointer.
@@ -82,7 +90,6 @@ func main() {
 	Store(b, Return("j"))
 	SUBQ(Load(Param("dst").Base(), GP64()), dst)
 	Store(dst, Return("k"))
-	VZEROUPPER()
 	RET()
 	Generate()
 }
