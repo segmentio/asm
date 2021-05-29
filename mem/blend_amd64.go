@@ -2,5 +2,5 @@
 
 package mem
 
-// Blend copies the one-bits of src to dst, returning the number of bytes written.
+// AVX optimized version for medium to large size inputs.
 func Blend(dst []byte, src []byte) int

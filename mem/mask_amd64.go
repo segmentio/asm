@@ -2,5 +2,5 @@
 
 package mem
 
-// Mask set bits of dst to zero and copies the one-bits of src to dst, returning the number of bytes written.
+// AVX optimized version for medium to large size inputs.
 func Mask(dst []byte, src []byte) int

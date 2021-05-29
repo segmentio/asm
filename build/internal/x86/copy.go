@@ -1,13 +1,33 @@
-package gen
+package x86
 
 import (
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
-	. "github.com/segmentio/asm/build/internal/x86"
 
 	"github.com/segmentio/asm/cpu"
 )
+
+func CopyB(src, dst Register, store func(Op, Op)) {
+	LoadAndStore(src, dst, GP8(), MOVB, store)
+}
+
+func CopyW(src, dst Register, store func(Op, Op)) {
+	LoadAndStore(src, dst, GP16(), MOVW, store)
+}
+
+func CopyL(src, dst Register, store func(Op, Op)) {
+	LoadAndStore(src, dst, GP32(), MOVL, store)
+}
+
+func CopyQ(src, dst Register, store func(Op, Op)) {
+	LoadAndStore(src, dst, GP64(), MOVQ, store)
+}
+
+func LoadAndStore(src, dst, tmp Register, load func(Op, Op), store func(Op, Op)) {
+	load(Mem{Base: src}, tmp)
+	store(tmp, Mem{Base: dst})
+}
 
 // Copy is a generator for copy-like functions.
 type Copy struct {
@@ -39,12 +59,11 @@ func (c *Copy) Generate(name, doc string) {
 
 	JumpIfFeature("avx2", cpu.AVX2)
 
+	Doc("Generic copy for small inputs or targets without AVX instructions.")
 	Label("cmp8")
 	CMPQ(n, Imm(8))
 	JB(LabelRef("cmp4"))
-	gp64 := GP64()
-	MOVQ(Mem{Base: src}, gp64)
-	c.CopyQ(gp64, Mem{Base: dst})
+	CopyQ(src, dst, c.CopyQ)
 	ADDQ(Imm(8), dst)
 	ADDQ(Imm(8), src)
 	SUBQ(Imm(8), n)
@@ -53,9 +72,7 @@ func (c *Copy) Generate(name, doc string) {
 	Label("cmp4")
 	CMPQ(n, Imm(4))
 	JB(LabelRef("cmp2"))
-	gp32 := GP32()
-	MOVL(Mem{Base: src}, gp32)
-	c.CopyL(gp32, Mem{Base: dst})
+	CopyL(src, dst, c.CopyL)
 	ADDQ(Imm(4), dst)
 	ADDQ(Imm(4), src)
 	SUBQ(Imm(4), n)
@@ -63,9 +80,7 @@ func (c *Copy) Generate(name, doc string) {
 	Label("cmp2")
 	CMPQ(n, Imm(2))
 	JB(LabelRef("cmp1"))
-	gp16 := GP16()
-	MOVW(Mem{Base: src}, gp16)
-	c.CopyW(gp16, Mem{Base: dst})
+	CopyW(src, dst, c.CopyW)
 	ADDQ(Imm(2), dst)
 	ADDQ(Imm(2), src)
 	SUBQ(Imm(2), n)
@@ -73,14 +88,13 @@ func (c *Copy) Generate(name, doc string) {
 	Label("cmp1")
 	CMPQ(n, Imm(1))
 	JB(LabelRef("done"))
-	gp8 := GP8()
-	MOVB(Mem{Base: src}, gp8)
-	c.CopyB(gp8, Mem{Base: dst})
+	CopyB(src, dst, c.CopyB)
 
 	Label("done")
 	Store(r, ReturnIndex(0))
 	RET()
 
+	Doc("AVX optimized version for medium to large size inputs.")
 	Label("avx2")
 	Label("cmp128")
 	CMPQ(n, Imm(128))
