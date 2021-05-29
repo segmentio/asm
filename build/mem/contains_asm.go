@@ -15,8 +15,7 @@ func main() {
 	haystack := Load(Param("haystack").Base(), GP64())
 	length := Load(Param("haystack").Len(), GP64())
 	end := GP64()
-	MOVQ(haystack, end)
-	ADDQ(length, end)
+	LEAQ(Mem{Base: haystack, Index: length, Scale: 1}, end)
 
 	needle := Load(Param("needle"), GP8())
 	needleVec := VecBroadcast(needle, YMM())
@@ -37,11 +36,11 @@ func main() {
 	MOVQ(haystack, next)
 
 	Label("avx2_loop")
-	const lanes = 8
-	ADDQ(U32(32 * lanes), next)
+	const unroll = 8
+	ADDQ(U32(32 * unroll), next)
 	CMPQ(next, end)
 	JA(LabelRef("tail_loop"))
-	VPTEST(vec.Compile(S256, lanes)[0], zero)
+	VPTEST(vec.Compile(S256, unroll)[0], zero)
 	JCC(LabelRef("found"))
 	MOVQ(next, haystack)
 	JMP(LabelRef("avx2_loop"))
