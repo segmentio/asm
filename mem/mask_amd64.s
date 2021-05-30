@@ -125,10 +125,6 @@ avx2:
 
 avx2_tail:
 	JZ      done
-	LEAQ    (AX)(DX*1), BX
-	LEAQ    (CX)(DX*1), SI
-	SUBQ    $0x20, BX
-	SUBQ    $0x20, SI
 	CMPQ    DX, $0x20
 	JBE     avx2_tail_1to32
 	CMPQ    DX, $0x40
@@ -138,40 +134,40 @@ avx2_tail:
 	VMOVDQU (CX), Y0
 	VMOVDQU 32(CX), Y1
 	VMOVDQU 64(CX), Y2
-	VMOVDQU (SI), Y3
+	VMOVDQU -32(CX)(DX*1), Y3
 	VPAND   (AX), Y0, Y0
 	VPAND   32(AX), Y1, Y1
 	VPAND   64(AX), Y2, Y2
-	VPAND   (BX), Y3, Y3
+	VPAND   -32(AX)(DX*1), Y3, Y3
 	VMOVDQU Y0, (AX)
 	VMOVDQU Y1, 32(AX)
 	VMOVDQU Y2, 64(AX)
-	VMOVDQU Y3, (BX)
+	VMOVDQU Y3, -32(AX)(DX*1)
 	RET
 
 avx2_tail_65to96:
 	VMOVDQU (CX), Y0
 	VMOVDQU 32(CX), Y1
-	VMOVDQU (SI), Y3
+	VMOVDQU -32(CX)(DX*1), Y3
 	VPAND   (AX), Y0, Y0
 	VPAND   32(AX), Y1, Y1
-	VPAND   (BX), Y3, Y3
+	VPAND   -32(AX)(DX*1), Y3, Y3
 	VMOVDQU Y0, (AX)
 	VMOVDQU Y1, 32(AX)
-	VMOVDQU Y3, (BX)
+	VMOVDQU Y3, -32(AX)(DX*1)
 	RET
 
 avx2_tail_33to64:
 	VMOVDQU (CX), Y0
-	VMOVDQU (SI), Y3
+	VMOVDQU -32(CX)(DX*1), Y3
 	VPAND   (AX), Y0, Y0
-	VPAND   (BX), Y3, Y3
+	VPAND   -32(AX)(DX*1), Y3, Y3
 	VMOVDQU Y0, (AX)
-	VMOVDQU Y3, (BX)
+	VMOVDQU Y3, -32(AX)(DX*1)
 	RET
 
 avx2_tail_1to32:
-	VMOVDQU (SI), Y3
-	VPAND   (BX), Y3, Y3
-	VMOVDQU Y3, (BX)
+	VMOVDQU -32(CX)(DX*1), Y3
+	VPAND   -32(AX)(DX*1), Y3, Y3
+	VMOVDQU Y3, -32(AX)(DX*1)
 	RET

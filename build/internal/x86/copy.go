@@ -167,13 +167,6 @@ func (c *Copy) Generate(name, doc string) {
 	Label("avx2_tail")
 	JZ(LabelRef("done")) // check flags from last CMPQ
 
-	dstTail := GP64()
-	srcTail := GP64()
-	LEAQ(Mem{Base: dst, Index: n, Scale: 1}, dstTail)
-	LEAQ(Mem{Base: src, Index: n, Scale: 1}, srcTail)
-	SUBQ(Imm(32), dstTail)
-	SUBQ(Imm(32), srcTail)
-
 	CMPQ(n, Imm(32)) // n > 0 && n <= 32
 	JBE(LabelRef("avx2_tail_1to32"))
 
@@ -186,50 +179,50 @@ func (c *Copy) Generate(name, doc string) {
 	VMOVDQU(Mem{Base: src}, Y0)
 	VMOVDQU((Mem{Base: src}).Offset(32), Y1)
 	VMOVDQU((Mem{Base: src}).Offset(64), Y2)
-	VMOVDQU(Mem{Base: srcTail}, Y3)
+	VMOVDQU((Mem{Base: src, Index: n, Scale: 1}).Offset(-32), Y3)
 	if c.CopyAVX != nil {
 		c.CopyAVX(Mem{Base: dst}, Y0, Y0)
 		c.CopyAVX((Mem{Base: dst}).Offset(32), Y1, Y1)
 		c.CopyAVX((Mem{Base: dst}).Offset(64), Y2, Y2)
-		c.CopyAVX(Mem{Base: dstTail}, Y3, Y3)
+		c.CopyAVX((Mem{Base: dst, Index: n, Scale: 1}).Offset(-32), Y3, Y3)
 	}
 	VMOVDQU(Y0, Mem{Base: dst})
 	VMOVDQU(Y1, (Mem{Base: dst}).Offset(32))
 	VMOVDQU(Y2, (Mem{Base: dst}).Offset(64))
-	VMOVDQU(Y3, Mem{Base: dstTail})
+	VMOVDQU(Y3, (Mem{Base: dst, Index: n, Scale: 1}).Offset(-32))
 	RET()
 
 	Label("avx2_tail_65to96")
 	VMOVDQU(Mem{Base: src}, Y0)
 	VMOVDQU((Mem{Base: src}).Offset(32), Y1)
-	VMOVDQU(Mem{Base: srcTail}, Y3)
+	VMOVDQU((Mem{Base: src, Index: n, Scale: 1}).Offset(-32), Y3)
 	if c.CopyAVX != nil {
 		c.CopyAVX(Mem{Base: dst}, Y0, Y0)
 		c.CopyAVX((Mem{Base: dst}).Offset(32), Y1, Y1)
-		c.CopyAVX(Mem{Base: dstTail}, Y3, Y3)
+		c.CopyAVX((Mem{Base: dst, Index: n, Scale: 1}).Offset(-32), Y3, Y3)
 	}
 	VMOVDQU(Y0, Mem{Base: dst})
 	VMOVDQU(Y1, (Mem{Base: dst}).Offset(32))
-	VMOVDQU(Y3, Mem{Base: dstTail})
+	VMOVDQU(Y3, (Mem{Base: dst, Index: n, Scale: 1}).Offset(-32))
 	RET()
 
 	Label("avx2_tail_33to64")
 	VMOVDQU(Mem{Base: src}, Y0)
-	VMOVDQU(Mem{Base: srcTail}, Y3)
+	VMOVDQU((Mem{Base: src, Index: n, Scale: 1}).Offset(-32), Y3)
 	if c.CopyAVX != nil {
 		c.CopyAVX(Mem{Base: dst}, Y0, Y0)
-		c.CopyAVX(Mem{Base: dstTail}, Y3, Y3)
+		c.CopyAVX((Mem{Base: dst, Index: n, Scale: 1}).Offset(-32), Y3, Y3)
 	}
 	VMOVDQU(Y0, Mem{Base: dst})
-	VMOVDQU(Y3, Mem{Base: dstTail})
+	VMOVDQU(Y3, (Mem{Base: dst, Index: n, Scale: 1}).Offset(-32))
 	RET()
 
 	Label("avx2_tail_1to32")
-	VMOVDQU(Mem{Base: srcTail}, Y3)
+	VMOVDQU((Mem{Base: src, Index: n, Scale: 1}).Offset(-32), Y3)
 	if c.CopyAVX != nil {
-		c.CopyAVX(Mem{Base: dstTail}, Y3, Y3)
+		c.CopyAVX((Mem{Base: dst, Index: n, Scale: 1}).Offset(-32), Y3, Y3)
 	}
-	VMOVDQU(Y3, Mem{Base: dstTail})
+	VMOVDQU(Y3, (Mem{Base: dst, Index: n, Scale: 1}).Offset(-32))
 	RET()
 
 	Generate()
