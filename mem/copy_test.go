@@ -2,6 +2,7 @@ package mem_test
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"math/rand"
@@ -11,7 +12,7 @@ import (
 )
 
 func TestCopy(t *testing.T) {
-	for _, N := range []int{0, 1, 2, 3, 4, 8, 10, 31, 32, 100, 1024, 4096} {
+	for _, N := range []int{0, 1, 2, 3, 4, 6, 8, 10, 31, 32, 33, 64, 100, 1024, 4096} {
 		t.Run(fmt.Sprintf("N=%d", N), func(t *testing.T) {
 			src := make([]byte, N)
 			dst := make([]byte, N)
@@ -30,9 +31,9 @@ func TestCopy(t *testing.T) {
 
 			if !bytes.Equal(dst, exp) {
 				t.Error("copying produced the wrong output")
-				t.Logf("expected: %08b", limit(exp, 8))
-				t.Logf("found:    %08b", limit(dst, 8))
-				t.Logf("source:   %08b", limit(src, 8))
+				t.Logf("expected:\n%s", hex.Dump(exp))
+				t.Logf("found:   \n%s", hex.Dump(dst))
+				t.Logf("source:  \n%s", hex.Dump(src))
 			}
 		})
 	}

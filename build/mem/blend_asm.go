@@ -4,7 +4,7 @@ package main
 
 import (
 	. "github.com/mmcloughlin/avo/build"
-	. "github.com/segmentio/asm/build/internal/gen"
+	. "github.com/segmentio/asm/build/internal/x86"
 )
 
 func main() {
@@ -13,6 +13,7 @@ func main() {
 		CopyW:   ORW,
 		CopyL:   ORL,
 		CopyQ:   ORQ,
+		CopySSE: POR,
 		CopyAVX: VPOR,
 	}
 

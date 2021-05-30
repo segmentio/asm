@@ -2,6 +2,7 @@ package mem_test
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"math/rand"
@@ -33,9 +34,9 @@ func TestBlend(t *testing.T) {
 
 			if !bytes.Equal(dst, exp) {
 				t.Error("blending produced the wrong output")
-				t.Logf("expected: %08b", limit(exp, 8))
-				t.Logf("found:    %08b", limit(dst, 8))
-				t.Logf("source:   %08b", limit(src, 8))
+				t.Logf("expected:\n%s", hex.Dump(exp))
+				t.Logf("found:   \n%s", hex.Dump(dst))
+				t.Logf("source:  \n%s", hex.Dump(src))
 			}
 		})
 	}
