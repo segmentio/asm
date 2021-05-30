@@ -35,7 +35,7 @@ tail:
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
-	// Generic copy for short inputs or targets without AVX instructions.
+	// Generic copy for targets without AVX instructions.
 generic:
 	MOVQ (CX), BX
 	ORQ  BX, (AX)
