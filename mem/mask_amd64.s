@@ -11,52 +11,101 @@ TEXT ·Mask(SB), NOSPLIT, $0-56
 	MOVQ    src_len+32(FP), BX
 	CMPQ    BX, DX
 	CMOVQGT BX, DX
-	MOVQ    DX, BX
-	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCS     avx2
+	MOVQ    DX, ret+48(FP)
 
-cmp8:
-	CMPQ BX, $0x08
-	JB   cmp4
-	MOVQ (CX), SI
-	ANDQ SI, (AX)
-	ADDQ $0x08, AX
+	// Tail copy with special cases for each possible item size.
+tail:
+	CMPQ DX, $0x00
+	JE   done
+	CMPQ DX, $0x01
+	JE   copy1
+	CMPQ DX, $0x02
+	JE   copy2
+	CMPQ DX, $0x03
+	JE   copy3
+	CMPQ DX, $0x04
+	JE   copy4
+	CMPQ DX, $0x05
+	JE   copy5
+	CMPQ DX, $0x06
+	JE   copy6
+	CMPQ DX, $0x07
+	JE   copy7
+	CMPQ DX, $0x08
+	JE   copy8
+	CMPQ DX, $0x20
+	JB   generic
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS  avx2
+
+	// Generic copy for short inputs or targets without AVX instructions.
+generic:
+	MOVQ (CX), BX
+	ANDQ BX, (AX)
 	ADDQ $0x08, CX
-	SUBQ $0x08, BX
-	JMP  cmp8
-
-cmp4:
-	CMPQ BX, $0x04
-	JB   cmp2
-	MOVL (CX), SI
-	ANDL SI, (AX)
-	ADDQ $0x04, AX
-	ADDQ $0x04, CX
-	SUBQ $0x04, BX
-
-cmp2:
-	CMPQ BX, $0x02
-	JB   cmp1
-	MOVW (CX), SI
-	ANDW SI, (AX)
-	ADDQ $0x02, AX
-	ADDQ $0x02, CX
-	SUBQ $0x02, BX
-
-cmp1:
-	CMPQ BX, $0x01
-	JB   done
-	MOVB (CX), CL
-	ANDB CL, (AX)
+	ADDQ $0x08, AX
+	SUBQ $0x08, DX
+	CMPQ DX, $0x08
+	JBE  tail
+	JMP  generic
 
 done:
-	MOVQ DX, ret+48(FP)
 	RET
 
+copy1:
+	MOVB (CX), CL
+	ANDB CL, (AX)
+	RET
+
+copy2:
+	MOVW (CX), CX
+	ANDW CX, (AX)
+	RET
+
+copy3:
+	MOVW (CX), DX
+	ANDW DX, (AX)
+	MOVB 2(CX), CL
+	ANDB CL, 2(AX)
+	RET
+
+copy4:
+	MOVL (CX), CX
+	ANDL CX, (AX)
+	RET
+
+copy5:
+	MOVL (CX), DX
+	ANDL DX, (AX)
+	MOVB 4(CX), CL
+	ANDB CL, 4(AX)
+	RET
+
+copy6:
+	MOVL (CX), DX
+	ANDL DX, (AX)
+	MOVW 4(CX), CX
+	ANDW CX, 4(AX)
+	RET
+
+copy7:
+	MOVL (CX), DX
+	ANDL DX, (AX)
+	MOVW 4(CX), DX
+	ANDW DX, 4(AX)
+	MOVB 6(CX), CL
+	ANDB CL, 6(AX)
+	RET
+
+copy8:
+	MOVQ (CX), CX
+	ANDQ CX, (AX)
+	RET
+
+	// AVX optimized version for medium to large size inputs.
 avx2:
-cmp128:
-	CMPQ    BX, $0x80
-	JB      cmp64
+	CMPQ    DX, $0x80
+	JB      avx2_tail
 	VMOVDQU (CX), Y0
 	VMOVDQU 32(CX), Y1
 	VMOVDQU 64(CX), Y2
@@ -71,35 +120,58 @@ cmp128:
 	VMOVDQU Y3, 96(AX)
 	ADDQ    $0x80, AX
 	ADDQ    $0x80, CX
-	SUBQ    $0x80, BX
-	JMP     cmp128
+	SUBQ    $0x80, DX
+	JMP     avx2
 
-cmp64:
-	CMPQ    BX, $0x40
-	JB      cmp32
+avx2_tail:
+	JZ      done
+	LEAQ    (AX)(DX*1), BX
+	LEAQ    (CX)(DX*1), SI
+	SUBQ    $0x20, BX
+	SUBQ    $0x20, SI
+	CMPQ    DX, $0x20
+	JBE     avx2_tail_1to32
+	CMPQ    DX, $0x40
+	JBE     avx2_tail_33to64
+	CMPQ    DX, $0x60
+	JBE     avx2_tail_65to96
 	VMOVDQU (CX), Y0
 	VMOVDQU 32(CX), Y1
+	VMOVDQU 64(CX), Y2
+	VMOVDQU (SI), Y3
 	VPAND   (AX), Y0, Y0
 	VPAND   32(AX), Y1, Y1
+	VPAND   64(AX), Y2, Y2
+	VPAND   (BX), Y3, Y3
 	VMOVDQU Y0, (AX)
 	VMOVDQU Y1, 32(AX)
-	ADDQ    $0x40, AX
-	ADDQ    $0x40, CX
-	SUBQ    $0x40, BX
+	VMOVDQU Y2, 64(AX)
+	VMOVDQU Y3, (BX)
+	RET
 
-cmp32:
-	CMPQ    BX, $0x20
-	JB      cmp8
-	MOVQ    AX, SI
-	MOVQ    CX, DI
-	ADDQ    BX, SI
-	ADDQ    BX, DI
-	SUBQ    $0x20, SI
-	SUBQ    $0x20, DI
+avx2_tail_65to96:
 	VMOVDQU (CX), Y0
-	VMOVDQU (DI), Y1
+	VMOVDQU 32(CX), Y1
+	VMOVDQU (SI), Y3
 	VPAND   (AX), Y0, Y0
-	VPAND   (SI), Y1, Y1
+	VPAND   32(AX), Y1, Y1
+	VPAND   (BX), Y3, Y3
 	VMOVDQU Y0, (AX)
-	VMOVDQU Y1, (SI)
-	JMP     done
+	VMOVDQU Y1, 32(AX)
+	VMOVDQU Y3, (BX)
+	RET
+
+avx2_tail_33to64:
+	VMOVDQU (CX), Y0
+	VMOVDQU (SI), Y3
+	VPAND   (AX), Y0, Y0
+	VPAND   (BX), Y3, Y3
+	VMOVDQU Y0, (AX)
+	VMOVDQU Y3, (BX)
+	RET
+
+avx2_tail_1to32:
+	VMOVDQU (SI), Y3
+	VPAND   (BX), Y3, Y3
+	VMOVDQU Y3, (BX)
+	RET

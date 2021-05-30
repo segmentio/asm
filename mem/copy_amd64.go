@@ -2,5 +2,5 @@
 
 package mem
 
-// AVX optimized version for medium to large size inputs.
+// Copy copies src to dst, returning the number of bytes written.
 func Copy(dst []byte, src []byte) int

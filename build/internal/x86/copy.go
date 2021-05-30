@@ -8,25 +8,25 @@ import (
 	"github.com/segmentio/asm/cpu"
 )
 
-func CopyB(src, dst Register, store func(Op, Op)) {
+func CopyB(src, dst Mem, store func(Op, Op)) {
 	LoadAndStore(src, dst, GP8(), MOVB, store)
 }
 
-func CopyW(src, dst Register, store func(Op, Op)) {
+func CopyW(src, dst Mem, store func(Op, Op)) {
 	LoadAndStore(src, dst, GP16(), MOVW, store)
 }
 
-func CopyL(src, dst Register, store func(Op, Op)) {
+func CopyL(src, dst Mem, store func(Op, Op)) {
 	LoadAndStore(src, dst, GP32(), MOVL, store)
 }
 
-func CopyQ(src, dst Register, store func(Op, Op)) {
+func CopyQ(src, dst Mem, store func(Op, Op)) {
 	LoadAndStore(src, dst, GP64(), MOVQ, store)
 }
 
-func LoadAndStore(src, dst, tmp Register, load func(Op, Op), store func(Op, Op)) {
-	load(Mem{Base: src}, tmp)
-	store(tmp, Mem{Base: dst})
+func LoadAndStore(src, dst Mem, tmp Register, load func(Op, Op), store func(Op, Op)) {
+	load(src, tmp)
+	store(tmp, dst)
 }
 
 // Copy is a generator for copy-like functions.
@@ -48,57 +48,101 @@ func (c *Copy) Generate(name, doc string) {
 	dst := Load(Param("dst").Base(), GP64())
 	src := Load(Param("src").Base(), GP64())
 
-	r := Load(Param("dst").Len(), GP64())
+	n := Load(Param("dst").Len(), GP64())
 	x := Load(Param("src").Len(), GP64())
 
-	CMPQ(x, r)
-	CMOVQGT(x, r)
+	CMPQ(x, n)
+	CMOVQGT(x, n)
+	Store(n, ReturnIndex(0))
 
-	n := GP64()
-	MOVQ(r, n)
+	Comment("Tail copy with special cases for each possible item size.")
+	Label("tail")
 
-	JumpIfFeature("avx2", cpu.AVX2)
+	CMPQ(n, Imm(0))
+	JE(LabelRef("done"))
 
-	Doc("Generic copy for small inputs or targets without AVX instructions.")
-	Label("cmp8")
-	CMPQ(n, Imm(8))
-	JB(LabelRef("cmp4"))
-	CopyQ(src, dst, c.CopyQ)
-	ADDQ(Imm(8), dst)
-	ADDQ(Imm(8), src)
-	SUBQ(Imm(8), n)
-	JMP(LabelRef("cmp8"))
-
-	Label("cmp4")
-	CMPQ(n, Imm(4))
-	JB(LabelRef("cmp2"))
-	CopyL(src, dst, c.CopyL)
-	ADDQ(Imm(4), dst)
-	ADDQ(Imm(4), src)
-	SUBQ(Imm(4), n)
-
-	Label("cmp2")
-	CMPQ(n, Imm(2))
-	JB(LabelRef("cmp1"))
-	CopyW(src, dst, c.CopyW)
-	ADDQ(Imm(2), dst)
-	ADDQ(Imm(2), src)
-	SUBQ(Imm(2), n)
-
-	Label("cmp1")
 	CMPQ(n, Imm(1))
-	JB(LabelRef("done"))
-	CopyB(src, dst, c.CopyB)
+	JE(LabelRef("copy1"))
+
+	CMPQ(n, Imm(2))
+	JE(LabelRef("copy2"))
+
+	CMPQ(n, Imm(3))
+	JE(LabelRef("copy3"))
+
+	CMPQ(n, Imm(4))
+	JE(LabelRef("copy4"))
+
+	CMPQ(n, Imm(5))
+	JE(LabelRef("copy5"))
+
+	CMPQ(n, Imm(6))
+	JE(LabelRef("copy6"))
+
+	CMPQ(n, Imm(7))
+	JE(LabelRef("copy7"))
+
+	CMPQ(n, Imm(8))
+	JE(LabelRef("copy8"))
+
+	CMPQ(n, Imm(32))
+	JB(LabelRef("generic"))
+	JumpIfFeature("avx2", cpu.AVX2)
+	Comment("Generic copy for short inputs or targets without AVX instructions.")
+
+	Label("generic")
+	CopyQ(Mem{Base: src}, Mem{Base: dst}, c.CopyQ)
+	ADDQ(Imm(8), src)
+	ADDQ(Imm(8), dst)
+	SUBQ(Imm(8), n)
+	CMPQ(n, Imm(8))
+	JBE(LabelRef("tail"))
+	JMP(LabelRef("generic"))
 
 	Label("done")
-	Store(r, ReturnIndex(0))
 	RET()
 
-	Doc("AVX optimized version for medium to large size inputs.")
+	Label("copy1")
+	CopyB(Mem{Base: src}, Mem{Base: dst}, c.CopyB)
+	RET()
+
+	Label("copy2")
+	CopyW(Mem{Base: src}, Mem{Base: dst}, c.CopyW)
+	RET()
+
+	Label("copy3")
+	CopyW(Mem{Base: src}, Mem{Base: dst}, c.CopyW)
+	CopyB((Mem{Base: src}).Offset(2), (Mem{Base: dst}).Offset(2), c.CopyB)
+	RET()
+
+	Label("copy4")
+	CopyL(Mem{Base: src}, Mem{Base: dst}, c.CopyL)
+	RET()
+
+	Label("copy5")
+	CopyL(Mem{Base: src}, Mem{Base: dst}, c.CopyL)
+	CopyB((Mem{Base: src}).Offset(4), (Mem{Base: dst}).Offset(4), c.CopyB)
+	RET()
+
+	Label("copy6")
+	CopyL(Mem{Base: src}, Mem{Base: dst}, c.CopyL)
+	CopyW((Mem{Base: src}).Offset(4), (Mem{Base: dst}).Offset(4), c.CopyW)
+	RET()
+
+	Label("copy7")
+	CopyL(Mem{Base: src}, Mem{Base: dst}, c.CopyL)
+	CopyW((Mem{Base: src}).Offset(4), (Mem{Base: dst}).Offset(4), c.CopyW)
+	CopyB((Mem{Base: src}).Offset(6), (Mem{Base: dst}).Offset(6), c.CopyB)
+	RET()
+
+	Label("copy8")
+	CopyQ(Mem{Base: src}, Mem{Base: dst}, c.CopyQ)
+	RET()
+
+	Comment("AVX optimized version for medium to large size inputs.")
 	Label("avx2")
-	Label("cmp128")
 	CMPQ(n, Imm(128))
-	JB(LabelRef("cmp64"))
+	JB(LabelRef("avx2_tail"))
 
 	VMOVDQU(Mem{Base: src}, Y0)
 	VMOVDQU((Mem{Base: src}).Offset(32), Y1)
@@ -118,47 +162,75 @@ func (c *Copy) Generate(name, doc string) {
 	ADDQ(Imm(128), dst)
 	ADDQ(Imm(128), src)
 	SUBQ(Imm(128), n)
-	JMP(LabelRef("cmp128"))
+	JMP(LabelRef("avx2"))
 
-	Label("cmp64")
-	CMPQ(n, Imm(64))
-	JB(LabelRef("cmp32"))
-
-	VMOVDQU(Mem{Base: src}, Y0)
-	VMOVDQU((Mem{Base: src}).Offset(32), Y1)
-	if c.CopyAVX != nil {
-		c.CopyAVX(Mem{Base: dst}, Y0, Y0)
-		c.CopyAVX((Mem{Base: dst}).Offset(32), Y1, Y1)
-	}
-	VMOVDQU(Y0, Mem{Base: dst})
-	VMOVDQU(Y1, (Mem{Base: dst}).Offset(32))
-
-	ADDQ(Imm(64), dst)
-	ADDQ(Imm(64), src)
-	SUBQ(Imm(64), n)
-
-	Label("cmp32")
-	CMPQ(n, Imm(32))
-	JB(LabelRef("cmp8"))
+	Label("avx2_tail")
+	JZ(LabelRef("done")) // check flags from last CMPQ
 
 	dstTail := GP64()
 	srcTail := GP64()
-	MOVQ(dst, dstTail)
-	MOVQ(src, srcTail)
-	ADDQ(n, dstTail)
-	ADDQ(n, srcTail)
+	LEAQ(Mem{Base: dst, Index: n, Scale: 1}, dstTail)
+	LEAQ(Mem{Base: src, Index: n, Scale: 1}, srcTail)
 	SUBQ(Imm(32), dstTail)
 	SUBQ(Imm(32), srcTail)
 
+	CMPQ(n, Imm(32)) // n > 0 && n <= 32
+	JBE(LabelRef("avx2_tail_1to32"))
+
+	CMPQ(n, Imm(64)) // n > 32 && n <= 64
+	JBE(LabelRef("avx2_tail_33to64"))
+
+	CMPQ(n, Imm(96)) // n > 64 && n <= 96
+	JBE(LabelRef("avx2_tail_65to96"))
+
 	VMOVDQU(Mem{Base: src}, Y0)
-	VMOVDQU(Mem{Base: srcTail}, Y1)
+	VMOVDQU((Mem{Base: src}).Offset(32), Y1)
+	VMOVDQU((Mem{Base: src}).Offset(64), Y2)
+	VMOVDQU(Mem{Base: srcTail}, Y3)
 	if c.CopyAVX != nil {
 		c.CopyAVX(Mem{Base: dst}, Y0, Y0)
-		c.CopyAVX(Mem{Base: dstTail}, Y1, Y1)
+		c.CopyAVX((Mem{Base: dst}).Offset(32), Y1, Y1)
+		c.CopyAVX((Mem{Base: dst}).Offset(64), Y2, Y2)
+		c.CopyAVX(Mem{Base: dstTail}, Y3, Y3)
 	}
 	VMOVDQU(Y0, Mem{Base: dst})
-	VMOVDQU(Y1, Mem{Base: dstTail})
-	JMP(LabelRef("done"))
+	VMOVDQU(Y1, (Mem{Base: dst}).Offset(32))
+	VMOVDQU(Y2, (Mem{Base: dst}).Offset(64))
+	VMOVDQU(Y3, Mem{Base: dstTail})
+	RET()
+
+	Label("avx2_tail_65to96")
+	VMOVDQU(Mem{Base: src}, Y0)
+	VMOVDQU((Mem{Base: src}).Offset(32), Y1)
+	VMOVDQU(Mem{Base: srcTail}, Y3)
+	if c.CopyAVX != nil {
+		c.CopyAVX(Mem{Base: dst}, Y0, Y0)
+		c.CopyAVX((Mem{Base: dst}).Offset(32), Y1, Y1)
+		c.CopyAVX(Mem{Base: dstTail}, Y3, Y3)
+	}
+	VMOVDQU(Y0, Mem{Base: dst})
+	VMOVDQU(Y1, (Mem{Base: dst}).Offset(32))
+	VMOVDQU(Y3, Mem{Base: dstTail})
+	RET()
+
+	Label("avx2_tail_33to64")
+	VMOVDQU(Mem{Base: src}, Y0)
+	VMOVDQU(Mem{Base: srcTail}, Y3)
+	if c.CopyAVX != nil {
+		c.CopyAVX(Mem{Base: dst}, Y0, Y0)
+		c.CopyAVX(Mem{Base: dstTail}, Y3, Y3)
+	}
+	VMOVDQU(Y0, Mem{Base: dst})
+	VMOVDQU(Y3, Mem{Base: dstTail})
+	RET()
+
+	Label("avx2_tail_1to32")
+	VMOVDQU(Mem{Base: srcTail}, Y3)
+	if c.CopyAVX != nil {
+		c.CopyAVX(Mem{Base: dstTail}, Y3, Y3)
+	}
+	VMOVDQU(Y3, Mem{Base: dstTail})
+	RET()
 
 	Generate()
 }
