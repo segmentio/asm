@@ -203,14 +203,8 @@ func (c *Copy) Generate(name, doc string) {
 	Label("avx2_tail")
 	JZ(LabelRef("done")) // check flags from last CMPQ
 
-	CMPQ(n, Imm(32)) // n > 0 && n <= 32
-	JBE(LabelRef("avx2_tail_1to32"))
-
-	CMPQ(n, Imm(64)) // n > 32 && n <= 64
-	JBE(LabelRef("avx2_tail_33to64"))
-
-	CMPQ(n, Imm(96)) // n > 64 && n <= 96
-	JBE(LabelRef("avx2_tail_65to96"))
+	CMPQ(n, Imm(64)) // n > 0 && n <= 64
+	JBE(LabelRef("avx2_tail_1to64"))
 
 	VMOVDQU(Mem{Base: src}, Y0)
 	VMOVDQU((Mem{Base: src}).Offset(32), Y1)
@@ -228,37 +222,15 @@ func (c *Copy) Generate(name, doc string) {
 	VMOVDQU(Y3, (Mem{Base: dst}).Idx(n, 1).Offset(-32))
 	RET()
 
-	Label("avx2_tail_65to96")
-	VMOVDQU(Mem{Base: src}, Y0)
-	VMOVDQU((Mem{Base: src}).Offset(32), Y1)
-	VMOVDQU((Mem{Base: src, Index: n, Scale: 1}).Offset(-32), Y3)
+	Label("avx2_tail_1to64")
+	VMOVDQU((Mem{Base: src, Index: n, Scale: 1}).Offset(-64), Y0)
+	VMOVDQU((Mem{Base: src, Index: n, Scale: 1}).Offset(-32), Y1)
 	if c.CopyAVX != nil {
-		c.CopyAVX(Mem{Base: dst}, Y0, Y0)
-		c.CopyAVX((Mem{Base: dst}).Offset(32), Y1, Y1)
-		c.CopyAVX((Mem{Base: dst}).Idx(n, 1).Offset(-32), Y3, Y3)
+		c.CopyAVX((Mem{Base: dst}).Idx(n, 1).Offset(-64), Y0, Y0)
+		c.CopyAVX((Mem{Base: dst}).Idx(n, 1).Offset(-32), Y1, Y1)
 	}
-	VMOVDQU(Y0, Mem{Base: dst})
-	VMOVDQU(Y1, (Mem{Base: dst}).Offset(32))
-	VMOVDQU(Y3, (Mem{Base: dst}).Idx(n, 1).Offset(-32))
-	RET()
-
-	Label("avx2_tail_33to64")
-	VMOVDQU(Mem{Base: src}, Y0)
-	VMOVDQU((Mem{Base: src, Index: n, Scale: 1}).Offset(-32), Y3)
-	if c.CopyAVX != nil {
-		c.CopyAVX(Mem{Base: dst}, Y0, Y0)
-		c.CopyAVX((Mem{Base: dst}).Idx(n, 1).Offset(-32), Y3, Y3)
-	}
-	VMOVDQU(Y0, Mem{Base: dst})
-	VMOVDQU(Y3, (Mem{Base: dst}).Idx(n, 1).Offset(-32))
-	RET()
-
-	Label("avx2_tail_1to32")
-	VMOVDQU((Mem{Base: src}).Idx(n, 1).Offset(-32), Y3)
-	if c.CopyAVX != nil {
-		c.CopyAVX((Mem{Base: dst}).Idx(n, 1).Offset(-32), Y3, Y3)
-	}
-	VMOVDQU(Y3, (Mem{Base: dst}).Idx(n, 1).Offset(-32))
+	VMOVDQU(Y0, (Mem{Base: dst}).Idx(n, 1).Offset(-64))
+	VMOVDQU(Y1, (Mem{Base: dst}).Idx(n, 1).Offset(-32))
 	RET()
 
 	Generate()

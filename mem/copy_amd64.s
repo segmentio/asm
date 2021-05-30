@@ -124,12 +124,8 @@ avx2:
 
 avx2_tail:
 	JZ      done
-	CMPQ    DX, $0x20
-	JBE     avx2_tail_1to32
 	CMPQ    DX, $0x40
-	JBE     avx2_tail_33to64
-	CMPQ    DX, $0x60
-	JBE     avx2_tail_65to96
+	JBE     avx2_tail_1to64
 	VMOVDQU (CX), Y0
 	VMOVDQU 32(CX), Y1
 	VMOVDQU 64(CX), Y2
@@ -140,23 +136,9 @@ avx2_tail:
 	VMOVDQU Y3, -32(AX)(DX*1)
 	RET
 
-avx2_tail_65to96:
-	VMOVDQU (CX), Y0
-	VMOVDQU 32(CX), Y1
-	VMOVDQU -32(CX)(DX*1), Y3
-	VMOVDQU Y0, (AX)
-	VMOVDQU Y1, 32(AX)
-	VMOVDQU Y3, -32(AX)(DX*1)
-	RET
-
-avx2_tail_33to64:
-	VMOVDQU (CX), Y0
-	VMOVDQU -32(CX)(DX*1), Y3
-	VMOVDQU Y0, (AX)
-	VMOVDQU Y3, -32(AX)(DX*1)
-	RET
-
-avx2_tail_1to32:
-	VMOVDQU -32(CX)(DX*1), Y3
-	VMOVDQU Y3, -32(AX)(DX*1)
+avx2_tail_1to64:
+	VMOVDQU -64(CX)(DX*1), Y0
+	VMOVDQU -32(CX)(DX*1), Y1
+	VMOVDQU Y0, -64(AX)(DX*1)
+	VMOVDQU Y1, -32(AX)(DX*1)
 	RET
