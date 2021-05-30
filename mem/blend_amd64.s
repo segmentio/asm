@@ -3,7 +3,7 @@
 #include "textflag.h"
 
 // func Blend(dst []byte, src []byte) int
-// Requires: AVX, AVX2, CMOV
+// Requires: AVX, AVX2, CMOV, SSE2
 TEXT ·Blend(SB), NOSPLIT, $0-56
 	MOVQ    dst_base+0(FP), AX
 	MOVQ    src_base+24(FP), CX
@@ -17,24 +17,21 @@ TEXT ·Blend(SB), NOSPLIT, $0-56
 tail:
 	CMPQ DX, $0x00
 	JE   done
-	CMPQ DX, $0x01
-	JE   copy1
 	CMPQ DX, $0x02
-	JE   copy2
+	JBE  copy1to2
 	CMPQ DX, $0x03
 	JE   copy3
 	CMPQ DX, $0x04
 	JE   copy4
-	CMPQ DX, $0x05
-	JE   copy5
-	CMPQ DX, $0x06
-	JE   copy6
-	CMPQ DX, $0x07
-	JE   copy7
 	CMPQ DX, $0x08
+	JB   copy5to7
 	JE   copy8
+	CMPQ DX, $0x10
+	JBE  copy9to16
 	CMPQ DX, $0x20
-	JB   generic
+	JBE  copy17to32
+	CMPQ DX, $0x40
+	JBE  copy33to64
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
@@ -52,14 +49,11 @@ generic:
 done:
 	RET
 
-copy1:
-	MOVB (CX), CL
-	ORB  CL, (AX)
-	RET
-
-copy2:
-	MOVW (CX), CX
-	ORW  CX, (AX)
+copy1to2:
+	MOVB (CX), BL
+	MOVB -1(CX)(DX*1), CL
+	ORB  BL, (AX)
+	ORB  CL, -1(AX)(DX*1)
 	RET
 
 copy3:
@@ -74,32 +68,53 @@ copy4:
 	ORL  CX, (AX)
 	RET
 
-copy5:
-	MOVL (CX), DX
-	ORL  DX, (AX)
-	MOVB 4(CX), CL
-	ORB  CL, 4(AX)
-	RET
-
-copy6:
-	MOVL (CX), DX
-	ORL  DX, (AX)
-	MOVW 4(CX), CX
-	ORW  CX, 4(AX)
-	RET
-
-copy7:
-	MOVL (CX), DX
-	ORL  DX, (AX)
-	MOVW 4(CX), DX
-	ORW  DX, 4(AX)
-	MOVB 6(CX), CL
-	ORB  CL, 6(AX)
+copy5to7:
+	MOVL (CX), BX
+	MOVL -4(CX)(DX*1), CX
+	ORL  BX, (AX)
+	ORL  CX, -4(AX)(DX*1)
 	RET
 
 copy8:
 	MOVQ (CX), CX
 	ORQ  CX, (AX)
+	RET
+
+copy9to16:
+	MOVQ (CX), BX
+	MOVQ -8(CX)(DX*1), CX
+	ORQ  BX, (AX)
+	ORQ  CX, -8(AX)(DX*1)
+	RET
+
+copy17to32:
+	MOVOU (CX), X0
+	MOVOU -16(CX)(DX*1), X1
+	MOVOU (AX), X2
+	MOVOU -16(AX)(DX*1), X3
+	POR   X2, X0
+	POR   X3, X1
+	MOVOU X0, (AX)
+	MOVOU X1, -16(AX)(DX*1)
+	RET
+
+copy33to64:
+	MOVOU (CX), X0
+	MOVOU 16(CX), X1
+	MOVOU -32(CX)(DX*1), X2
+	MOVOU -16(CX)(DX*1), X3
+	MOVOU (AX), X4
+	MOVOU 16(AX), X5
+	MOVOU -32(AX)(DX*1), X6
+	MOVOU -16(AX)(DX*1), X7
+	POR   X4, X0
+	POR   X5, X1
+	POR   X6, X2
+	POR   X7, X3
+	MOVOU X0, (AX)
+	MOVOU X1, 16(AX)
+	MOVOU X2, -32(AX)(DX*1)
+	MOVOU X3, -16(AX)(DX*1)
 	RET
 
 	// AVX optimized version for medium to large size inputs.

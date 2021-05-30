@@ -36,6 +36,9 @@ type Copy struct {
 	CopyW func(dst, src Op)
 	CopyL func(dst, src Op)
 	CopyQ func(dst, src Op)
+	// If non-nil, applies the SSE instruction to transform the input
+	// in src into dst.
+	CopySSE func(src, dst Op)
 	// If non-nil, applies the AVX instruction to transform the inputs
 	// in src0 and src1 into dst.
 	CopyAVX func(src0, src1, dst Op)
@@ -61,11 +64,8 @@ func (c *Copy) Generate(name, doc string) {
 	CMPQ(n, Imm(0))
 	JE(LabelRef("done"))
 
-	CMPQ(n, Imm(1))
-	JE(LabelRef("copy1"))
-
 	CMPQ(n, Imm(2))
-	JE(LabelRef("copy2"))
+	JBE(LabelRef("copy1to2"))
 
 	CMPQ(n, Imm(3))
 	JE(LabelRef("copy3"))
@@ -73,23 +73,22 @@ func (c *Copy) Generate(name, doc string) {
 	CMPQ(n, Imm(4))
 	JE(LabelRef("copy4"))
 
-	CMPQ(n, Imm(5))
-	JE(LabelRef("copy5"))
-
-	CMPQ(n, Imm(6))
-	JE(LabelRef("copy6"))
-
-	CMPQ(n, Imm(7))
-	JE(LabelRef("copy7"))
-
 	CMPQ(n, Imm(8))
+	JB(LabelRef("copy5to7"))
 	JE(LabelRef("copy8"))
 
-	CMPQ(n, Imm(32))
-	JB(LabelRef("generic"))
-	JumpIfFeature("avx2", cpu.AVX2)
-	Comment("Generic copy for short inputs or targets without AVX instructions.")
+	CMPQ(n, Imm(16))
+	JBE(LabelRef("copy9to16"))
 
+	CMPQ(n, Imm(32))
+	JBE(LabelRef("copy17to32"))
+
+	CMPQ(n, Imm(64))
+	JBE(LabelRef("copy33to64"))
+
+	JumpIfFeature("avx2", cpu.AVX2)
+
+	Comment("Generic copy for targets without AVX instructions.")
 	Label("generic")
 	CopyQ(Mem{Base: src}, Mem{Base: dst}, c.CopyQ)
 	ADDQ(Imm(8), src)
@@ -102,12 +101,13 @@ func (c *Copy) Generate(name, doc string) {
 	Label("done")
 	RET()
 
-	Label("copy1")
-	CopyB(Mem{Base: src}, Mem{Base: dst}, c.CopyB)
-	RET()
-
-	Label("copy2")
-	CopyW(Mem{Base: src}, Mem{Base: dst}, c.CopyW)
+	Label("copy1to2")
+	copy1to2Reg0 := GP8()
+	copy1to2Reg1 := GP8()
+	MOVB(Mem{Base: src}, copy1to2Reg0)
+	MOVB((Mem{Base: src}).Idx(n, 1).Offset(-1), copy1to2Reg1)
+	c.CopyB(copy1to2Reg0, Mem{Base: dst})
+	c.CopyB(copy1to2Reg1, (Mem{Base: dst}).Idx(n, 1).Offset(-1))
 	RET()
 
 	Label("copy3")
@@ -119,24 +119,60 @@ func (c *Copy) Generate(name, doc string) {
 	CopyL(Mem{Base: src}, Mem{Base: dst}, c.CopyL)
 	RET()
 
-	Label("copy5")
-	CopyL(Mem{Base: src}, Mem{Base: dst}, c.CopyL)
-	CopyB((Mem{Base: src}).Offset(4), (Mem{Base: dst}).Offset(4), c.CopyB)
-	RET()
-
-	Label("copy6")
-	CopyL(Mem{Base: src}, Mem{Base: dst}, c.CopyL)
-	CopyW((Mem{Base: src}).Offset(4), (Mem{Base: dst}).Offset(4), c.CopyW)
-	RET()
-
-	Label("copy7")
-	CopyL(Mem{Base: src}, Mem{Base: dst}, c.CopyL)
-	CopyW((Mem{Base: src}).Offset(4), (Mem{Base: dst}).Offset(4), c.CopyW)
-	CopyB((Mem{Base: src}).Offset(6), (Mem{Base: dst}).Offset(6), c.CopyB)
+	Label("copy5to7")
+	copy5to7Reg0 := GP32()
+	copy5to7Reg1 := GP32()
+	MOVL(Mem{Base: src}, copy5to7Reg0)
+	MOVL((Mem{Base: src}).Idx(n, 1).Offset(-4), copy5to7Reg1)
+	c.CopyL(copy5to7Reg0, Mem{Base: dst})
+	c.CopyL(copy5to7Reg1, (Mem{Base: dst}).Idx(n, 1).Offset(-4))
 	RET()
 
 	Label("copy8")
 	CopyQ(Mem{Base: src}, Mem{Base: dst}, c.CopyQ)
+	RET()
+
+	Label("copy9to16")
+	copy9to16Reg0 := GP64()
+	copy9to16Reg1 := GP64()
+	MOVQ(Mem{Base: src}, copy9to16Reg0)
+	MOVQ((Mem{Base: src}).Idx(n, 1).Offset(-8), copy9to16Reg1)
+	c.CopyQ(copy9to16Reg0, Mem{Base: dst})
+	c.CopyQ(copy9to16Reg1, (Mem{Base: dst}).Idx(n, 1).Offset(-8))
+	RET()
+
+	Label("copy17to32")
+	MOVOU(Mem{Base: src}, X0)
+	MOVOU((Mem{Base: src}).Idx(n, 1).Offset(-16), X1)
+	if c.CopySSE != nil {
+		MOVOU(Mem{Base: dst}, X2)
+		MOVOU((Mem{Base: dst}).Idx(n, 1).Offset(-16), X3)
+		c.CopySSE(X2, X0)
+		c.CopySSE(X3, X1)
+	}
+	MOVOU(X0, Mem{Base: dst})
+	MOVOU(X1, (Mem{Base: dst}).Idx(n, 1).Offset(-16))
+	RET()
+
+	Label("copy33to64")
+	MOVOU(Mem{Base: src}, X0)
+	MOVOU((Mem{Base: src}).Offset(16), X1)
+	MOVOU((Mem{Base: src}).Idx(n, 1).Offset(-32), X2)
+	MOVOU((Mem{Base: src}).Idx(n, 1).Offset(-16), X3)
+	if c.CopySSE != nil {
+		MOVOU(Mem{Base: dst}, X4)
+		MOVOU((Mem{Base: dst}).Offset(16), X5)
+		MOVOU((Mem{Base: dst}).Idx(n, 1).Offset(-32), X6)
+		MOVOU((Mem{Base: dst}).Idx(n, 1).Offset(-16), X7)
+		c.CopySSE(X4, X0)
+		c.CopySSE(X5, X1)
+		c.CopySSE(X6, X2)
+		c.CopySSE(X7, X3)
+	}
+	MOVOU(X0, Mem{Base: dst})
+	MOVOU(X1, (Mem{Base: dst}).Offset(16))
+	MOVOU(X2, (Mem{Base: dst}).Idx(n, 1).Offset(-32))
+	MOVOU(X3, (Mem{Base: dst}).Idx(n, 1).Offset(-16))
 	RET()
 
 	Comment("AVX optimized version for medium to large size inputs.")

@@ -13,6 +13,7 @@ func main() {
 		CopyW:   ORW,
 		CopyL:   ORL,
 		CopyQ:   ORQ,
+		CopySSE: POR,
 		CopyAVX: VPOR,
 	}
 

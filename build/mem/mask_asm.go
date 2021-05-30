@@ -13,6 +13,7 @@ func main() {
 		CopyW:   ANDW,
 		CopyL:   ANDL,
 		CopyQ:   ANDQ,
+		CopySSE: PAND,
 		CopyAVX: VPAND,
 	}
 

@@ -12,7 +12,7 @@ import (
 )
 
 func TestCopy(t *testing.T) {
-	for _, N := range []int{0, 1, 2, 3, 4, 8, 10, 31, 32, 100, 1024, 4096} {
+	for _, N := range []int{0, 1, 2, 3, 4, 6, 8, 10, 31, 32, 33, 64, 100, 1024, 4096} {
 		t.Run(fmt.Sprintf("N=%d", N), func(t *testing.T) {
 			src := make([]byte, N)
 			dst := make([]byte, N)
@@ -20,7 +20,7 @@ func TestCopy(t *testing.T) {
 
 			prng := rand.New(rand.NewSource(0))
 			io.ReadFull(prng, src)
-			//io.ReadFull(prng, dst)
+			io.ReadFull(prng, dst)
 
 			copy(exp, src)
 
