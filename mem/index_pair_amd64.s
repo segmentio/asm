@@ -38,40 +38,18 @@ found:
 
 avx2:
 	MOVQ BX, SI
-	SUBQ $0x81, SI
+	SUBQ $0x21, SI
 	MOVQ $0x0000000000000000, DI
-	MOVQ $0x0000000000000000, R8
-	MOVQ $0x0000000000000000, R9
-	MOVQ $0x0000000000000000, R10
 
 avx2_loop:
 	VMOVDQU   (DX), Y0
 	VMOVDQU   1(DX), Y1
-	VMOVDQU   32(DX), Y2
-	VMOVDQU   33(DX), Y3
-	VMOVDQU   64(DX), Y4
-	VMOVDQU   65(DX), Y5
-	VMOVDQU   96(DX), Y6
-	VMOVDQU   97(DX), Y7
 	VPCMPEQB  Y0, Y1, Y1
-	VPCMPEQB  Y2, Y3, Y3
-	VPCMPEQB  Y4, Y5, Y5
-	VPCMPEQB  Y6, Y7, Y7
 	VPMOVMSKB Y1, DI
-	VPMOVMSKB Y3, R8
-	VPMOVMSKB Y5, R9
-	VPMOVMSKB Y7, R10
-	SHLQ      $0x20, R8
-	SHLQ      $0x20, R10
-	ORQ       R8, DI
-	ORQ       R10, R9
 	TZCNTQ    DI, DI
-	TZCNTQ    R9, R9
 	CMPQ      DI, $0x40
-	JNE       avx2_found_mask0
-	CMPQ      R9, $0x40
-	JNE       avx2_found_mask2
-	ADDQ      $0x80, DX
+	JNE       avx2_found
+	ADDQ      $0x1f, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
@@ -79,13 +57,8 @@ avx2_loop:
 	JB        generic
 	JMP       done
 
-avx2_found_mask0:
+avx2_found:
 	ADDQ DI, DX
-	VZEROUPPER
-	JMP  found
-
-avx2_found_mask2:
-	ADDQ R9, DX
 	VZEROUPPER
 	JMP  found
 
@@ -125,40 +98,18 @@ found:
 
 avx2:
 	MOVQ BX, SI
-	SUBQ $0x82, SI
+	SUBQ $0x22, SI
 	MOVQ $0x0000000000000000, DI
-	MOVQ $0x0000000000000000, R8
-	MOVQ $0x0000000000000000, R9
-	MOVQ $0x0000000000000000, R10
 
 avx2_loop:
 	VMOVDQU   (DX), Y0
 	VMOVDQU   2(DX), Y1
-	VMOVDQU   32(DX), Y2
-	VMOVDQU   34(DX), Y3
-	VMOVDQU   64(DX), Y4
-	VMOVDQU   66(DX), Y5
-	VMOVDQU   96(DX), Y6
-	VMOVDQU   98(DX), Y7
 	VPCMPEQW  Y0, Y1, Y1
-	VPCMPEQW  Y2, Y3, Y3
-	VPCMPEQW  Y4, Y5, Y5
-	VPCMPEQW  Y6, Y7, Y7
 	VPMOVMSKB Y1, DI
-	VPMOVMSKB Y3, R8
-	VPMOVMSKB Y5, R9
-	VPMOVMSKB Y7, R10
-	SHLQ      $0x20, R8
-	SHLQ      $0x20, R10
-	ORQ       R8, DI
-	ORQ       R10, R9
 	TZCNTQ    DI, DI
-	TZCNTQ    R9, R9
 	CMPQ      DI, $0x40
-	JNE       avx2_found_mask0
-	CMPQ      R9, $0x40
-	JNE       avx2_found_mask2
-	ADDQ      $0x80, DX
+	JNE       avx2_found
+	ADDQ      $0x1e, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
@@ -166,13 +117,8 @@ avx2_loop:
 	JB        generic
 	JMP       done
 
-avx2_found_mask0:
+avx2_found:
 	ADDQ DI, DX
-	VZEROUPPER
-	JMP  found
-
-avx2_found_mask2:
-	ADDQ R9, DX
 	VZEROUPPER
 	JMP  found
 
@@ -212,40 +158,18 @@ found:
 
 avx2:
 	MOVQ BX, SI
-	SUBQ $0x84, SI
+	SUBQ $0x24, SI
 	MOVQ $0x0000000000000000, DI
-	MOVQ $0x0000000000000000, R8
-	MOVQ $0x0000000000000000, R9
-	MOVQ $0x0000000000000000, R10
 
 avx2_loop:
 	VMOVDQU   (DX), Y0
 	VMOVDQU   4(DX), Y1
-	VMOVDQU   32(DX), Y2
-	VMOVDQU   36(DX), Y3
-	VMOVDQU   64(DX), Y4
-	VMOVDQU   68(DX), Y5
-	VMOVDQU   96(DX), Y6
-	VMOVDQU   100(DX), Y7
 	VPCMPEQD  Y0, Y1, Y1
-	VPCMPEQD  Y2, Y3, Y3
-	VPCMPEQD  Y4, Y5, Y5
-	VPCMPEQD  Y6, Y7, Y7
 	VPMOVMSKB Y1, DI
-	VPMOVMSKB Y3, R8
-	VPMOVMSKB Y5, R9
-	VPMOVMSKB Y7, R10
-	SHLQ      $0x20, R8
-	SHLQ      $0x20, R10
-	ORQ       R8, DI
-	ORQ       R10, R9
 	TZCNTQ    DI, DI
-	TZCNTQ    R9, R9
 	CMPQ      DI, $0x40
-	JNE       avx2_found_mask0
-	CMPQ      R9, $0x40
-	JNE       avx2_found_mask2
-	ADDQ      $0x80, DX
+	JNE       avx2_found
+	ADDQ      $0x1c, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
@@ -253,13 +177,8 @@ avx2_loop:
 	JB        generic
 	JMP       done
 
-avx2_found_mask0:
+avx2_found:
 	ADDQ DI, DX
-	VZEROUPPER
-	JMP  found
-
-avx2_found_mask2:
-	ADDQ R9, DX
 	VZEROUPPER
 	JMP  found
 
@@ -299,40 +218,18 @@ found:
 
 avx2:
 	MOVQ BX, SI
-	SUBQ $0x88, SI
+	SUBQ $0x28, SI
 	MOVQ $0x0000000000000000, DI
-	MOVQ $0x0000000000000000, R8
-	MOVQ $0x0000000000000000, R9
-	MOVQ $0x0000000000000000, R10
 
 avx2_loop:
 	VMOVDQU   (DX), Y0
 	VMOVDQU   8(DX), Y1
-	VMOVDQU   32(DX), Y2
-	VMOVDQU   40(DX), Y3
-	VMOVDQU   64(DX), Y4
-	VMOVDQU   72(DX), Y5
-	VMOVDQU   96(DX), Y6
-	VMOVDQU   104(DX), Y7
 	VPCMPEQQ  Y0, Y1, Y1
-	VPCMPEQQ  Y2, Y3, Y3
-	VPCMPEQQ  Y4, Y5, Y5
-	VPCMPEQQ  Y6, Y7, Y7
 	VPMOVMSKB Y1, DI
-	VPMOVMSKB Y3, R8
-	VPMOVMSKB Y5, R9
-	VPMOVMSKB Y7, R10
-	SHLQ      $0x20, R8
-	SHLQ      $0x20, R10
-	ORQ       R8, DI
-	ORQ       R10, R9
 	TZCNTQ    DI, DI
-	TZCNTQ    R9, R9
 	CMPQ      DI, $0x40
-	JNE       avx2_found_mask0
-	CMPQ      R9, $0x40
-	JNE       avx2_found_mask2
-	ADDQ      $0x80, DX
+	JNE       avx2_found
+	ADDQ      $0x18, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
@@ -340,13 +237,8 @@ avx2_loop:
 	JB        generic
 	JMP       done
 
-avx2_found_mask0:
+avx2_found:
 	ADDQ DI, DX
-	VZEROUPPER
-	JMP  found
-
-avx2_found_mask2:
-	ADDQ R9, DX
 	VZEROUPPER
 	JMP  found
 

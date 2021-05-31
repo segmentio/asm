@@ -7,8 +7,7 @@ import (
 
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
-
-	//. "github.com/mmcloughlin/avo/reg"
+	. "github.com/mmcloughlin/avo/reg"
 	. "github.com/segmentio/asm/build/internal/x86"
 	"github.com/segmentio/asm/cpu"
 )
@@ -122,61 +121,21 @@ func generateIndexPair(code indexPair) {
 
 	if size < 16 {
 		Label("avx2")
-		// limit := end - size
 		limit := GP64()
 		MOVQ(end, limit)
-		SUBQ(Imm(128+uint64(size)), limit)
-
-		mask0 := GP64()
-		mask1 := GP64()
-		mask2 := GP64()
-		mask3 := GP64()
-		MOVQ(U64(0), mask0)
-		MOVQ(U64(0), mask1)
-		MOVQ(U64(0), mask2)
-		MOVQ(U64(0), mask3)
+		SUBQ(Imm(32+uint64(size)), limit)
+		mask := GP64()
+		MOVQ(U64(0), mask)
 
 		Label("avx2_loop")
-		y0 := YMM()
-		y1 := YMM()
-		y2 := YMM()
-		y3 := YMM()
-		y4 := YMM()
-		y5 := YMM()
-		y6 := YMM()
-		y7 := YMM()
-		VMOVDQU(Mem{Base: ptr}, y0)
-		VMOVDQU((Mem{Base: ptr}).Offset(size), y1)
-		VMOVDQU((Mem{Base: ptr}).Offset(32), y2)
-		VMOVDQU((Mem{Base: ptr}).Offset(32+size), y3)
-		VMOVDQU((Mem{Base: ptr}).Offset(64), y4)
-		VMOVDQU((Mem{Base: ptr}).Offset(64+size), y5)
-		VMOVDQU((Mem{Base: ptr}).Offset(96), y6)
-		VMOVDQU((Mem{Base: ptr}).Offset(96+size), y7)
-
-		code.vpcmpeq(y0, y1, y1)
-		code.vpcmpeq(y2, y3, y3)
-		code.vpcmpeq(y4, y5, y5)
-		code.vpcmpeq(y6, y7, y7)
-		VPMOVMSKB(y1, mask0.As32())
-		VPMOVMSKB(y3, mask1.As32())
-		VPMOVMSKB(y5, mask2.As32())
-		VPMOVMSKB(y7, mask3.As32())
-
-		SHLQ(Imm(32), mask1)
-		SHLQ(Imm(32), mask3)
-		ORQ(mask1, mask0)
-		ORQ(mask3, mask2)
-
-		TZCNTQ(mask0, mask0)
-		TZCNTQ(mask2, mask2)
-
-		CMPQ(mask0, Imm(64))
-		JNE(LabelRef("avx2_found_mask0"))
-		CMPQ(mask2, Imm(64))
-		JNE(LabelRef("avx2_found_mask2"))
-
-		ADDQ(Imm(128), ptr)
+		VMOVDQU(Mem{Base: ptr}, Y0)
+		VMOVDQU((Mem{Base: ptr}).Offset(size), Y1)
+		code.vpcmpeq(Y0, Y1, Y1)
+		VPMOVMSKB(Y1, mask.As32())
+		TZCNTQ(mask, mask)
+		CMPQ(mask, Imm(64))
+		JNE(LabelRef("avx2_found"))
+		ADDQ(Imm(32-uint64(size)), ptr)
 		CMPQ(ptr, limit)
 		JBE(LabelRef("avx2_loop"))
 
@@ -185,13 +144,8 @@ func generateIndexPair(code indexPair) {
 		JB(LabelRef("generic"))
 		JMP(LabelRef("done"))
 
-		Label("avx2_found_mask0")
-		ADDQ(mask0, ptr) // ptr += trailingZeros
-		VZEROUPPER()
-		JMP(LabelRef("found"))
-
-		Label("avx2_found_mask2")
-		ADDQ(mask2, ptr)
+		Label("avx2_found")
+		ADDQ(mask, ptr)
 		VZEROUPPER()
 		JMP(LabelRef("found"))
 	}
