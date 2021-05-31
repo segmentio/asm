@@ -19,7 +19,7 @@ loop:
 	VPCMPEQB  X0, X1, X2
 	VPMOVMSKB X2, DI
 	CMPL      DI, $0x0000ffff
-	JNE       check_greater
+	JNE       compare_byte
 	VMOVUPS   X0, (AX)
 	ADDQ      $0x10, AX
 	ADDQ      $0x10, CX
@@ -32,7 +32,7 @@ loop:
 	VMOVUPS   (DX), X1
 	JMP       loop
 
-check_greater:
+compare_byte:
 	NOTL    DI
 	BSFL    DI, R8
 	MOVB    (CX)(R8*1), DI

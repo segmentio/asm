@@ -21,22 +21,23 @@ func main() {
 	bEnd := Load(Param("b").Len(), GP64())
 	ADDQ(b, bEnd)
 
-	// Load the first item from either side.
+	// Load the first item from one side.
 	item := XMM()
 	VMOVUPS(Mem{Base: a}, item)
 
 	Label("loop")
 
-	// Compare bytes from each side and extract an equality mask.
+	// Compare bytes and extract an equality mask.
 	result := XMM()
 	VPCMPEQB(Mem{Base: b}, item, result)
 	mask := GP32()
 	VPMOVMSKB(result, mask)
 
-	// If a==b, copy either to dst and advance all pointers.
-	Label("check_equal")
+	// Check if they're equal firstly.
 	CMPL(mask, U32(0xFFFF))
-	JNE(LabelRef("check_greater"))
+	JNE(LabelRef("compare_byte"))
+
+	// If a==b, copy either and advance both.
 	VMOVUPS(item, Mem{Base: dst})
 	ADDQ(Imm(16), dst)
 	ADDQ(Imm(16), a)
@@ -48,9 +49,8 @@ func main() {
 	VMOVUPS(Mem{Base: a}, item)
 	JMP(LabelRef("loop"))
 
-	// Otherwise, if a>b, advance b.
-	// Find the first unequal byte and compare.
-	Label("check_greater")
+	// They're not equal, so compare the first unequal byte.
+	Label("compare_byte")
 	NOTL(mask)
 	unequalByteIndex := GP32()
 	BSFL(mask, unequalByteIndex)
@@ -60,12 +60,15 @@ func main() {
 	MOVB(Mem{Base: b, Index: unequalByteIndex, Scale: 1}, bByte)
 	CMPB(aByte, bByte)
 	JB(LabelRef("less"))
+
+	// If b<a, advance b.
+	Label("greater")
 	ADDQ(Imm(16), b)
 	CMPQ(b, bEnd)
 	JE(LabelRef("done"))
 	JMP(LabelRef("loop"))
 
-	// Otherwise (if a<b), advance a.
+	// If a<b, advance a.
 	Label("less")
 	ADDQ(Imm(16), a)
 	CMPQ(a, aEnd)

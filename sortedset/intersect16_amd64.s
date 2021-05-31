@@ -18,7 +18,7 @@ loop:
 	VPCMPEQB  (DX), X0, X1
 	VPMOVMSKB X1, DI
 	CMPL      DI, $0x0000ffff
-	JNE       check_greater
+	JNE       compare_byte
 	VMOVUPS   X0, (AX)
 	ADDQ      $0x10, AX
 	ADDQ      $0x10, CX
@@ -30,7 +30,7 @@ loop:
 	VMOVUPS   (CX), X0
 	JMP       loop
 
-check_greater:
+compare_byte:
 	NOTL DI
 	BSFL DI, R8
 	MOVB (CX)(R8*1), DI
@@ -53,5 +53,4 @@ done:
 	MOVQ dst_base+0(FP), CX
 	SUBQ CX, AX
 	MOVQ AX, ret+72(FP)
-	VZEROUPPER
 	RET
