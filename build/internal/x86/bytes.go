@@ -69,14 +69,14 @@ func GetRegister(size int) (r Register) {
 	return
 }
 
-func BinaryOpTable(B, W, L, Q, X func(Op, Op), Y func(Op, Op, Op)) []func(Op, Op) {
+func BinaryOpTable(B, W, L, Q, X func(Op, Op), VEX func(Op, Op, Op)) []func(Op, Op) {
 	return []func(Op, Op){
 		1:  B,
 		2:  W,
 		4:  L,
 		8:  Q,
 		16: X,
-		32: func (src, dst Op) { Y(src, dst, dst) },
+		32: func (src, dst Op) { VEX(src, dst, dst) },
 	}
 }
 
@@ -104,6 +104,9 @@ func GenerateCopy(name, doc string, transform []func(Op, Op)) {
 			operands[i] = m.Load(src)
 			if transform != nil {
 				if m.Size == 32 {
+					// For AVX2, avoid loading the destination into a register
+					// before transforming it; pass the memory argument directly
+					// to the transform instruction.
 					operands[i+count] = m.Resolve(dst)
 				} else {
 					operands[i+count] = m.Load(dst)
