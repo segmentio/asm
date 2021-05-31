@@ -10,5 +10,5 @@ import (
 
 func main() {
 	x86.GenerateCopy("Blend", "copies the one-bits of src to dst, returning the number of bytes written.",
-		x86.BinaryOpTable(ORB, ORW, ORL, ORQ, POR), VPOR)
+		x86.BinaryOpTable(ORB, ORW, ORL, ORQ, POR, VPOR))
 }

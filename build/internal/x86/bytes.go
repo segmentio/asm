@@ -69,17 +69,18 @@ func GetRegister(size int) (r Register) {
 	return
 }
 
-func BinaryOpTable(B, W, L, Q, X func(Op, Op)) []func(Op, Op) {
+func BinaryOpTable(B, W, L, Q, X func(Op, Op), Y func(Op, Op, Op)) []func(Op, Op) {
 	return []func(Op, Op){
 		1:  B,
 		2:  W,
 		4:  L,
 		8:  Q,
 		16: X,
+		32: func (src, dst Op) { Y(src, dst, dst) },
 	}
 }
 
-func GenerateCopy(name, doc string, transformOps []func(Op, Op), transformOpAVX2 func(Op, Op, Op)) {
+func GenerateCopy(name, doc string, transform []func(Op, Op)) {
 	TEXT(name, NOSPLIT, "func(dst, src []byte) int")
 	Doc(name + " " + doc)
 
@@ -101,7 +102,7 @@ func GenerateCopy(name, doc string, transformOps []func(Op, Op), transformOpAVX2
 
 		for i, m := range memory {
 			operands[i] = m.Load(src)
-			if transformOps != nil {
+			if transform != nil {
 				if m.Size == 32 {
 					operands[i+count] = m.Resolve(dst)
 				} else {
@@ -110,13 +111,9 @@ func GenerateCopy(name, doc string, transformOps []func(Op, Op), transformOpAVX2
 			}
 		}
 
-		if transformOps != nil {
+		if transform != nil {
 			for i, m := range memory {
-				if m.Size == 32 {
-					transformOpAVX2(operands[i+count], operands[i], operands[i])
-				} else {
-					transformOps[m.Size](operands[i+count], operands[i])
-				}
+				transform[m.Size](operands[i+count], operands[i])
 			}
 		}
 
