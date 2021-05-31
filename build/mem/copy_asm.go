@@ -23,60 +23,15 @@ func main() {
 	CMOVQGT(x, n)
 	Store(n, ReturnIndex(0))
 
-	x86.VariableLengthBytes([]Register{src, dst}, n, func (length int, regs []Register, memory ...x86.Memory) {
+	x86.VariableLengthBytes([]Register{src, dst}, n, func (regs []Register, memory ...x86.Memory) {
 		src, dst := regs[0], regs[1]
 
-		reg := make([]Register, len(memory))
-
-		switch length {
-		case 1:
-			for i, m := range memory {
-				reg[i] = GP8()
-				MOVB(m.Get(src), reg[i])
-			}
-			for i, m := range memory {
-				MOVB(reg[i], m.Get(dst))
-			}
-		case 2:
-			for i, m := range memory {
-				reg[i] = GP16()
-				MOVW(m.Get(src), reg[i])
-			}
-			for i, m := range memory {
-				MOVW(reg[i], m.Get(dst))
-			}
-		case 4:
-			for i, m := range memory {
-				reg[i] = GP32()
-				MOVL(m.Get(src), reg[i])
-			}
-			for i, m := range memory {
-				MOVL(reg[i], m.Get(dst))
-			}
-		case 8:
-			for i, m := range memory {
-				reg[i] = GP64()
-				MOVQ(m.Get(src), reg[i])
-			}
-			for i, m := range memory {
-				MOVQ(reg[i], m.Get(dst))
-			}
-		case 16:
-			for i, m := range memory {
-				reg[i] = XMM()
-				MOVOU(m.Get(src), reg[i])
-			}
-			for i, m := range memory {
-				MOVOU(reg[i], m.Get(dst))
-			}
-		case 32:
-			for i, m := range memory {
-				reg[i] = YMM()
-				VMOVUPS(m.Get(src), reg[i])
-			}
-			for i, m := range memory {
-				VMOVUPS(reg[i], m.Get(dst))
-			}
+		tmp := make([]Register, len(memory))
+		for i, m := range memory {
+			tmp[i] = m.Load(src)
+		}
+		for i, m := range memory {
+			m.Store(tmp[i], dst)
 		}
 	})
 }

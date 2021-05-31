@@ -57,8 +57,8 @@ handle1to2:
 
 handle3:
 	MOVW (CX), DX
-	MOVW DX, (AX)
 	MOVB 2(CX), CL
+	MOVW DX, (AX)
 	MOVB CL, 2(AX)
 	RET
 
