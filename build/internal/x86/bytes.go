@@ -45,7 +45,7 @@ func (m Memory) mov(src, dst Op) {
 	case 16:
 		MOVOU(src, dst)
 	case 32:
-		VMOVUPS(src, dst)
+		VMOVDQU(src, dst)
 	}
 }
 
