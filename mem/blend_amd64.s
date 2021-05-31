@@ -32,7 +32,10 @@ tail:
 	CMPQ DX, $0x40
 	JBE  handle33to64
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCS  avx2
+	JCC  generic
+	CMPQ DX, $0x80
+	JB   avx2_tail
+	JMP  avx2
 
 generic:
 	MOVQ (CX), BX
@@ -135,8 +138,6 @@ handle33to64:
 
 	// AVX optimized version for medium to large size inputs.
 avx2:
-	CMPQ    DX, $0x80
-	JB      avx2_tail
 	VMOVUPS (CX), Y0
 	VMOVUPS 32(CX), Y1
 	VMOVUPS 64(CX), Y2
@@ -152,7 +153,8 @@ avx2:
 	ADDQ    $0x80, CX
 	ADDQ    $0x80, AX
 	SUBQ    $0x80, DX
-	JMP     avx2
+	CMPQ    DX, $0x80
+	JAE     avx2
 
 avx2_tail:
 	JZ      done

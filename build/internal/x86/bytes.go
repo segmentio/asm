@@ -104,7 +104,11 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Reg
 	CMPQ(n, Imm(64))
 	JBE(LabelRef("handle33to64"))
 
-	JumpIfFeature("avx2", cpu.AVX2)
+	JumpUnlessFeature("generic", cpu.AVX2)
+
+	CMPQ(n, Imm(128))
+	JB(LabelRef("avx2_tail"))
+	JMP(LabelRef("avx2"))
 
 	Label("generic")
 	handle(inputs, Memory{Size: 8})
@@ -165,8 +169,6 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Reg
 
 	Comment("AVX optimized version for medium to large size inputs.")
 	Label("avx2")
-	CMPQ(n, Imm(128))
-	JB(LabelRef("avx2_tail"))
 	handle(inputs,
 		Memory{Size: 32},
 		Memory{Size: 32, Offset: 32},
@@ -176,11 +178,12 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Reg
 		ADDQ(Imm(128), inputs[i])
 	}
 	SUBQ(Imm(128), n)
-	JMP(LabelRef("avx2"))
+	CMPQ(n, Imm(128))
+	JAE(LabelRef("avx2"))
 
 	Label("avx2_tail")
 	JZ(LabelRef("done")) // check flags from last CMPQ
-	CMPQ(n, Imm(64)) // n > 0 && n <= 64
+	CMPQ(n, Imm(64))     // n > 0 && n <= 64
 	JBE(LabelRef("avx2_tail_1to64"))
 	handle(inputs,
 		Memory{Size: 32},
