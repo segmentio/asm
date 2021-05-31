@@ -7,7 +7,11 @@ import (
 
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
+
 	//. "github.com/mmcloughlin/avo/reg"
+
+	. "github.com/segmentio/asm/build/internal/x86"
+	"github.com/segmentio/asm/cpu"
 )
 
 func main() {
@@ -24,7 +28,6 @@ type indexPair interface {
 	reg() Op
 	mov(Op, Op)
 	cmp(Op, Op)
-	//test(...[2]Op)
 }
 
 type indexPair1 struct{}
@@ -60,7 +63,7 @@ type indexPair16 struct{}
 func (indexPair16) size() int   { return 16 }
 func (indexPair16) reg() Op     { return XMM() }
 func (indexPair16) mov(a, b Op) { MOVOU(a, b) }
-func (indexPair16) cmp(a, b Op) {
+func (ins indexPair16) cmp(a, b Op) {
 	r := GP32()
 	PCMPEQQ(a, b)
 	PMOVMSKB(b, r)
@@ -83,15 +86,18 @@ func generateIndexPair(code indexPair) {
 	MOVQ(p, end)
 	ADDQ(n, end)
 
-	//CMPQ(n, Imm(4*uint64(size)))
-	//JE(LabelRef("loop4"))
-
 	p0 := ptr
 	p1 := GP64()
 	MOVQ(p0, p1)
 	ADDQ(Imm(uint64(size)), p1)
 
-	Label("loop1")
+	if size == 1 {
+		CMPQ(n, Imm(64))
+		JBE(LabelRef("generic"))
+		JumpIfFeature("avx2", cpu.AVX2)
+	}
+
+	Label("generic")
 	r0 := code.reg()
 	r1 := code.reg()
 	code.mov(Mem{Base: p0}, r0)
@@ -100,32 +106,8 @@ func generateIndexPair(code indexPair) {
 	JE(LabelRef("found"))
 	ADDQ(Imm(uint64(size)), p0)
 	ADDQ(Imm(uint64(size)), p1)
-	CMPQ(ptr, end)
-	JNE(LabelRef("loop1"))
-	JMP(LabelRef("done"))
-
-	/*
-		Label("loop4")
-		r0 := code.reg()
-		r1 := code.reg()
-		r2 := code.reg()
-		r3 := code.reg()
-		code.mov(Mem{Base: ptr}, r0)
-		code.mov((Mem{Base: ptr}).Offset(1*size), r1)
-		code.mov((Mem{Base: ptr}).Offset(2*size), r2)
-		code.mov((Mem{Base: ptr}).Offset(3*size), r3)
-		code.test(
-			[2]Op{r0, r1},
-			[2]Op{r0, r1},
-			[2]Op{r0, r1},
-			[2]Op{r0, r1},
-		)
-		JE(LabelRef("found"))
-		ADDQ(Imm(4*uint64(size)), ptr)
-		CMPQ(ptr, end)
-		JNE(LabelRef("loop4"))
-		JMP(LabelRef("done"))
-	*/
+	CMPQ(p0, end)
+	JNE(LabelRef("generic"))
 
 	Label("done")
 	Store(n, ReturnIndex(0))
@@ -133,9 +115,38 @@ func generateIndexPair(code indexPair) {
 
 	Label("found")
 	// The delta between the base pointer and how far we advanced is the index of the pair.
-	i := ptr
-	SUBQ(p, i)
-	//SUBQ(Imm(uint64(size)), i)
-	Store(i, ReturnIndex(0))
+	SUBQ(p, p0)
+	Store(p0, ReturnIndex(0))
 	RET()
+
+	Label("avx2")
+	// limit := end - size
+	limit := GP64()
+	MOVQ(end, limit)
+	SUBQ(Imm(uint64(size)), limit)
+
+	Label("avx2_loop")
+	y0 := YMM()
+	y1 := YMM()
+	y2 := YMM()
+	mask := GP32()
+	VMOVDQU(Mem{Base: p0}, y0)
+	VMOVDQU(Mem{Base: p1}, y1)
+	VPCMPEQB(y0, y1, y2)
+	VPMOVMSKB(y2, mask)
+	TZCNTL(mask, mask)
+	CMPL(mask, Imm(0))
+	JNE(LabelRef("avx2_found"))
+	ADDQ(Imm(32), p0)
+	ADDQ(Imm(32), p1)
+	CMPQ(p1, limit)
+	JB(LabelRef("avx2_loop"))
+
+	VZEROUPPER()
+	JE(LabelRef("generic"))
+	JMP(LabelRef("done"))
+
+	Label("avx2_found")
+	ADDQ(mask.As64(), p0)
+	JMP(LabelRef("found"))
 }
