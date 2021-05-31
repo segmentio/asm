@@ -4,18 +4,51 @@ package main
 
 import (
 	. "github.com/mmcloughlin/avo/build"
-	. "github.com/segmentio/asm/build/internal/x86"
+	. "github.com/mmcloughlin/avo/operand"
+	. "github.com/mmcloughlin/avo/reg"
+
+	"github.com/segmentio/asm/build/internal/x86"
 )
 
 func main() {
-	gen := Copy{
-		CopyB:   ORB,
-		CopyW:   ORW,
-		CopyL:   ORL,
-		CopyQ:   ORQ,
-		CopySSE: POR,
-		CopyAVX: VPOR,
-	}
+	TEXT("Blend", NOSPLIT, "func(dst, src []byte) int")
+	Doc("Blend copies the one-bits of src to dst, returning the number of bytes written.")
 
-	gen.Generate("Blend", "copies the one-bits of src to dst, returning the number of bytes written.")
+	dst := Load(Param("dst").Base(), GP64())
+	src := Load(Param("src").Base(), GP64())
+
+	n := Load(Param("dst").Len(), GP64())
+	x := Load(Param("src").Len(), GP64())
+
+	CMPQ(x, n)
+	CMOVQGT(x, n)
+	Store(n, ReturnIndex(0))
+
+	x86.VariableLengthBytes([]Register{src, dst}, n, func (regs []Register, memory ...x86.Memory) {
+		src, dst := regs[0], regs[1]
+
+		count := len(memory)
+		operands := make([]Op, count*2)
+
+		for i, m := range memory {
+			operands[i] = m.Load(src)
+			if m.Size == 32 {
+				operands[i+count] = m.Resolve(dst)
+			} else {
+				operands[i+count] = m.Load(dst)
+			}
+		}
+
+		for i, m := range memory {
+			if m.Size == 32 {
+				VPOR(operands[i+count], operands[i], operands[i])
+			} else {
+				x86.BinaryOpTable(ORB, ORW, ORL, ORQ, POR)[m.Size](operands[i+count], operands[i])
+			}
+		}
+
+		for i, m := range memory {
+			m.Store(operands[i].(Register), dst)
+		}
+	})
 }

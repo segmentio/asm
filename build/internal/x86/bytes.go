@@ -14,7 +14,7 @@ type Memory struct {
 	Offset int
 }
 
-func (m Memory) Get(base Register) Mem {
+func (m Memory) Resolve(base Register) Mem {
 	memory := Mem{Base: base, Disp: m.Offset, Scale: 1}
 	if m.Index != nil {
 		memory.Index = m.Index
@@ -24,12 +24,12 @@ func (m Memory) Get(base Register) Mem {
 
 func (m Memory) Load(base Register) Register {
 	r := GetRegister(m.Size)
-	m.mov(m.Get(base), r)
+	m.mov(m.Resolve(base), r)
 	return r
 }
 
 func (m Memory) Store(src Register, base Register) {
-	m.mov(src, m.Get(base))
+	m.mov(src, m.Resolve(base))
 }
 
 func (m Memory) mov(src, dst Op) {
@@ -69,6 +69,13 @@ func GetRegister(size int) (r Register) {
 	return
 }
 
+func BinaryOpTable(b, w, l, q, xmm func(Op, Op)) []func(Op, Op) {
+	return []func(Op, Op){
+		nil, b, w, nil, l, nil, nil, nil, q,
+		nil, nil, nil, nil, nil, nil, nil, xmm,
+	}
+}
+
 func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Register, memory ...Memory)) {
 	zero := GP64()
 	XORQ(zero, zero)
@@ -78,11 +85,11 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Reg
 	CMPQ(n, Imm(0))
 	JE(LabelRef("done"))
 
-	CMPQ(n, Imm(2))
-	JBE(LabelRef("handle1to2"))
+	CMPQ(n, Imm(1))
+	JE(LabelRef("handle1"))
 
 	CMPQ(n, Imm(3))
-	JE(LabelRef("handle3"))
+	JBE(LabelRef("handle2to3"))
 
 	CMPQ(n, Imm(4))
 	JE(LabelRef("handle4"))
@@ -115,16 +122,14 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Reg
 	Label("done")
 	RET()
 
-	Label("handle1to2")
-	handle(inputs,
-		Memory{Size: 1},
-		Memory{Size: 1, Index: n, Offset: -1})
+	Label("handle1")
+	handle(inputs, Memory{Size: 1})
 	RET()
 
-	Label("handle3")
+	Label("handle2to3")
 	handle(inputs,
 		Memory{Size: 2},
-		Memory{Size: 1, Offset: 2})
+		Memory{Size: 2, Index: n, Offset: -2})
 	RET()
 
 	Label("handle4")

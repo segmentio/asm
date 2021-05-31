@@ -17,10 +17,10 @@ TEXT ·Copy(SB), NOSPLIT, $0-56
 tail:
 	CMPQ DX, $0x00
 	JE   done
-	CMPQ DX, $0x02
-	JBE  handle1to2
+	CMPQ DX, $0x01
+	JE   handle1
 	CMPQ DX, $0x03
-	JE   handle3
+	JBE  handle2to3
 	CMPQ DX, $0x04
 	JE   handle4
 	CMPQ DX, $0x08
@@ -48,18 +48,16 @@ generic:
 done:
 	RET
 
-handle1to2:
-	MOVB (CX), BL
-	MOVB -1(CX)(DX*1), CL
-	MOVB BL, (AX)
-	MOVB CL, -1(AX)(DX*1)
+handle1:
+	MOVB (CX), CL
+	MOVB CL, (AX)
 	RET
 
-handle3:
-	MOVW (CX), DX
-	MOVB 2(CX), CL
-	MOVW DX, (AX)
-	MOVB CL, 2(AX)
+handle2to3:
+	MOVW (CX), BX
+	MOVW -2(CX)(DX*1), CX
+	MOVW BX, (AX)
+	MOVW CX, -2(AX)(DX*1)
 	RET
 
 handle4:
