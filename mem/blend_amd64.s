@@ -10,7 +10,7 @@ TEXT ·Blend(SB), NOSPLIT, $0-56
 	MOVQ    dst_len+8(FP), DX
 	MOVQ    src_len+32(FP), BX
 	CMPQ    BX, DX
-	CMOVQGT BX, DX
+	CMOVQLT BX, DX
 	MOVQ    DX, ret+48(FP)
 
 tail:

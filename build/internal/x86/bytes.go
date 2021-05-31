@@ -91,7 +91,7 @@ func GenerateCopy(name, doc string, transform []func(Op, Op)) {
 	x := Load(Param("src").Len(), GP64())
 
 	CMPQ(x, n)
-	CMOVQGT(x, n)
+	CMOVQLT(x, n)
 	Store(n, ReturnIndex(0))
 
 	VariableLengthBytes([]Register{src, dst}, n, func (regs []Register, memory ...Memory) {

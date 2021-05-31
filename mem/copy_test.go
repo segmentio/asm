@@ -12,6 +12,9 @@ import (
 )
 
 func TestCopy(t *testing.T) {
+
+	mem.Copy([]byte{1, 2}, []byte{1})
+
 	for _, N := range []int{0, 1, 2, 3, 4, 6, 8, 10, 31, 32, 33, 64, 100, 1024, 4096} {
 		t.Run(fmt.Sprintf("N=%d", N), func(t *testing.T) {
 			src := make([]byte, N)
