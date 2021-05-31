@@ -50,8 +50,8 @@ done:
 
 handle1to2:
 	MOVB (CX), BL
-	MOVB BL, (AX)
 	MOVB -1(CX)(DX*1), CL
+	MOVB BL, (AX)
 	MOVB CL, -1(AX)(DX*1)
 	RET
 
@@ -69,8 +69,8 @@ handle4:
 
 handle5to7:
 	MOVL (CX), BX
-	MOVL BX, (AX)
 	MOVL -4(CX)(DX*1), CX
+	MOVL BX, (AX)
 	MOVL CX, -4(AX)(DX*1)
 	RET
 
@@ -81,23 +81,23 @@ handle8:
 
 handle9to16:
 	MOVQ (CX), BX
-	MOVQ BX, (AX)
 	MOVQ -8(CX)(DX*1), CX
+	MOVQ BX, (AX)
 	MOVQ CX, -8(AX)(DX*1)
 	RET
 
 handle17to32:
 	VMOVUPS (CX), X0
+	VMOVUPS -16(CX)(DX*1), X1
 	VMOVUPS X0, (AX)
-	VMOVUPS -16(CX)(DX*1), X0
-	VMOVUPS X0, -16(AX)(DX*1)
+	VMOVUPS X1, -16(AX)(DX*1)
 	RET
 
 handle33to64:
 	VMOVUPS (CX), Y0
+	VMOVUPS -32(CX)(DX*1), Y1
 	VMOVUPS Y0, (AX)
-	VMOVUPS -32(CX)(DX*1), Y0
-	VMOVUPS Y0, -32(AX)(DX*1)
+	VMOVUPS Y1, -32(AX)(DX*1)
 	RET
 
 	// AVX optimized version for medium to large size inputs.
@@ -105,13 +105,13 @@ avx2:
 	CMPQ    DX, $0x80
 	JB      avx2_tail
 	VMOVUPS (CX), Y0
+	VMOVUPS 32(CX), Y1
+	VMOVUPS 64(CX), Y2
+	VMOVUPS 96(CX), Y3
 	VMOVUPS Y0, (AX)
-	VMOVUPS 32(CX), Y0
-	VMOVUPS Y0, 32(AX)
-	VMOVUPS 64(CX), Y0
-	VMOVUPS Y0, 64(AX)
-	VMOVUPS 96(CX), Y0
-	VMOVUPS Y0, 96(AX)
+	VMOVUPS Y1, 32(AX)
+	VMOVUPS Y2, 64(AX)
+	VMOVUPS Y3, 96(AX)
 	ADDQ    $0x80, CX
 	ADDQ    $0x80, AX
 	SUBQ    $0x80, DX
@@ -122,18 +122,18 @@ avx2_tail:
 	CMPQ    DX, $0x40
 	JBE     avx2_tail_1to64
 	VMOVUPS (CX), Y0
+	VMOVUPS 32(CX), Y1
+	VMOVUPS 64(CX), Y2
+	VMOVUPS -32(CX)(DX*1), Y3
 	VMOVUPS Y0, (AX)
-	VMOVUPS 32(CX), Y0
-	VMOVUPS Y0, 32(AX)
-	VMOVUPS 64(CX), Y0
-	VMOVUPS Y0, 64(AX)
-	VMOVUPS -32(CX)(DX*1), Y0
-	VMOVUPS Y0, -32(AX)(DX*1)
+	VMOVUPS Y1, 32(AX)
+	VMOVUPS Y2, 64(AX)
+	VMOVUPS Y3, -32(AX)(DX*1)
 	RET
 
 avx2_tail_1to64:
 	VMOVUPS -64(CX)(DX*1), Y0
+	VMOVUPS -32(CX)(DX*1), Y1
 	VMOVUPS Y0, -64(AX)(DX*1)
-	VMOVUPS -32(CX)(DX*1), Y0
-	VMOVUPS Y0, -32(AX)(DX*1)
+	VMOVUPS Y1, -32(AX)(DX*1)
 	RET

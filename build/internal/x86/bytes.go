@@ -21,7 +21,7 @@ func (m Memory) Get(base Register) Mem {
 	return memory
 }
 
-func VariableLengthBytes(inputs []Register, n Register, handle func(length int, inputs []Register, mem Memory)) {
+func VariableLengthBytes(inputs []Register, n Register, handle func(length int, inputs []Register, memory ...Memory)) {
 	zero := GP64()
 	XORQ(zero, zero)
 
@@ -68,8 +68,7 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(length int, 
 	RET()
 
 	Label("handle1to2")
-	handle(1, inputs, Memory{})
-	handle(1, inputs, Memory{Index: n, Offset: -1})
+	handle(1, inputs, Memory{}, Memory{Index: n, Offset: -1})
 	RET()
 
 	Label("handle3")
@@ -82,8 +81,7 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(length int, 
 	RET()
 
 	Label("handle5to7")
-	handle(4, inputs, Memory{})
-	handle(4, inputs, Memory{Index: n, Offset: -4})
+	handle(4, inputs, Memory{}, Memory{Index: n, Offset: -4})
 	RET()
 
 	Label("handle8")
@@ -91,28 +89,22 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(length int, 
 	RET()
 
 	Label("handle9to16")
-	handle(8, inputs, Memory{})
-	handle(8, inputs, Memory{Index: n, Offset: -8})
+	handle(8, inputs, Memory{}, Memory{Index: n, Offset: -8})
 	RET()
 
 	Label("handle17to32")
-	handle(16, inputs, Memory{})
-	handle(16, inputs, Memory{Index: n, Offset: -16})
+	handle(16, inputs, Memory{}, Memory{Index: n, Offset: -16})
 	RET()
 
 	Label("handle33to64")
-	handle(32, inputs, Memory{})
-	handle(32, inputs, Memory{Index: n, Offset: -32})
+	handle(32, inputs, Memory{}, Memory{Index: n, Offset: -32})
 	RET()
 
 	Comment("AVX optimized version for medium to large size inputs.")
 	Label("avx2")
 	CMPQ(n, Imm(128))
 	JB(LabelRef("avx2_tail"))
-	handle(32, inputs, Memory{})
-	handle(32, inputs, Memory{Offset: 32})
-	handle(32, inputs, Memory{Offset: 64})
-	handle(32, inputs, Memory{Offset: 96})
+	handle(32, inputs, Memory{}, Memory{Offset: 32}, Memory{Offset: 64}, Memory{Offset: 96})
 	for i := range inputs {
 		ADDQ(Imm(128), inputs[i])
 	}
@@ -123,15 +115,11 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(length int, 
 	JZ(LabelRef("done")) // check flags from last CMPQ
 	CMPQ(n, Imm(64)) // n > 0 && n <= 64
 	JBE(LabelRef("avx2_tail_1to64"))
-	handle(32, inputs, Memory{})
-	handle(32, inputs, Memory{Offset: 32})
-	handle(32, inputs, Memory{Offset: 64})
-	handle(32, inputs, Memory{Index: n, Offset: -32})
+	handle(32, inputs, Memory{}, Memory{Offset: 32}, Memory{Offset: 64}, Memory{Index: n, Offset: -32})
 	RET()
 
 	Label("avx2_tail_1to64")
-	handle(32, inputs, Memory{Index: n, Offset: -64})
-	handle(32, inputs, Memory{Index: n, Offset: -32})
+	handle(32, inputs, Memory{Index: n, Offset: -64}, Memory{Index: n, Offset: -32})
 	RET()
 
 	Generate()
