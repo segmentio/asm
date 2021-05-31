@@ -21,6 +21,9 @@ func main() {
 	bEnd := Load(Param("b").Len(), GP64())
 	ADDQ(b, bEnd)
 
+	ones := XMM()
+	VPCMPEQB(ones, ones, ones)
+
 	// Load the first item from a/b. We know that each has at least
 	// one item (this is enforced in the wrapper).
 	aItem := XMM()
@@ -30,41 +33,28 @@ func main() {
 
 	Label("loop")
 
-	// Compare bytes and extract an equality mask.
-	result := XMM()
-	VPCMPEQB(aItem, bItem, result)
-	mask := GP32()
-	VPMOVMSKB(result, mask)
+	// Compare bytes and extract two masks.
+	// ne = mask of bytes where a!=b
+	// lt = mask of bytes where a<b
+	ne := XMM()
+	lt := XMM()
+	VPCMPEQB(aItem, bItem, ne)
+	VPXOR(ne, ones, ne)
+	VPMINUB(aItem, bItem, lt)
+	VPCMPEQB(aItem, lt, lt)
+	VPAND(lt, ne, lt)
+	unequalMask := GP32()
+	lessMask := GP32()
+	VPMOVMSKB(ne, unequalMask)
+	VPMOVMSKB(lt, lessMask)
 
-	// Check if they're equal firstly.
-	CMPL(mask, U32(0xFFFF))
-	JNE(LabelRef("compare_byte"))
-
-	// If a==b, copy either and advance both.
-	Label("equal")
-	VMOVUPS(aItem, Mem{Base: dst})
-	ADDQ(Imm(16), dst)
-	ADDQ(Imm(16), a)
-	ADDQ(Imm(16), b)
-	CMPQ(a, aEnd)
-	JE(LabelRef("done"))
-	CMPQ(b, bEnd)
-	JE(LabelRef("done"))
-	VMOVUPS(Mem{Base: a}, aItem)
-	VMOVUPS(Mem{Base: b}, bItem)
-	JMP(LabelRef("loop"))
-
-	// They're not equal, so compare the first unequal byte.
-	Label("compare_byte")
-	NOTL(mask)
+	// Branch based on whether a==b, or a<b.
+	CMPL(unequalMask, U32(0))
+	JE(LabelRef("equal"))
 	unequalByteIndex := GP32()
-	BSFL(mask, unequalByteIndex)
-	aByte := GP8()
-	bByte := GP8()
-	MOVB(Mem{Base: a, Index: unequalByteIndex, Scale: 1}, aByte)
-	MOVB(Mem{Base: b, Index: unequalByteIndex, Scale: 1}, bByte)
-	CMPB(aByte, bByte)
-	JB(LabelRef("less"))
+	BSFL(unequalMask, unequalByteIndex)
+	BTSL(unequalByteIndex, lessMask)
+	JCS(LabelRef("less"))
 
 	// If b>a, copy and advance a.
 	Label("greater")
@@ -84,6 +74,20 @@ func main() {
 	CMPQ(a, aEnd)
 	JE(LabelRef("done"))
 	VMOVUPS(Mem{Base: a}, aItem)
+	JMP(LabelRef("loop"))
+
+	// If a==b, copy either and advance both.
+	Label("equal")
+	VMOVUPS(aItem, Mem{Base: dst})
+	ADDQ(Imm(16), dst)
+	ADDQ(Imm(16), a)
+	ADDQ(Imm(16), b)
+	CMPQ(a, aEnd)
+	JE(LabelRef("done"))
+	CMPQ(b, bEnd)
+	JE(LabelRef("done"))
+	VMOVUPS(Mem{Base: a}, aItem)
+	VMOVUPS(Mem{Base: b}, bItem)
 	JMP(LabelRef("loop"))
 
 	// Calculate and return byte offsets of the each pointer.
