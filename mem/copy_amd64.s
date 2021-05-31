@@ -39,11 +39,17 @@ tail:
 
 generic:
 	MOVOU (CX), X0
+	MOVOU 16(CX), X1
+	MOVOU 32(CX), X2
+	MOVOU 48(CX), X3
 	MOVOU X0, (AX)
-	ADDQ  $0x10, CX
-	ADDQ  $0x10, AX
-	SUBQ  $0x10, DX
-	CMPQ  DX, $0x10
+	MOVOU X1, 16(AX)
+	MOVOU X2, 32(AX)
+	MOVOU X3, 48(AX)
+	ADDQ  $0x40, CX
+	ADDQ  $0x40, AX
+	SUBQ  $0x40, DX
+	CMPQ  DX, $0x40
 	JBE   tail
 	JMP   generic
 
