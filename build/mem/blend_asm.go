@@ -4,17 +4,11 @@ package main
 
 import (
 	. "github.com/mmcloughlin/avo/build"
-	. "github.com/segmentio/asm/build/internal/gen"
+
+	"github.com/segmentio/asm/build/internal/x86"
 )
 
 func main() {
-	gen := Copy{
-		CopyB:   ORB,
-		CopyW:   ORW,
-		CopyL:   ORL,
-		CopyQ:   ORQ,
-		CopyAVX: VPOR,
-	}
-
-	gen.Generate("Blend", "copies the one-bits of src to dst, returning the number of bytes written.")
+	x86.GenerateCopy("Blend", "copies the one-bits of src to dst, returning the number of bytes written.",
+		x86.BinaryOpTable(ORB, ORW, ORL, ORQ, POR, VPOR))
 }

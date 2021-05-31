@@ -2,4 +2,6 @@
 
 package mem
 
-func Copy(dst, src []byte) int { return copy(dst, src) }
+func Copy(dst, src []byte) int {
+	return copyGeneric(dst, src)
+}
