@@ -161,12 +161,12 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Reg
 	JMP(LabelRef("avx2"))
 
 	Label("generic")
-	handle(inputs, Memory{Size: 8})
+	handle(inputs, Memory{Size: 16})
 	for i := range inputs {
-		ADDQ(Imm(8), inputs[i])
+		ADDQ(Imm(16), inputs[i])
 	}
-	SUBQ(Imm(8), n)
-	CMPQ(n, Imm(8))
+	SUBQ(Imm(16), n)
+	CMPQ(n, Imm(16))
 	JBE(LabelRef("tail"))
 	JMP(LabelRef("generic"))
 

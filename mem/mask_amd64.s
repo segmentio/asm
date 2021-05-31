@@ -38,16 +38,16 @@ tail:
 	JMP  avx2
 
 generic:
-	MOVQ (CX), BX
-	MOVQ (AX), SI
-	ANDQ SI, BX
-	MOVQ BX, (AX)
-	ADDQ $0x08, CX
-	ADDQ $0x08, AX
-	SUBQ $0x08, DX
-	CMPQ DX, $0x08
-	JBE  tail
-	JMP  generic
+	MOVOU (CX), X0
+	MOVOU (AX), X1
+	PAND  X1, X0
+	MOVOU X0, (AX)
+	ADDQ  $0x10, CX
+	ADDQ  $0x10, AX
+	SUBQ  $0x10, DX
+	CMPQ  DX, $0x10
+	JBE   tail
+	JMP   generic
 
 done:
 	RET
