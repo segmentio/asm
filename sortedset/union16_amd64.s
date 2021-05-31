@@ -5,55 +5,58 @@
 // func union16(dst []byte, a []byte, b []byte) (i int, j int, k int)
 // Requires: AVX
 TEXT ·union16(SB), NOSPLIT, $0-96
-	MOVQ    dst_base+0(FP), AX
-	MOVQ    a_base+24(FP), CX
-	MOVQ    b_base+48(FP), DX
-	MOVQ    a_len+32(FP), BX
-	ADDQ    CX, BX
-	MOVQ    b_len+56(FP), SI
-	ADDQ    DX, SI
-	VMOVUPS (CX), X0
-	VMOVUPS (DX), X1
+	MOVQ     dst_base+0(FP), AX
+	MOVQ     a_base+24(FP), CX
+	MOVQ     b_base+48(FP), DX
+	MOVQ     a_len+32(FP), BX
+	ADDQ     CX, BX
+	MOVQ     b_len+56(FP), SI
+	ADDQ     DX, SI
+	VPCMPEQB X0, X0, X0
+	VMOVUPS  (CX), X1
+	VMOVUPS  (DX), X2
 
 loop:
-	VPCMPEQB  X0, X1, X2
-	VPMOVMSKB X2, DI
-	CMPL      DI, $0x0000ffff
-	JNE       compare_byte
-	VMOVUPS   X0, (AX)
+	VPCMPEQB  X1, X2, X3
+	VPXOR     X3, X0, X3
+	VPMINUB   X1, X2, X4
+	VPCMPEQB  X1, X4, X4
+	VPAND     X4, X3, X4
+	VPMOVMSKB X3, DI
+	VPMOVMSKB X4, R8
+	TESTL     DI, DI
+	JZ        equal
+	BSFL      DI, R9
+	BTSL      R9, R8
+	JCS       less
+	VMOVUPS   X2, (AX)
 	ADDQ      $0x10, AX
-	ADDQ      $0x10, CX
 	ADDQ      $0x10, DX
-	CMPQ      CX, BX
-	JE        done
 	CMPQ      DX, SI
 	JE        done
-	VMOVUPS   (CX), X0
-	VMOVUPS   (DX), X1
+	VMOVUPS   (DX), X2
 	JMP       loop
 
-compare_byte:
-	NOTL    DI
-	BSFL    DI, R8
-	MOVB    (CX)(R8*1), DI
-	MOVB    (DX)(R8*1), R9
-	CMPB    DI, R9
-	JB      less
-	VMOVUPS X1, (AX)
-	ADDQ    $0x10, AX
-	ADDQ    $0x10, DX
-	CMPQ    DX, SI
-	JE      done
-	VMOVUPS (DX), X1
-	JMP     loop
-
 less:
-	VMOVUPS X0, (AX)
+	VMOVUPS X1, (AX)
 	ADDQ    $0x10, AX
 	ADDQ    $0x10, CX
 	CMPQ    CX, BX
 	JE      done
-	VMOVUPS (CX), X0
+	VMOVUPS (CX), X1
+	JMP     loop
+
+equal:
+	VMOVUPS X1, (AX)
+	ADDQ    $0x10, AX
+	ADDQ    $0x10, CX
+	ADDQ    $0x10, DX
+	CMPQ    CX, BX
+	JE      done
+	CMPQ    DX, SI
+	JE      done
+	VMOVUPS (CX), X1
+	VMOVUPS (DX), X2
 	JMP     loop
 
 done:
