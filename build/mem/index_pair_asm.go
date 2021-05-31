@@ -3,19 +3,59 @@
 package main
 
 import (
+	"fmt"
+
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
-	//. "github.com/mmcloughlin/avo/reg"
+	. "github.com/mmcloughlin/avo/reg"
 )
 
 func main() {
-	TEXT("indexPair1", NOSPLIT, "func(b []byte) int")
-	Doc("indexPair1 is the x86 specialization of mem.IndexPair for items of size 1")
+	generateIndexPair(indexPair{
+		size: 1,
+		GP:   GP8,
+		MOV:  MOVB,
+		CMP:  CMPB,
+	})
+
+	generateIndexPair(indexPair{
+		size: 2,
+		GP:   GP16,
+		MOV:  MOVW,
+		CMP:  CMPW,
+	})
+
+	generateIndexPair(indexPair{
+		size: 4,
+		GP:   GP32,
+		MOV:  MOVL,
+		CMP:  CMPL,
+	})
+
+	generateIndexPair(indexPair{
+		size: 8,
+		GP:   GP64,
+		MOV:  MOVQ,
+		CMP:  CMPQ,
+	})
+
+	Generate()
+}
+
+type indexPair struct {
+	size int
+	GP   func() GPVirtual
+	MOV  func(Op, Op)
+	CMP  func(Op, Op)
+}
+
+func generateIndexPair(code indexPair) {
+	TEXT(fmt.Sprintf("indexPair%d", code.size), NOSPLIT, "func(b []byte) int")
 
 	p := Load(Param("b").Base(), GP64())
 	n := Load(Param("b").Len(), GP64())
 
-	CMPQ(n, Imm(1)) // n <= 1
+	CMPQ(n, Imm(uint64(code.size))) // zero or one item
 	JBE(LabelRef("done"))
 
 	ptr := GP64()
@@ -25,13 +65,13 @@ func main() {
 	ADDQ(n, end)
 
 	Label("loop")
-	b0 := GP8()
-	b1 := GP8()
-	MOVB(Mem{Base: ptr}, b0)
-	MOVB((Mem{Base: ptr}).Offset(1), b1)
-	CMPB(b0, b1)
+	r0 := code.GP()
+	r1 := code.GP()
+	code.MOV(Mem{Base: ptr}, r0)
+	code.MOV((Mem{Base: ptr}).Offset(1*code.size), r1)
+	code.CMP(r0, r1)
 	JE(LabelRef("found"))
-	INCQ(ptr)
+	ADDQ(Imm(uint64(code.size)), ptr)
 	CMPQ(ptr, end)
 	JNE(LabelRef("loop"))
 
@@ -45,6 +85,4 @@ func main() {
 	SUBQ(p, i)
 	Store(i, ReturnIndex(0))
 	RET()
-
-	Generate()
 }

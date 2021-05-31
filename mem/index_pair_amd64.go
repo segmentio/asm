@@ -2,5 +2,10 @@
 
 package mem
 
-// indexPair1 is the x86 specialization of mem.IndexPair for items of size 1
 func indexPair1(b []byte) int
+
+func indexPair2(b []byte) int
+
+func indexPair4(b []byte) int
+
+func indexPair8(b []byte) int

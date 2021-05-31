@@ -22,6 +22,12 @@ func indexPair(b []byte, n int) int {
 	switch n {
 	case 1:
 		return indexPair1(b)
+	case 2:
+		return indexPair2(b)
+	case 4:
+		return indexPair4(b)
+	case 8:
+		return indexPair8(b)
 	default:
 		return indexPairGeneric(b, n)
 	}

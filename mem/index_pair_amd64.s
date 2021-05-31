@@ -17,7 +17,94 @@ loop:
 	MOVB 1(DX), DI
 	CMPB SI, DI
 	JE   found
-	INCQ DX
+	ADDQ $0x01, DX
+	CMPQ DX, BX
+	JNE  loop
+
+done:
+	MOVQ CX, ret+24(FP)
+	RET
+
+found:
+	// The delta between the base pointer and how far we advanced is the index of the pair.
+	SUBQ AX, DX
+	MOVQ DX, ret+24(FP)
+	RET
+
+// func indexPair2(b []byte) int
+TEXT ·indexPair2(SB), NOSPLIT, $0-32
+	MOVQ b_base+0(FP), AX
+	MOVQ b_len+8(FP), CX
+	CMPQ CX, $0x02
+	JBE  done
+	MOVQ AX, DX
+	MOVQ AX, BX
+	ADDQ CX, BX
+
+loop:
+	MOVW (DX), SI
+	MOVW 2(DX), DI
+	CMPW SI, DI
+	JE   found
+	ADDQ $0x02, DX
+	CMPQ DX, BX
+	JNE  loop
+
+done:
+	MOVQ CX, ret+24(FP)
+	RET
+
+found:
+	// The delta between the base pointer and how far we advanced is the index of the pair.
+	SUBQ AX, DX
+	MOVQ DX, ret+24(FP)
+	RET
+
+// func indexPair4(b []byte) int
+TEXT ·indexPair4(SB), NOSPLIT, $0-32
+	MOVQ b_base+0(FP), AX
+	MOVQ b_len+8(FP), CX
+	CMPQ CX, $0x04
+	JBE  done
+	MOVQ AX, DX
+	MOVQ AX, BX
+	ADDQ CX, BX
+
+loop:
+	MOVL (DX), SI
+	MOVL 4(DX), DI
+	CMPL SI, DI
+	JE   found
+	ADDQ $0x04, DX
+	CMPQ DX, BX
+	JNE  loop
+
+done:
+	MOVQ CX, ret+24(FP)
+	RET
+
+found:
+	// The delta between the base pointer and how far we advanced is the index of the pair.
+	SUBQ AX, DX
+	MOVQ DX, ret+24(FP)
+	RET
+
+// func indexPair8(b []byte) int
+TEXT ·indexPair8(SB), NOSPLIT, $0-32
+	MOVQ b_base+0(FP), AX
+	MOVQ b_len+8(FP), CX
+	CMPQ CX, $0x08
+	JBE  done
+	MOVQ AX, DX
+	MOVQ AX, BX
+	ADDQ CX, BX
+
+loop:
+	MOVQ (DX), SI
+	MOVQ 8(DX), DI
+	CMPQ SI, DI
+	JE   found
+	ADDQ $0x08, DX
 	CMPQ DX, BX
 	JNE  loop
 
