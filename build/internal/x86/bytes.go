@@ -79,6 +79,53 @@ func BinaryOpTable(B, W, L, Q, X func(Op, Op)) []func(Op, Op) {
 	}
 }
 
+func GenerateCopy(name, doc string, transformOps []func(Op, Op), transformOpAVX2 func(Op, Op, Op)) {
+	TEXT(name, NOSPLIT, "func(dst, src []byte) int")
+	Doc(name + " " + doc)
+
+	dst := Load(Param("dst").Base(), GP64())
+	src := Load(Param("src").Base(), GP64())
+
+	n := Load(Param("dst").Len(), GP64())
+	x := Load(Param("src").Len(), GP64())
+
+	CMPQ(x, n)
+	CMOVQGT(x, n)
+	Store(n, ReturnIndex(0))
+
+	VariableLengthBytes([]Register{src, dst}, n, func (regs []Register, memory ...Memory) {
+		src, dst := regs[0], regs[1]
+
+		count := len(memory)
+		operands := make([]Op, count*2)
+
+		for i, m := range memory {
+			operands[i] = m.Load(src)
+			if transformOps != nil {
+				if m.Size == 32 {
+					operands[i+count] = m.Resolve(dst)
+				} else {
+					operands[i+count] = m.Load(dst)
+				}
+			}
+		}
+
+		if transformOps != nil {
+			for i, m := range memory {
+				if m.Size == 32 {
+					transformOpAVX2(operands[i+count], operands[i], operands[i])
+				} else {
+					transformOps[m.Size](operands[i+count], operands[i])
+				}
+			}
+		}
+
+		for i, m := range memory {
+			m.Store(operands[i].(Register), dst)
+		}
+	})
+}
+
 func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Register, memory ...Memory)) {
 	Label("tail")
 
