@@ -71,8 +71,11 @@ func GetRegister(size int) (r Register) {
 
 func BinaryOpTable(B, W, L, Q, X func(Op, Op)) []func(Op, Op) {
 	return []func(Op, Op){
-		nil, B, W, nil, L, nil, nil, nil, Q,
-		nil, nil, nil, nil, nil, nil, nil, X,
+		1:  B,
+		2:  W,
+		4:  L,
+		8:  Q,
+		16: X,
 	}
 }
 
