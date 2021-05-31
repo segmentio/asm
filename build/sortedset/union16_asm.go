@@ -49,8 +49,8 @@ func main() {
 	VPMOVMSKB(lt, lessMask)
 
 	// Branch based on whether a==b, or a<b.
-	CMPL(unequalMask, U32(0))
-	JE(LabelRef("equal"))
+	TESTL(unequalMask, unequalMask)
+	JZ(LabelRef("equal"))
 	unequalByteIndex := GP32()
 	BSFL(unequalMask, unequalByteIndex)
 	BTSL(unequalByteIndex, lessMask)

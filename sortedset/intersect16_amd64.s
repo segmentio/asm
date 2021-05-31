@@ -24,8 +24,8 @@ loop:
 	VPAND     X4, X3, X4
 	VPMOVMSKB X3, DI
 	VPMOVMSKB X4, R8
-	CMPL      DI, $0x00000000
-	JE        equal
+	TESTL     DI, DI
+	JZ        equal
 	BSFL      DI, R9
 	BTSL      R9, R8
 	JCS       less
