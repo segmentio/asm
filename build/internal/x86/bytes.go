@@ -76,7 +76,7 @@ func BinaryOpTable(B, W, L, Q, X func(Op, Op), VEX func(Op, Op, Op)) []func(Op, 
 		4:  L,
 		8:  Q,
 		16: X,
-		32: func (src, dst Op) { VEX(src, dst, dst) },
+		32: func(src, dst Op) { VEX(src, dst, dst) },
 	}
 }
 
@@ -94,7 +94,7 @@ func GenerateCopy(name, doc string, transform []func(Op, Op)) {
 	CMOVQLT(x, n)
 	Store(n, ReturnIndex(0))
 
-	VariableLengthBytes([]Register{src, dst}, n, func (regs []Register, memory ...Memory) {
+	VariableLengthBytes([]Register{src, dst}, n, func(regs []Register, memory ...Memory) {
 		src, dst := regs[0], regs[1]
 
 		count := len(memory)
@@ -233,7 +233,7 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Reg
 	JZ(LabelRef("avx2_done"))
 
 	Label("avx2_tail")
-	CMPQ(n, Imm(64))     // n > 0 && n <= 64
+	CMPQ(n, Imm(64)) // n > 0 && n <= 64
 	JBE(LabelRef("avx2_tail_1to64"))
 	handle(inputs,
 		Memory{Size: 32},
