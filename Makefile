@@ -10,9 +10,7 @@ targets := \
 	$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.s,$(sources)) \
 	$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.go,$(sources))
 
-internal := $(wildcard \
-	$(srcdir)/internal/x86/*.go \
-)
+internal := $(wildcard $(srcdir)/internal/*/*.go)
 
 build: $(targets)
 
