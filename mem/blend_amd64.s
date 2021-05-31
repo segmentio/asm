@@ -34,7 +34,7 @@ tail:
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC  generic
 	CMPQ DX, $0x80
-	JB   avx2_tail
+	JBE  avx2_tail
 	JMP  avx2
 
 generic:
@@ -155,9 +155,9 @@ avx2:
 	SUBQ    $0x80, DX
 	CMPQ    DX, $0x80
 	JAE     avx2
+	JZ      avx2_done
 
 avx2_tail:
-	JZ      done
 	CMPQ    DX, $0x40
 	JBE     avx2_tail_1to64
 	VMOVDQU (CX), Y0
@@ -172,7 +172,7 @@ avx2_tail:
 	VMOVDQU Y1, 32(AX)
 	VMOVDQU Y2, 64(AX)
 	VMOVDQU Y3, -32(AX)(DX*1)
-	RET
+	JMP     avx2_done
 
 avx2_tail_1to64:
 	VMOVDQU -64(CX)(DX*1), Y0
@@ -181,4 +181,7 @@ avx2_tail_1to64:
 	VPOR    -32(AX)(DX*1), Y1, Y1
 	VMOVDQU Y0, -64(AX)(DX*1)
 	VMOVDQU Y1, -32(AX)(DX*1)
+
+avx2_done:
+	VZEROUPPER
 	RET

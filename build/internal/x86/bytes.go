@@ -157,7 +157,7 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Reg
 	JumpUnlessFeature("generic", cpu.AVX2)
 
 	CMPQ(n, Imm(128))
-	JB(LabelRef("avx2_tail"))
+	JBE(LabelRef("avx2_tail"))
 	JMP(LabelRef("avx2"))
 
 	Label("generic")
@@ -230,9 +230,9 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Reg
 	SUBQ(Imm(128), n)
 	CMPQ(n, Imm(128))
 	JAE(LabelRef("avx2"))
+	JZ(LabelRef("avx2_done"))
 
 	Label("avx2_tail")
-	JZ(LabelRef("done")) // check flags from last CMPQ
 	CMPQ(n, Imm(64))     // n > 0 && n <= 64
 	JBE(LabelRef("avx2_tail_1to64"))
 	handle(inputs,
@@ -240,13 +240,15 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Reg
 		Memory{Size: 32, Offset: 32},
 		Memory{Size: 32, Offset: 64},
 		Memory{Size: 32, Index: n, Offset: -32})
-	RET()
+	JMP(LabelRef("avx2_done"))
 
 	Label("avx2_tail_1to64")
 	handle(inputs,
 		Memory{Size: 32, Index: n, Offset: -64},
 		Memory{Size: 32, Index: n, Offset: -32})
-	RET()
 
+	Label("avx2_done")
+	VZEROUPPER()
+	RET()
 	Generate()
 }
