@@ -52,6 +52,12 @@ func TestIndexPair(t *testing.T) {
 				},
 
 				{
+					scenario: "input with two equal items in the middle",
+					input:    makeInput(0, 1, 2, 3, 4, 5, 5, 6, 7, 8, 9),
+					index:    5,
+				},
+
+				{
 					scenario: "input with two equal items at the end",
 					input:    makeInput(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9),
 					index:    9,
