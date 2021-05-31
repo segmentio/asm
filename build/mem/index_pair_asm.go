@@ -125,38 +125,35 @@ func generateIndexPair(code indexPair) {
 		// limit := end - size
 		limit := GP64()
 		MOVQ(end, limit)
-		SUBQ(Imm(32+uint64(size)), limit)
-		//SUBQ(Imm(64), limit)
+		SUBQ(Imm(64+uint64(size)), limit)
 
 		Label("avx2_loop")
 		y0 := YMM()
 		y1 := YMM()
-		//y2 := YMM()
-		//y3 := YMM()
+		y2 := YMM()
+		y3 := YMM()
 		mask0 := GP64()
-		//mask1 := GP64()
+		mask1 := GP64()
+		MOVQ(U64(0), mask0)
+		MOVQ(U64(0), mask1)
 
 		VMOVDQU(Mem{Base: ptr}, y0)
 		VMOVDQU((Mem{Base: ptr}).Offset(size), y1)
-
+		VMOVDQU((Mem{Base: ptr}).Offset(32), y2)
+		VMOVDQU((Mem{Base: ptr}).Offset(32+size), y3)
 		code.vpcmpeq(y0, y1, y1)
-		//code.vpcmpeq(y2, y3, y3)
-
-		//XORQ(mask0, mask0)
-		//XORQ(mask1, mask1)
+		code.vpcmpeq(y2, y3, y3)
 		VPMOVMSKB(y1, mask0.As32())
-		//VPMOVMSKB(y3, mask1.As32())
-		//SHLQ(Imm(32), mask1)
-		//ORQ(mask1, mask0)
+		VPMOVMSKB(y3, mask1.As32())
+
+		SHLQ(Imm(32), mask1)
+		ORQ(mask1, mask0)
 
 		TZCNTQ(mask0, mask0)
 		CMPQ(mask0, Imm(64))
 		JNE(LabelRef("avx2_found"))
 
-		//ADDQ(Imm(64), ptr)
-		//ADDQ(Imm(64), p1)
-		ADDQ(Imm(32), ptr)
-		//ADDQ(Imm(32), p1)
+		ADDQ(Imm(64), ptr)
 		CMPQ(ptr, limit)
 		JBE(LabelRef("avx2_loop"))
 

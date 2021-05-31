@@ -38,17 +38,25 @@ found:
 
 avx2:
 	MOVQ BX, SI
-	SUBQ $0x21, SI
+	SUBQ $0x41, SI
 
 avx2_loop:
+	MOVQ      $0x0000000000000000, DI
+	MOVQ      $0x0000000000000000, R8
 	VMOVDQU   (DX), Y0
 	VMOVDQU   1(DX), Y1
+	VMOVDQU   32(DX), Y2
+	VMOVDQU   33(DX), Y3
 	VPCMPEQB  Y0, Y1, Y1
+	VPCMPEQB  Y2, Y3, Y3
 	VPMOVMSKB Y1, DI
+	VPMOVMSKB Y3, R8
+	SHLQ      $0x20, R8
+	ORQ       R8, DI
 	TZCNTQ    DI, DI
 	CMPQ      DI, $0x40
 	JNE       avx2_found
-	ADDQ      $0x20, DX
+	ADDQ      $0x40, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
@@ -96,17 +104,25 @@ found:
 
 avx2:
 	MOVQ BX, SI
-	SUBQ $0x22, SI
+	SUBQ $0x42, SI
 
 avx2_loop:
+	MOVQ      $0x0000000000000000, DI
+	MOVQ      $0x0000000000000000, R8
 	VMOVDQU   (DX), Y0
 	VMOVDQU   2(DX), Y1
+	VMOVDQU   32(DX), Y2
+	VMOVDQU   34(DX), Y3
 	VPCMPEQW  Y0, Y1, Y1
+	VPCMPEQW  Y2, Y3, Y3
 	VPMOVMSKB Y1, DI
+	VPMOVMSKB Y3, R8
+	SHLQ      $0x20, R8
+	ORQ       R8, DI
 	TZCNTQ    DI, DI
 	CMPQ      DI, $0x40
 	JNE       avx2_found
-	ADDQ      $0x20, DX
+	ADDQ      $0x40, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
@@ -154,17 +170,25 @@ found:
 
 avx2:
 	MOVQ BX, SI
-	SUBQ $0x24, SI
+	SUBQ $0x44, SI
 
 avx2_loop:
+	MOVQ      $0x0000000000000000, DI
+	MOVQ      $0x0000000000000000, R8
 	VMOVDQU   (DX), Y0
 	VMOVDQU   4(DX), Y1
+	VMOVDQU   32(DX), Y2
+	VMOVDQU   36(DX), Y3
 	VPCMPEQD  Y0, Y1, Y1
+	VPCMPEQD  Y2, Y3, Y3
 	VPMOVMSKB Y1, DI
+	VPMOVMSKB Y3, R8
+	SHLQ      $0x20, R8
+	ORQ       R8, DI
 	TZCNTQ    DI, DI
 	CMPQ      DI, $0x40
 	JNE       avx2_found
-	ADDQ      $0x20, DX
+	ADDQ      $0x40, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
@@ -212,17 +236,25 @@ found:
 
 avx2:
 	MOVQ BX, SI
-	SUBQ $0x28, SI
+	SUBQ $0x48, SI
 
 avx2_loop:
+	MOVQ      $0x0000000000000000, DI
+	MOVQ      $0x0000000000000000, R8
 	VMOVDQU   (DX), Y0
 	VMOVDQU   8(DX), Y1
+	VMOVDQU   32(DX), Y2
+	VMOVDQU   40(DX), Y3
 	VPCMPEQQ  Y0, Y1, Y1
+	VPCMPEQQ  Y2, Y3, Y3
 	VPMOVMSKB Y1, DI
+	VPMOVMSKB Y3, R8
+	SHLQ      $0x20, R8
+	ORQ       R8, DI
 	TZCNTQ    DI, DI
 	CMPQ      DI, $0x40
 	JNE       avx2_found
-	ADDQ      $0x20, DX
+	ADDQ      $0x40, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
