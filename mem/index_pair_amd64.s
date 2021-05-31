@@ -12,20 +12,18 @@ TEXT ·indexPair1(SB), NOSPLIT, $0-32
 	MOVQ AX, DX
 	MOVQ AX, BX
 	ADDQ CX, BX
-	MOVQ DX, SI
-	ADDQ $0x01, SI
+	SUBQ $0x01, BX
 	CMPQ CX, $0x40
 	JBE  generic
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 generic:
-	MOVB (DX), DI
-	MOVB (SI), R8
-	CMPB DI, R8
+	MOVB (DX), SI
+	MOVB 1(DX), DI
+	CMPB SI, DI
 	JE   found
 	ADDQ $0x01, DX
-	ADDQ $0x01, SI
 	CMPQ DX, BX
 	JNE  generic
 
@@ -39,30 +37,27 @@ found:
 	RET
 
 avx2:
-	MOVQ BX, DI
-	SUBQ $0x20, DI
+	MOVQ BX, SI
+	SUBQ $0x21, SI
 
 avx2_loop:
 	VMOVDQU   (DX), Y0
-	VMOVDQU   (SI), Y1
+	VMOVDQU   1(DX), Y1
 	VPCMPEQB  Y0, Y1, Y1
-	VPMOVMSKB Y1, R8
-	TZCNTQ    R8, R8
-	CMPQ      R8, $0x40
+	VPMOVMSKB Y1, DI
+	TZCNTQ    DI, DI
+	CMPQ      DI, $0x40
 	JNE       avx2_found
 	ADDQ      $0x20, DX
-	ADDQ      $0x20, SI
-	CMPQ      SI, DI
+	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
-	CMPQ      SI, BX
+	CMPQ      DX, BX
 	JB        generic
 	JMP       done
 
 avx2_found:
-	MOVQ $0x00000040, CX
-	SUBQ R8, CX
-	ADDQ CX, DX
+	ADDQ DI, DX
 	JMP  found
 
 // func indexPair2(b []byte) int
@@ -75,16 +70,18 @@ TEXT ·indexPair2(SB), NOSPLIT, $0-32
 	MOVQ AX, DX
 	MOVQ AX, BX
 	ADDQ CX, BX
-	MOVQ DX, SI
-	ADDQ $0x02, SI
+	SUBQ $0x02, BX
+	CMPQ CX, $0x40
+	JBE  generic
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS  avx2
 
 generic:
-	MOVW (DX), DI
-	MOVW (SI), R8
-	CMPW DI, R8
+	MOVW (DX), SI
+	MOVW 2(DX), DI
+	CMPW SI, DI
 	JE   found
 	ADDQ $0x02, DX
-	ADDQ $0x02, SI
 	CMPQ DX, BX
 	JNE  generic
 
@@ -96,30 +93,29 @@ found:
 	SUBQ AX, DX
 	MOVQ DX, ret+24(FP)
 	RET
-	MOVQ BX, DI
-	SUBQ $0x20, DI
+
+avx2:
+	MOVQ BX, SI
+	SUBQ $0x22, SI
 
 avx2_loop:
 	VMOVDQU   (DX), Y0
-	VMOVDQU   (SI), Y1
-	VPCMPEQB  Y0, Y1, Y1
-	VPMOVMSKB Y1, R8
-	TZCNTQ    R8, R8
-	CMPQ      R8, $0x40
+	VMOVDQU   2(DX), Y1
+	VPCMPEQW  Y0, Y1, Y1
+	VPMOVMSKB Y1, DI
+	TZCNTQ    DI, DI
+	CMPQ      DI, $0x40
 	JNE       avx2_found
 	ADDQ      $0x20, DX
-	ADDQ      $0x20, SI
-	CMPQ      SI, DI
+	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
-	CMPQ      SI, BX
+	CMPQ      DX, BX
 	JB        generic
 	JMP       done
 
 avx2_found:
-	MOVQ $0x00000040, CX
-	SUBQ R8, CX
-	ADDQ CX, DX
+	ADDQ DI, DX
 	JMP  found
 
 // func indexPair4(b []byte) int
@@ -132,16 +128,18 @@ TEXT ·indexPair4(SB), NOSPLIT, $0-32
 	MOVQ AX, DX
 	MOVQ AX, BX
 	ADDQ CX, BX
-	MOVQ DX, SI
-	ADDQ $0x04, SI
+	SUBQ $0x04, BX
+	CMPQ CX, $0x40
+	JBE  generic
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS  avx2
 
 generic:
-	MOVL (DX), DI
-	MOVL (SI), R8
-	CMPL DI, R8
+	MOVL (DX), SI
+	MOVL 4(DX), DI
+	CMPL SI, DI
 	JE   found
 	ADDQ $0x04, DX
-	ADDQ $0x04, SI
 	CMPQ DX, BX
 	JNE  generic
 
@@ -153,30 +151,29 @@ found:
 	SUBQ AX, DX
 	MOVQ DX, ret+24(FP)
 	RET
-	MOVQ BX, DI
-	SUBQ $0x20, DI
+
+avx2:
+	MOVQ BX, SI
+	SUBQ $0x24, SI
 
 avx2_loop:
 	VMOVDQU   (DX), Y0
-	VMOVDQU   (SI), Y1
-	VPCMPEQB  Y0, Y1, Y1
-	VPMOVMSKB Y1, R8
-	TZCNTQ    R8, R8
-	CMPQ      R8, $0x40
+	VMOVDQU   4(DX), Y1
+	VPCMPEQD  Y0, Y1, Y1
+	VPMOVMSKB Y1, DI
+	TZCNTQ    DI, DI
+	CMPQ      DI, $0x40
 	JNE       avx2_found
 	ADDQ      $0x20, DX
-	ADDQ      $0x20, SI
-	CMPQ      SI, DI
+	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
-	CMPQ      SI, BX
+	CMPQ      DX, BX
 	JB        generic
 	JMP       done
 
 avx2_found:
-	MOVQ $0x00000040, CX
-	SUBQ R8, CX
-	ADDQ CX, DX
+	ADDQ DI, DX
 	JMP  found
 
 // func indexPair8(b []byte) int
@@ -189,16 +186,18 @@ TEXT ·indexPair8(SB), NOSPLIT, $0-32
 	MOVQ AX, DX
 	MOVQ AX, BX
 	ADDQ CX, BX
-	MOVQ DX, SI
-	ADDQ $0x08, SI
+	SUBQ $0x08, BX
+	CMPQ CX, $0x40
+	JBE  generic
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS  avx2
 
 generic:
-	MOVQ (DX), DI
-	MOVQ (SI), R8
-	CMPQ DI, R8
+	MOVQ (DX), SI
+	MOVQ 8(DX), DI
+	CMPQ SI, DI
 	JE   found
 	ADDQ $0x08, DX
-	ADDQ $0x08, SI
 	CMPQ DX, BX
 	JNE  generic
 
@@ -210,34 +209,33 @@ found:
 	SUBQ AX, DX
 	MOVQ DX, ret+24(FP)
 	RET
-	MOVQ BX, DI
-	SUBQ $0x20, DI
+
+avx2:
+	MOVQ BX, SI
+	SUBQ $0x28, SI
 
 avx2_loop:
 	VMOVDQU   (DX), Y0
-	VMOVDQU   (SI), Y1
-	VPCMPEQB  Y0, Y1, Y1
-	VPMOVMSKB Y1, R8
-	TZCNTQ    R8, R8
-	CMPQ      R8, $0x40
+	VMOVDQU   8(DX), Y1
+	VPCMPEQQ  Y0, Y1, Y1
+	VPMOVMSKB Y1, DI
+	TZCNTQ    DI, DI
+	CMPQ      DI, $0x40
 	JNE       avx2_found
 	ADDQ      $0x20, DX
-	ADDQ      $0x20, SI
-	CMPQ      SI, DI
+	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
-	CMPQ      SI, BX
+	CMPQ      DX, BX
 	JB        generic
 	JMP       done
 
 avx2_found:
-	MOVQ $0x00000040, CX
-	SUBQ R8, CX
-	ADDQ CX, DX
+	ADDQ DI, DX
 	JMP  found
 
 // func indexPair16(b []byte) int
-// Requires: AVX, AVX2, BMI, SSE2, SSE4.1
+// Requires: SSE2, SSE4.1
 TEXT ·indexPair16(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
@@ -246,18 +244,16 @@ TEXT ·indexPair16(SB), NOSPLIT, $0-32
 	MOVQ AX, DX
 	MOVQ AX, BX
 	ADDQ CX, BX
-	MOVQ DX, SI
-	ADDQ $0x10, SI
+	SUBQ $0x10, BX
 
 generic:
 	MOVOU    (DX), X0
-	MOVOU    (SI), X1
+	MOVOU    16(DX), X1
 	PCMPEQQ  X0, X1
-	PMOVMSKB X1, DI
-	CMPL     DI, $0x0000ffff
+	PMOVMSKB X1, SI
+	CMPL     SI, $0x0000ffff
 	JE       found
 	ADDQ     $0x10, DX
-	ADDQ     $0x10, SI
 	CMPQ     DX, BX
 	JNE      generic
 
@@ -269,28 +265,3 @@ found:
 	SUBQ AX, DX
 	MOVQ DX, ret+24(FP)
 	RET
-	MOVQ BX, DI
-	SUBQ $0x20, DI
-
-avx2_loop:
-	VMOVDQU   (DX), Y0
-	VMOVDQU   (SI), Y1
-	VPCMPEQB  Y0, Y1, Y1
-	VPMOVMSKB Y1, R8
-	TZCNTQ    R8, R8
-	CMPQ      R8, $0x40
-	JNE       avx2_found
-	ADDQ      $0x20, DX
-	ADDQ      $0x20, SI
-	CMPQ      SI, DI
-	JBE       avx2_loop
-	VZEROUPPER
-	CMPQ      SI, BX
-	JB        generic
-	JMP       done
-
-avx2_found:
-	MOVQ $0x00000040, CX
-	SUBQ R8, CX
-	ADDQ CX, DX
-	JMP  found

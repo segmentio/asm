@@ -97,9 +97,13 @@ func TestIndexPair(t *testing.T) {
 
 func BenchmarkIndexPair(b *testing.B) {
 	for _, size := range indexPairSizes {
-		input := make([]byte, 256*size)
-		for i := 0; i < 256; i++ {
-			input[i*size] = byte(i)
+		input := make([]byte, 4096)
+		for i := range input {
+			input[i] = byte(i)
+		}
+
+		if size%len(input) != 0 {
+			input = input[:(len(input)/size)*size]
 		}
 
 		b.Run(fmt.Sprintf("N=%d", size), func(b *testing.B) {
@@ -107,7 +111,7 @@ func BenchmarkIndexPair(b *testing.B) {
 
 			for i := 0; i < b.N; i++ {
 				n := IndexPair(input, size)
-				if n != 256 {
+				if n != len(input) {
 					b.Fatal("unexpected result:", n)
 				}
 			}
