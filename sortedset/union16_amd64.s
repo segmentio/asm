@@ -5,32 +5,34 @@
 // func union16(dst []byte, a []byte, b []byte) (i int, j int, k int)
 // Requires: AVX
 TEXT ·union16(SB), NOSPLIT, $0-96
-	MOVQ dst_base+0(FP), AX
-	MOVQ a_base+24(FP), CX
-	MOVQ b_base+48(FP), DX
-	MOVQ a_len+32(FP), BX
-	ADDQ CX, BX
-	MOVQ b_len+56(FP), SI
-	ADDQ DX, SI
+	MOVQ    dst_base+0(FP), AX
+	MOVQ    a_base+24(FP), CX
+	MOVQ    b_base+48(FP), DX
+	MOVQ    a_len+32(FP), BX
+	ADDQ    CX, BX
+	MOVQ    b_len+56(FP), SI
+	ADDQ    DX, SI
+	VMOVUPS (CX), X0
+	VMOVUPS (DX), X1
 
 loop:
+	VPCMPEQB  X0, X1, X2
+	VPMOVMSKB X2, DI
+	CMPL      DI, $0x0000ffff
+	JNE       compare_byte
+	VMOVUPS   X0, (AX)
+	ADDQ      $0x10, AX
+	ADDQ      $0x10, CX
+	ADDQ      $0x10, DX
 	CMPQ      CX, BX
 	JE        done
 	CMPQ      DX, SI
 	JE        done
 	VMOVUPS   (CX), X0
 	VMOVUPS   (DX), X1
-	VPCMPEQB  X0, X1, X2
-	VPMOVMSKB X2, DI
-	CMPL      DI, $0x0000ffff
-	JNE       check_greater
-	VMOVUPS   X0, (AX)
-	ADDQ      $0x10, AX
-	ADDQ      $0x10, CX
-	ADDQ      $0x10, DX
 	JMP       loop
 
-check_greater:
+compare_byte:
 	NOTL    DI
 	BSFL    DI, R8
 	MOVB    (CX)(R8*1), DI
@@ -40,12 +42,18 @@ check_greater:
 	VMOVUPS X1, (AX)
 	ADDQ    $0x10, AX
 	ADDQ    $0x10, DX
+	CMPQ    DX, SI
+	JE      done
+	VMOVUPS (DX), X1
 	JMP     loop
 
 less:
 	VMOVUPS X0, (AX)
 	ADDQ    $0x10, AX
 	ADDQ    $0x10, CX
+	CMPQ    CX, BX
+	JE      done
+	VMOVUPS (CX), X0
 	JMP     loop
 
 done:
@@ -58,5 +66,4 @@ done:
 	MOVQ dst_base+0(FP), CX
 	SUBQ CX, AX
 	MOVQ AX, k+88(FP)
-	VZEROUPPER
 	RET
