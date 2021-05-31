@@ -11,22 +11,24 @@ TEXT ·indexPair1(SB), NOSPLIT, $0-32
 	MOVQ AX, DX
 	MOVQ AX, BX
 	ADDQ CX, BX
+	MOVQ DX, SI
+	ADDQ $0x01, SI
 
-loop:
-	MOVB (DX), SI
-	MOVB 1(DX), DI
-	CMPB SI, DI
+loop1:
+	MOVB (DX), DI
+	MOVB (SI), R8
+	CMPB DI, R8
 	JE   found
 	ADDQ $0x01, DX
+	ADDQ $0x01, SI
 	CMPQ DX, BX
-	JNE  loop
+	JNE  loop1
 
 done:
 	MOVQ CX, ret+24(FP)
 	RET
 
 found:
-	// The delta between the base pointer and how far we advanced is the index of the pair.
 	SUBQ AX, DX
 	MOVQ DX, ret+24(FP)
 	RET
@@ -40,22 +42,24 @@ TEXT ·indexPair2(SB), NOSPLIT, $0-32
 	MOVQ AX, DX
 	MOVQ AX, BX
 	ADDQ CX, BX
+	MOVQ DX, SI
+	ADDQ $0x02, SI
 
-loop:
-	MOVW (DX), SI
-	MOVW 2(DX), DI
-	CMPW SI, DI
+loop1:
+	MOVW (DX), DI
+	MOVW (SI), R8
+	CMPW DI, R8
 	JE   found
 	ADDQ $0x02, DX
+	ADDQ $0x02, SI
 	CMPQ DX, BX
-	JNE  loop
+	JNE  loop1
 
 done:
 	MOVQ CX, ret+24(FP)
 	RET
 
 found:
-	// The delta between the base pointer and how far we advanced is the index of the pair.
 	SUBQ AX, DX
 	MOVQ DX, ret+24(FP)
 	RET
@@ -69,22 +73,24 @@ TEXT ·indexPair4(SB), NOSPLIT, $0-32
 	MOVQ AX, DX
 	MOVQ AX, BX
 	ADDQ CX, BX
+	MOVQ DX, SI
+	ADDQ $0x04, SI
 
-loop:
-	MOVL (DX), SI
-	MOVL 4(DX), DI
-	CMPL SI, DI
+loop1:
+	MOVL (DX), DI
+	MOVL (SI), R8
+	CMPL DI, R8
 	JE   found
 	ADDQ $0x04, DX
+	ADDQ $0x04, SI
 	CMPQ DX, BX
-	JNE  loop
+	JNE  loop1
 
 done:
 	MOVQ CX, ret+24(FP)
 	RET
 
 found:
-	// The delta between the base pointer and how far we advanced is the index of the pair.
 	SUBQ AX, DX
 	MOVQ DX, ret+24(FP)
 	RET
@@ -98,22 +104,58 @@ TEXT ·indexPair8(SB), NOSPLIT, $0-32
 	MOVQ AX, DX
 	MOVQ AX, BX
 	ADDQ CX, BX
+	MOVQ DX, SI
+	ADDQ $0x08, SI
 
-loop:
-	MOVQ (DX), SI
-	MOVQ 8(DX), DI
-	CMPQ SI, DI
+loop1:
+	MOVQ (DX), DI
+	MOVQ (SI), R8
+	CMPQ DI, R8
 	JE   found
 	ADDQ $0x08, DX
+	ADDQ $0x08, SI
 	CMPQ DX, BX
-	JNE  loop
+	JNE  loop1
 
 done:
 	MOVQ CX, ret+24(FP)
 	RET
 
 found:
-	// The delta between the base pointer and how far we advanced is the index of the pair.
+	SUBQ AX, DX
+	MOVQ DX, ret+24(FP)
+	RET
+
+// func indexPair16(b []byte) int
+// Requires: SSE2, SSE4.1
+TEXT ·indexPair16(SB), NOSPLIT, $0-32
+	MOVQ b_base+0(FP), AX
+	MOVQ b_len+8(FP), CX
+	CMPQ CX, $0x10
+	JBE  done
+	MOVQ AX, DX
+	MOVQ AX, BX
+	ADDQ CX, BX
+	MOVQ DX, SI
+	ADDQ $0x10, SI
+
+loop1:
+	MOVOU    (DX), X0
+	MOVOU    (SI), X1
+	PCMPEQQ  X0, X1
+	PMOVMSKB X1, DI
+	CMPL     DI, $0x0000ffff
+	JE       found
+	ADDQ     $0x10, DX
+	ADDQ     $0x10, SI
+	CMPQ     DX, BX
+	JNE      loop1
+
+done:
+	MOVQ CX, ret+24(FP)
+	RET
+
+found:
 	SUBQ AX, DX
 	MOVQ DX, ret+24(FP)
 	RET

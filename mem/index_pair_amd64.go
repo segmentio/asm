@@ -9,3 +9,5 @@ func indexPair2(b []byte) int
 func indexPair4(b []byte) int
 
 func indexPair8(b []byte) int
+
+func indexPair16(b []byte) int

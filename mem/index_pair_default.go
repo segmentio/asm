@@ -17,3 +17,7 @@ func indexPair4(b []byte) int {
 func indexPair8(b []byte) int {
 	return indexPairGeneric(b, 8)
 }
+
+func indexPair16(b []byte) int {
+	return indexPairGeneric(b, 8)
+}
