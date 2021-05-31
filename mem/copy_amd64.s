@@ -10,32 +10,33 @@ TEXT ·Copy(SB), NOSPLIT, $0-56
 	MOVQ    dst_len+8(FP), DX
 	MOVQ    src_len+32(FP), BX
 	CMPQ    BX, DX
-	CMOVQGT BX, DX
+	CMOVQLT BX, DX
 	MOVQ    DX, ret+48(FP)
 
-	// Tail copy with special cases for each possible item size.
 tail:
 	CMPQ DX, $0x00
 	JE   done
-	CMPQ DX, $0x02
-	JBE  copy1to2
+	CMPQ DX, $0x01
+	JE   handle1
 	CMPQ DX, $0x03
-	JE   copy3
+	JBE  handle2to3
 	CMPQ DX, $0x04
-	JE   copy4
+	JE   handle4
 	CMPQ DX, $0x08
-	JB   copy5to7
-	JE   copy8
+	JB   handle5to7
+	JE   handle8
 	CMPQ DX, $0x10
-	JBE  copy9to16
+	JBE  handle9to16
 	CMPQ DX, $0x20
-	JBE  copy17to32
+	JBE  handle17to32
 	CMPQ DX, $0x40
-	JBE  copy33to64
+	JBE  handle33to64
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCS  avx2
+	JCC  generic
+	CMPQ DX, $0x80
+	JBE  avx2_tail
+	JMP  avx2
 
-	// Generic copy for targets without AVX instructions.
 generic:
 	MOVQ (CX), BX
 	MOVQ BX, (AX)
@@ -49,52 +50,50 @@ generic:
 done:
 	RET
 
-copy1to2:
-	MOVB (CX), BL
-	MOVB -1(CX)(DX*1), CL
-	MOVB BL, (AX)
-	MOVB CL, -1(AX)(DX*1)
+handle1:
+	MOVB (CX), CL
+	MOVB CL, (AX)
 	RET
 
-copy3:
-	MOVW (CX), DX
-	MOVW DX, (AX)
-	MOVB 2(CX), CL
-	MOVB CL, 2(AX)
+handle2to3:
+	MOVW (CX), BX
+	MOVW -2(CX)(DX*1), CX
+	MOVW BX, (AX)
+	MOVW CX, -2(AX)(DX*1)
 	RET
 
-copy4:
+handle4:
 	MOVL (CX), CX
 	MOVL CX, (AX)
 	RET
 
-copy5to7:
+handle5to7:
 	MOVL (CX), BX
 	MOVL -4(CX)(DX*1), CX
 	MOVL BX, (AX)
 	MOVL CX, -4(AX)(DX*1)
 	RET
 
-copy8:
+handle8:
 	MOVQ (CX), CX
 	MOVQ CX, (AX)
 	RET
 
-copy9to16:
+handle9to16:
 	MOVQ (CX), BX
 	MOVQ -8(CX)(DX*1), CX
 	MOVQ BX, (AX)
 	MOVQ CX, -8(AX)(DX*1)
 	RET
 
-copy17to32:
+handle17to32:
 	MOVOU (CX), X0
 	MOVOU -16(CX)(DX*1), X1
 	MOVOU X0, (AX)
 	MOVOU X1, -16(AX)(DX*1)
 	RET
 
-copy33to64:
+handle33to64:
 	MOVOU (CX), X0
 	MOVOU 16(CX), X1
 	MOVOU -32(CX)(DX*1), X2
@@ -107,8 +106,6 @@ copy33to64:
 
 	// AVX optimized version for medium to large size inputs.
 avx2:
-	CMPQ    DX, $0x80
-	JB      avx2_tail
 	VMOVDQU (CX), Y0
 	VMOVDQU 32(CX), Y1
 	VMOVDQU 64(CX), Y2
@@ -117,13 +114,14 @@ avx2:
 	VMOVDQU Y1, 32(AX)
 	VMOVDQU Y2, 64(AX)
 	VMOVDQU Y3, 96(AX)
-	ADDQ    $0x80, AX
 	ADDQ    $0x80, CX
+	ADDQ    $0x80, AX
 	SUBQ    $0x80, DX
-	JMP     avx2
+	CMPQ    DX, $0x80
+	JAE     avx2
+	JZ      avx2_done
 
 avx2_tail:
-	JZ      done
 	CMPQ    DX, $0x40
 	JBE     avx2_tail_1to64
 	VMOVDQU (CX), Y0
@@ -134,11 +132,14 @@ avx2_tail:
 	VMOVDQU Y1, 32(AX)
 	VMOVDQU Y2, 64(AX)
 	VMOVDQU Y3, -32(AX)(DX*1)
-	RET
+	JMP     avx2_done
 
 avx2_tail_1to64:
 	VMOVDQU -64(CX)(DX*1), Y0
 	VMOVDQU -32(CX)(DX*1), Y1
 	VMOVDQU Y0, -64(AX)(DX*1)
 	VMOVDQU Y1, -32(AX)(DX*1)
+
+avx2_done:
+	VZEROUPPER
 	RET
