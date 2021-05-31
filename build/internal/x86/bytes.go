@@ -77,9 +77,6 @@ func BinaryOpTable(b, w, l, q, xmm func(Op, Op)) []func(Op, Op) {
 }
 
 func VariableLengthBytes(inputs []Register, n Register, handle func(inputs []Register, memory ...Memory)) {
-	zero := GP64()
-	XORQ(zero, zero)
-
 	Label("tail")
 
 	CMPQ(n, Imm(0))

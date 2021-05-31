@@ -12,7 +12,6 @@ TEXT ·Copy(SB), NOSPLIT, $0-56
 	CMPQ    BX, DX
 	CMOVQGT BX, DX
 	MOVQ    DX, ret+48(FP)
-	XORQ    BX, BX
 
 tail:
 	CMPQ DX, $0x00
