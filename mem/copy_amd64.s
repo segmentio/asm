@@ -3,7 +3,7 @@
 #include "textflag.h"
 
 // func Copy(dst []byte, src []byte) int
-// Requires: AVX, CMOV
+// Requires: AVX, CMOV, SSE2
 TEXT ·Copy(SB), NOSPLIT, $0-56
 	MOVQ    dst_base+0(FP), AX
 	MOVQ    src_base+24(FP), CX
@@ -87,17 +87,21 @@ handle9to16:
 	RET
 
 handle17to32:
-	VMOVUPS (CX), X0
-	VMOVUPS -16(CX)(DX*1), X1
-	VMOVUPS X0, (AX)
-	VMOVUPS X1, -16(AX)(DX*1)
+	MOVOU (CX), X0
+	MOVOU -16(CX)(DX*1), X1
+	MOVOU X0, (AX)
+	MOVOU X1, -16(AX)(DX*1)
 	RET
 
 handle33to64:
-	VMOVUPS (CX), Y0
-	VMOVUPS -32(CX)(DX*1), Y1
-	VMOVUPS Y0, (AX)
-	VMOVUPS Y1, -32(AX)(DX*1)
+	MOVOU (CX), X0
+	MOVOU 16(CX), X1
+	MOVOU -32(CX)(DX*1), X2
+	MOVOU -16(CX)(DX*1), X3
+	MOVOU X0, (AX)
+	MOVOU X1, 16(AX)
+	MOVOU X2, -32(AX)(DX*1)
+	MOVOU X3, -16(AX)(DX*1)
 	RET
 
 	// AVX optimized version for medium to large size inputs.

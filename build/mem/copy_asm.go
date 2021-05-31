@@ -64,10 +64,10 @@ func main() {
 		case 16:
 			for i, m := range memory {
 				reg[i] = XMM()
-				VMOVUPS(m.Get(src), reg[i])
+				MOVOU(m.Get(src), reg[i])
 			}
 			for i, m := range memory {
-				VMOVUPS(reg[i], m.Get(dst))
+				MOVOU(reg[i], m.Get(dst))
 			}
 		case 32:
 			for i, m := range memory {

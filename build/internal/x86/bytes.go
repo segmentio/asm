@@ -97,7 +97,7 @@ func VariableLengthBytes(inputs []Register, n Register, handle func(length int, 
 	RET()
 
 	Label("handle33to64")
-	handle(32, inputs, Memory{}, Memory{Index: n, Offset: -32})
+	handle(16, inputs, Memory{}, Memory{Offset: 16}, Memory{Index: n, Offset: -32}, Memory{Index: n, Offset: -16})
 	RET()
 
 	Comment("AVX optimized version for medium to large size inputs.")
