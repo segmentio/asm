@@ -13,32 +13,35 @@ TEXT ·Mask(SB), NOSPLIT, $0-56
 	CMOVQGT BX, DX
 	MOVQ    DX, ret+48(FP)
 
-	// Tail copy with special cases for each possible item size.
 tail:
 	CMPQ DX, $0x00
 	JE   done
-	CMPQ DX, $0x02
-	JBE  copy1to2
+	CMPQ DX, $0x01
+	JE   handle1
 	CMPQ DX, $0x03
-	JE   copy3
+	JBE  handle2to3
 	CMPQ DX, $0x04
-	JE   copy4
+	JE   handle4
 	CMPQ DX, $0x08
-	JB   copy5to7
-	JE   copy8
+	JB   handle5to7
+	JE   handle8
 	CMPQ DX, $0x10
-	JBE  copy9to16
+	JBE  handle9to16
 	CMPQ DX, $0x20
-	JBE  copy17to32
+	JBE  handle17to32
 	CMPQ DX, $0x40
-	JBE  copy33to64
+	JBE  handle33to64
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCS  avx2
+	JCC  generic
+	CMPQ DX, $0x80
+	JB   avx2_tail
+	JMP  avx2
 
-	// Generic copy for targets without AVX instructions.
 generic:
 	MOVQ (CX), BX
-	ANDQ BX, (AX)
+	MOVQ (AX), SI
+	ANDQ SI, BX
+	MOVQ BX, (AX)
 	ADDQ $0x08, CX
 	ADDQ $0x08, AX
 	SUBQ $0x08, DX
@@ -49,78 +52,92 @@ generic:
 done:
 	RET
 
-copy1to2:
-	MOVB (CX), BL
-	MOVB -1(CX)(DX*1), CL
-	ANDB BL, (AX)
-	ANDB CL, -1(AX)(DX*1)
+handle1:
+	MOVB (CX), CL
+	MOVB (AX), DL
+	ANDB DL, CL
+	MOVB CL, (AX)
 	RET
 
-copy3:
-	MOVW (CX), DX
-	ANDW DX, (AX)
-	MOVB 2(CX), CL
-	ANDB CL, 2(AX)
+handle2to3:
+	MOVW (CX), BX
+	MOVW (AX), SI
+	MOVW -2(CX)(DX*1), CX
+	MOVW -2(AX)(DX*1), DI
+	ANDW SI, BX
+	ANDW DI, CX
+	MOVW BX, (AX)
+	MOVW CX, -2(AX)(DX*1)
 	RET
 
-copy4:
+handle4:
 	MOVL (CX), CX
-	ANDL CX, (AX)
+	MOVL (AX), DX
+	ANDL DX, CX
+	MOVL CX, (AX)
 	RET
 
-copy5to7:
+handle5to7:
 	MOVL (CX), BX
+	MOVL (AX), SI
 	MOVL -4(CX)(DX*1), CX
-	ANDL BX, (AX)
-	ANDL CX, -4(AX)(DX*1)
+	MOVL -4(AX)(DX*1), DI
+	ANDL SI, BX
+	ANDL DI, CX
+	MOVL BX, (AX)
+	MOVL CX, -4(AX)(DX*1)
 	RET
 
-copy8:
+handle8:
 	MOVQ (CX), CX
-	ANDQ CX, (AX)
+	MOVQ (AX), DX
+	ANDQ DX, CX
+	MOVQ CX, (AX)
 	RET
 
-copy9to16:
+handle9to16:
 	MOVQ (CX), BX
+	MOVQ (AX), SI
 	MOVQ -8(CX)(DX*1), CX
-	ANDQ BX, (AX)
-	ANDQ CX, -8(AX)(DX*1)
+	MOVQ -8(AX)(DX*1), DI
+	ANDQ SI, BX
+	ANDQ DI, CX
+	MOVQ BX, (AX)
+	MOVQ CX, -8(AX)(DX*1)
 	RET
 
-copy17to32:
+handle17to32:
 	MOVOU (CX), X0
-	MOVOU -16(CX)(DX*1), X1
-	MOVOU (AX), X2
+	MOVOU (AX), X1
+	MOVOU -16(CX)(DX*1), X2
 	MOVOU -16(AX)(DX*1), X3
-	PAND  X2, X0
-	PAND  X3, X1
+	PAND  X1, X0
+	PAND  X3, X2
 	MOVOU X0, (AX)
-	MOVOU X1, -16(AX)(DX*1)
+	MOVOU X2, -16(AX)(DX*1)
 	RET
 
-copy33to64:
+handle33to64:
 	MOVOU (CX), X0
-	MOVOU 16(CX), X1
-	MOVOU -32(CX)(DX*1), X2
-	MOVOU -16(CX)(DX*1), X3
-	MOVOU (AX), X4
-	MOVOU 16(AX), X5
-	MOVOU -32(AX)(DX*1), X6
+	MOVOU (AX), X1
+	MOVOU 16(CX), X2
+	MOVOU 16(AX), X3
+	MOVOU -32(CX)(DX*1), X4
+	MOVOU -32(AX)(DX*1), X5
+	MOVOU -16(CX)(DX*1), X6
 	MOVOU -16(AX)(DX*1), X7
-	PAND  X4, X0
-	PAND  X5, X1
-	PAND  X6, X2
-	PAND  X7, X3
+	PAND  X1, X0
+	PAND  X3, X2
+	PAND  X5, X4
+	PAND  X7, X6
 	MOVOU X0, (AX)
-	MOVOU X1, 16(AX)
-	MOVOU X2, -32(AX)(DX*1)
-	MOVOU X3, -16(AX)(DX*1)
+	MOVOU X2, 16(AX)
+	MOVOU X4, -32(AX)(DX*1)
+	MOVOU X6, -16(AX)(DX*1)
 	RET
 
 	// AVX optimized version for medium to large size inputs.
 avx2:
-	CMPQ    DX, $0x80
-	JB      avx2_tail
 	VMOVDQU (CX), Y0
 	VMOVDQU 32(CX), Y1
 	VMOVDQU 64(CX), Y2
@@ -133,10 +150,11 @@ avx2:
 	VMOVDQU Y1, 32(AX)
 	VMOVDQU Y2, 64(AX)
 	VMOVDQU Y3, 96(AX)
-	ADDQ    $0x80, AX
 	ADDQ    $0x80, CX
+	ADDQ    $0x80, AX
 	SUBQ    $0x80, DX
-	JMP     avx2
+	CMPQ    DX, $0x80
+	JAE     avx2
 
 avx2_tail:
 	JZ      done
