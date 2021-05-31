@@ -62,6 +62,23 @@ func TestIndexPair(t *testing.T) {
 					input:    makeInput(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9),
 					index:    9,
 				},
+
+				{
+					scenario: "input with two equal items at the end of a long sequence",
+					input: makeInput(
+						0, 1, 2, 3, 4, 5, 6, 7, 8,
+						0, 1, 2, 3, 4, 5, 6, 7, 8,
+						0, 1, 2, 3, 4, 5, 6, 7, 8,
+						0, 1, 2, 3, 4, 5, 6, 7, 8,
+						0, 1, 2, 3, 4, 5, 6, 7, 8,
+						0, 1, 2, 3, 4, 5, 6, 7, 8,
+						0, 1, 2, 3, 4, 5, 6, 7, 8,
+						0, 1, 2, 3, 4, 5, 6, 7, 8,
+						0, 1, 2, 3, 4, 5, 6, 7, 8,
+						0, 1, 2, 3, 4, 5, 6, 7, 7,
+					),
+					index: 88,
+				},
 			}
 
 			for _, test := range tests {
@@ -89,7 +106,10 @@ func BenchmarkIndexPair(b *testing.B) {
 			b.SetBytes(int64(len(input)))
 
 			for i := 0; i < b.N; i++ {
-				_ = IndexPair(input, size)
+				n := IndexPair(input, size)
+				if n != 256 {
+					b.Fatal("unexpected result:", n)
+				}
 			}
 		})
 	}

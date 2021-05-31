@@ -88,6 +88,8 @@ func generateIndexPair(code indexPair) {
 
 	p0 := ptr
 	p1 := GP64()
+	p2 := GP64()
+	p3 := GP64()
 	MOVQ(p0, p1)
 	ADDQ(Imm(uint64(size)), p1)
 
@@ -123,30 +125,65 @@ func generateIndexPair(code indexPair) {
 	// limit := end - size
 	limit := GP64()
 	MOVQ(end, limit)
-	SUBQ(Imm(uint64(size)), limit)
+	SUBQ(Imm(32), limit)
+
+	/*
+		MOVQ(p0, p2)
+		MOVQ(p1, p3)
+		ADDQ(Imm(32), p2)
+		ADDQ(Imm(32), p3)
+	*/
+	_ = p2
+	_ = p3
 
 	Label("avx2_loop")
 	y0 := YMM()
 	y1 := YMM()
-	y2 := YMM()
-	mask := GP32()
+	//y2 := YMM()
+	//y3 := YMM()
+	mask0 := GP64()
+	//mask1 := GP64()
+
 	VMOVDQU(Mem{Base: p0}, y0)
 	VMOVDQU(Mem{Base: p1}, y1)
-	VPCMPEQB(y0, y1, y2)
-	VPMOVMSKB(y2, mask)
-	TZCNTL(mask, mask)
-	CMPL(mask, Imm(0))
+	//VMOVDQU(Mem{Base: p2}, y2)
+	//VMOVDQU(Mem{Base: p3}, y3)
+
+	VPCMPEQB(y0, y1, y1)
+	//VPCMPEQB(y2, y3, y3)
+
+	VPMOVMSKB(y1, mask0.As32())
+	//VPMOVMSKB(y3, mask1.As32())
+
+	TZCNTQ(mask0, mask0)
+	//TZCNTQ(mask1, mask1)
+
+	//	SHLQ(Imm(32), mask1)
+	//	ORQ(mask1, mask0)
+	CMPQ(mask0, Imm(64))
 	JNE(LabelRef("avx2_found"))
+
+	//ADDQ(Imm(64), p0)
+	//ADDQ(Imm(64), p1)
+	//ADDQ(Imm(64), p2)
+	//ADDQ(Imm(64), p3)
+	//CMPQ(p3, limit)
 	ADDQ(Imm(32), p0)
 	ADDQ(Imm(32), p1)
 	CMPQ(p1, limit)
-	JB(LabelRef("avx2_loop"))
+	JBE(LabelRef("avx2_loop"))
 
 	VZEROUPPER()
-	JE(LabelRef("generic"))
+	//MOVQ(p2, p0)
+	//MOVQ(p3, p1)
+	CMPQ(p1, end)
+	JB(LabelRef("generic"))
 	JMP(LabelRef("done"))
 
 	Label("avx2_found")
-	ADDQ(mask.As64(), p0)
+	i := GP64()
+	MOVQ(U32(64), i)
+	SUBQ(mask0, i)
+	ADDQ(i, p0)
 	JMP(LabelRef("found"))
 }
