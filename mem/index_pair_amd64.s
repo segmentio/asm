@@ -1291,7 +1291,6 @@ TEXT ·indexPair32(SB), NOSPLIT, $0-32
 	CMPQ CX, $0x00
 	JLE  done
 	SUBQ $0x20, CX
-	MOVQ $0x0000000000000000, BX
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
@@ -1327,6 +1326,7 @@ done:
 avx2:
 	CMPQ CX, $0x00000120
 	JB   avx2_tail128
+	MOVQ $0x0000000000000000, BX
 	MOVQ $0x0000000000000000, SI
 	MOVQ $0x0000000000000000, DI
 	MOVQ $0x0000000000000000, R8
@@ -1334,9 +1334,9 @@ avx2:
 	MOVQ $0x0000000000000000, R10
 	MOVQ $0x0000000000000000, R11
 	MOVQ $0x0000000000000000, R12
-	MOVQ $0x0000000000000000, R13
 
 avx2_loop256:
+	MOVQ      $0x0000000000000000, R13
 	VMOVDQU   (AX), Y0
 	VMOVDQU   32(AX), Y2
 	VMOVDQU   64(AX), Y4
@@ -1354,40 +1354,40 @@ avx2_loop256:
 	VPCMPEQQ  Y8, Y9, Y4
 	VPCMPEQQ  Y9, Y10, Y5
 	VPCMPEQQ  Y10, Y11, Y11
-	VPMOVMSKB Y1, SI
+	VPMOVMSKB Y1, BX
+	CMPL      BX, $0xffffffff
+	CMOVLNE   R13, BX
+	VPMOVMSKB Y3, SI
 	CMPL      SI, $0xffffffff
-	CMOVLNE   BX, SI
-	VPMOVMSKB Y3, DI
+	CMOVLNE   R13, SI
+	VPMOVMSKB Y0, DI
 	CMPL      DI, $0xffffffff
-	CMOVLNE   BX, DI
-	VPMOVMSKB Y0, R8
+	CMOVLNE   R13, DI
+	VPMOVMSKB Y6, R8
 	CMPL      R8, $0xffffffff
-	CMOVLNE   BX, R8
-	VPMOVMSKB Y6, R9
+	CMOVLNE   R13, R8
+	VPMOVMSKB Y2, R9
 	CMPL      R9, $0xffffffff
-	CMOVLNE   BX, R9
-	VPMOVMSKB Y2, R10
+	CMOVLNE   R13, R9
+	VPMOVMSKB Y4, R10
 	CMPL      R10, $0xffffffff
-	CMOVLNE   BX, R10
-	VPMOVMSKB Y4, R11
+	CMOVLNE   R13, R10
+	VPMOVMSKB Y5, R11
 	CMPL      R11, $0xffffffff
-	CMOVLNE   BX, R11
-	VPMOVMSKB Y5, R12
+	CMOVLNE   R13, R11
+	VPMOVMSKB Y11, R12
 	CMPL      R12, $0xffffffff
-	CMOVLNE   BX, R12
-	VPMOVMSKB Y11, R13
-	CMPL      R13, $0xffffffff
-	CMOVLNE   BX, R13
-	MOVQ      $0x0000000000000000, R14
-	ORQ       SI, R14
-	ORQ       DI, R14
-	ORQ       R8, R14
-	ORQ       R9, R14
-	ORQ       R10, R14
-	ORQ       R11, R14
-	ORQ       R12, R14
-	ORQ       R13, R14
-	CMPQ      R14, $0x00
+	CMOVLNE   R13, R12
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	ORQ       R9, R13
+	ORQ       R10, R13
+	ORQ       R11, R13
+	ORQ       R12, R13
+	CMPQ      R13, $0x00
 	JNE       avx2_done
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
@@ -1397,6 +1397,7 @@ avx2_loop256:
 avx2_tail128:
 	CMPQ      CX, $0xa0
 	JB        avx2_tail64
+	MOVQ      $0x0000000000000000, R13
 	VMOVDQU   (AX), Y0
 	VMOVDQU   32(AX), Y2
 	VMOVDQU   64(AX), Y4
@@ -1406,24 +1407,24 @@ avx2_tail128:
 	VPCMPEQQ  Y2, Y4, Y3
 	VPCMPEQQ  Y4, Y5, Y0
 	VPCMPEQQ  Y5, Y6, Y6
-	VPMOVMSKB Y1, SI
+	VPMOVMSKB Y1, BX
+	CMPL      BX, $0xffffffff
+	CMOVLNE   R13, BX
+	VPMOVMSKB Y3, SI
 	CMPL      SI, $0xffffffff
-	CMOVLNE   BX, SI
-	VPMOVMSKB Y3, DI
+	CMOVLNE   R13, SI
+	VPMOVMSKB Y0, DI
 	CMPL      DI, $0xffffffff
-	CMOVLNE   BX, DI
-	VPMOVMSKB Y0, R8
+	CMOVLNE   R13, DI
+	VPMOVMSKB Y6, R8
 	CMPL      R8, $0xffffffff
-	CMOVLNE   BX, R8
-	VPMOVMSKB Y6, R9
-	CMPL      R9, $0xffffffff
-	CMOVLNE   BX, R9
-	MOVQ      $0x0000000000000000, R14
-	ORQ       SI, R14
-	ORQ       DI, R14
-	ORQ       R8, R14
-	ORQ       R9, R14
-	CMPQ      R14, $0x00
+	CMOVLNE   R13, R8
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	CMPQ      R13, $0x00
 	JNE       avx2_done
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
@@ -1431,21 +1432,22 @@ avx2_tail128:
 avx2_tail64:
 	CMPQ      CX, $0x60
 	JB        avx2_tail32
+	MOVQ      $0x0000000000000000, R13
 	VMOVDQU   (AX), Y0
 	VMOVDQU   32(AX), Y2
 	VMOVDQU   64(AX), Y3
 	VPCMPEQQ  Y0, Y2, Y1
 	VPCMPEQQ  Y2, Y3, Y3
-	VPMOVMSKB Y1, SI
+	VPMOVMSKB Y1, BX
+	CMPL      BX, $0xffffffff
+	CMOVLNE   R13, BX
+	VPMOVMSKB Y3, SI
 	CMPL      SI, $0xffffffff
-	CMOVLNE   BX, SI
-	VPMOVMSKB Y3, DI
-	CMPL      DI, $0xffffffff
-	CMOVLNE   BX, DI
-	MOVQ      $0x0000000000000000, R14
-	ORQ       SI, R14
-	ORQ       DI, R14
-	CMPQ      R14, $0x00
+	CMOVLNE   R13, SI
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	CMPQ      R13, $0x00
 	JNE       avx2_done
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
@@ -1453,13 +1455,14 @@ avx2_tail64:
 avx2_tail32:
 	CMPQ      CX, $0x40
 	JB        avx2_tail16
+	MOVQ      $0x0000000000000000, R13
 	VMOVDQU   (AX), Y0
 	VMOVDQU   32(AX), Y1
 	VPCMPEQQ  Y0, Y1, Y1
-	VPMOVMSKB Y1, SI
-	CMPL      SI, $0xffffffff
-	CMOVLNE   BX, SI
-	CMPQ      SI, $0x00
+	VPMOVMSKB Y1, BX
+	CMPL      BX, $0xffffffff
+	CMOVLNE   R13, BX
+	CMPQ      BX, $0x00
 	JNE       avx2_done
 	ADDQ      $0x00000020, AX
 	SUBQ      $0x00000020, CX
@@ -1470,81 +1473,81 @@ avx2_tail16:
 
 avx2_done:
 	VZEROUPPER
-	CMPQ SI, $0x00
+	CMPQ BX, $0x00
 	JNE  avx2_done0
-	CMPQ DI, $0x00
+	CMPQ SI, $0x00
 	JNE  avx2_done1
-	CMPQ R8, $0x00
+	CMPQ DI, $0x00
 	JNE  avx2_done2
-	CMPQ R9, $0x00
+	CMPQ R8, $0x00
 	JNE  avx2_done3
-	CMPQ R10, $0x00
+	CMPQ R9, $0x00
 	JNE  avx2_done4
-	CMPQ R11, $0x00
+	CMPQ R10, $0x00
 	JNE  avx2_done5
-	CMPQ R12, $0x00
+	CMPQ R11, $0x00
 	JNE  avx2_done6
-	CMPQ R13, $0x00
+	CMPQ R12, $0x00
 	JNE  avx2_done7
 
 avx2_done0:
-	TZCNTQ SI, SI
-	ADDQ   SI, AX
-	SUBQ   SI, CX
+	TZCNTQ BX, BX
+	ADDQ   BX, AX
+	SUBQ   BX, CX
 	JMP    done
 
 avx2_done1:
 	ADDQ   $0x00000020, AX
 	SUBQ   $0x00000020, CX
-	TZCNTQ DI, DI
-	ADDQ   DI, AX
-	SUBQ   DI, CX
+	TZCNTQ SI, SI
+	ADDQ   SI, AX
+	SUBQ   SI, CX
 	JMP    done
 
 avx2_done2:
 	ADDQ   $0x00000040, AX
 	SUBQ   $0x00000040, CX
-	TZCNTQ R8, R8
-	ADDQ   R8, AX
-	SUBQ   R8, CX
+	TZCNTQ DI, DI
+	ADDQ   DI, AX
+	SUBQ   DI, CX
 	JMP    done
 
 avx2_done3:
 	ADDQ   $0x00000060, AX
 	SUBQ   $0x00000060, CX
-	TZCNTQ R9, R9
-	ADDQ   R9, AX
-	SUBQ   R9, CX
+	TZCNTQ R8, R8
+	ADDQ   R8, AX
+	SUBQ   R8, CX
 	JMP    done
 
 avx2_done4:
 	ADDQ   $0x00000080, AX
 	SUBQ   $0x00000080, CX
-	TZCNTQ R10, R10
-	ADDQ   R10, AX
-	SUBQ   R10, CX
+	TZCNTQ R9, R9
+	ADDQ   R9, AX
+	SUBQ   R9, CX
 	JMP    done
 
 avx2_done5:
 	ADDQ   $0x000000a0, AX
 	SUBQ   $0x000000a0, CX
-	TZCNTQ R11, R11
-	ADDQ   R11, AX
-	SUBQ   R11, CX
+	TZCNTQ R10, R10
+	ADDQ   R10, AX
+	SUBQ   R10, CX
 	JMP    done
 
 avx2_done6:
 	ADDQ   $0x000000c0, AX
 	SUBQ   $0x000000c0, CX
-	TZCNTQ R12, R12
-	ADDQ   R12, AX
-	SUBQ   R12, CX
+	TZCNTQ R11, R11
+	ADDQ   R11, AX
+	SUBQ   R11, CX
 	JMP    done
 
 avx2_done7:
 	ADDQ   $0x000000e0, AX
 	SUBQ   $0x000000e0, CX
-	TZCNTQ R13, R13
-	ADDQ   R13, AX
-	SUBQ   R13, CX
+	TZCNTQ R12, R12
+	ADDQ   R12, AX
+	SUBQ   R12, CX
 	JMP    done

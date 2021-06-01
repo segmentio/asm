@@ -13,67 +13,65 @@ import (
 )
 
 func main() {
-	generateIndexPair(new(indexPair1))
-	generateIndexPair(new(indexPair2))
-	generateIndexPair(new(indexPair4))
-	generateIndexPair(new(indexPair8))
-	generateIndexPair(new(indexPair16))
-	generateIndexPair(new(indexPair32))
+	generateIndexPair(indexPair1{})
+	generateIndexPair(indexPair2{})
+	generateIndexPair(indexPair4{})
+	generateIndexPair(indexPair8{})
+	generateIndexPair(indexPair16{})
+	generateIndexPair(indexPair32{})
 	Generate()
 }
 
 type indexPair interface {
 	size() int
-	init()
 	test(a, b Mem)
 }
 
 type indexPairAVX2 interface {
 	indexPair
+	vinit(Register)
 	vpcmpeq(src0, src1, dst VecVirtual)
-	vpmovmskb(tmp, src VecVirtual, dst Register)
+	vpmovmskb(tmp, src VecVirtual, spare, dst Register)
 }
 
 type indexPair1 struct{}
 
-func (*indexPair1) size() int                             { return 1 }
-func (*indexPair1) init()                                 {}
-func (*indexPair1) test(a, b Mem)                         { generateIndexPairTest(MOVB, CMPB, GP8, a, b) }
-func (*indexPair1) vpcmpeq(a, b, c VecVirtual)            { VPCMPEQB(a, b, c) }
-func (*indexPair1) vpmovmskb(_, a VecVirtual, b Register) { VPMOVMSKB(a, b) }
+func (indexPair1) size() int                                { return 1 }
+func (indexPair1) test(a, b Mem)                            { generateIndexPairTest(MOVB, CMPB, GP8, a, b) }
+func (indexPair1) vinit(Register)                           {}
+func (indexPair1) vpcmpeq(a, b, c VecVirtual)               { VPCMPEQB(a, b, c) }
+func (indexPair1) vpmovmskb(_, a VecVirtual, _, b Register) { VPMOVMSKB(a, b) }
 
 type indexPair2 struct{}
 
-func (*indexPair2) size() int                             { return 2 }
-func (*indexPair2) init()                                 {}
-func (*indexPair2) test(a, b Mem)                         { generateIndexPairTest(MOVW, CMPW, GP16, a, b) }
-func (*indexPair2) vpcmpeq(a, b, c VecVirtual)            { VPCMPEQW(a, b, c) }
-func (*indexPair2) vpmovmskb(_, a VecVirtual, b Register) { VPMOVMSKB(a, b) }
+func (indexPair2) size() int                                { return 2 }
+func (indexPair2) test(a, b Mem)                            { generateIndexPairTest(MOVW, CMPW, GP16, a, b) }
+func (indexPair2) vinit(Register)                           {}
+func (indexPair2) vpcmpeq(a, b, c VecVirtual)               { VPCMPEQW(a, b, c) }
+func (indexPair2) vpmovmskb(_, a VecVirtual, _, b Register) { VPMOVMSKB(a, b) }
 
 type indexPair4 struct{}
 
-func (*indexPair4) size() int                             { return 4 }
-func (*indexPair4) init()                                 {}
-func (*indexPair4) test(a, b Mem)                         { generateIndexPairTest(MOVL, CMPL, GP32, a, b) }
-func (*indexPair4) vpcmpeq(a, b, c VecVirtual)            { VPCMPEQD(a, b, c) }
-func (*indexPair4) vpmovmskb(_, a VecVirtual, b Register) { VPMOVMSKB(a, b) }
+func (indexPair4) size() int                                { return 4 }
+func (indexPair4) test(a, b Mem)                            { generateIndexPairTest(MOVL, CMPL, GP32, a, b) }
+func (indexPair4) vinit(Register)                           {}
+func (indexPair4) vpcmpeq(a, b, c VecVirtual)               { VPCMPEQD(a, b, c) }
+func (indexPair4) vpmovmskb(_, a VecVirtual, _, b Register) { VPMOVMSKB(a, b) }
 
 type indexPair8 struct{}
 
-func (*indexPair8) size() int                             { return 8 }
-func (*indexPair8) init()                                 {}
-func (*indexPair8) test(a, b Mem)                         { generateIndexPairTest(MOVQ, CMPQ, GP64, a, b) }
-func (*indexPair8) vpcmpeq(a, b, c VecVirtual)            { VPCMPEQQ(a, b, c) }
-func (*indexPair8) vpmovmskb(_, a VecVirtual, b Register) { VPMOVMSKB(a, b) }
+func (indexPair8) size() int                                { return 8 }
+func (indexPair8) test(a, b Mem)                            { generateIndexPairTest(MOVQ, CMPQ, GP64, a, b) }
+func (indexPair8) vinit(Register)                           {}
+func (indexPair8) vpcmpeq(a, b, c VecVirtual)               { VPCMPEQQ(a, b, c) }
+func (indexPair8) vpmovmskb(_, a VecVirtual, _, b Register) { VPMOVMSKB(a, b) }
 
 type indexPair16 struct{}
 
-func (*indexPair16) size() int {
+func (indexPair16) size() int {
 	return 16
 }
-func (*indexPair16) init() {
-}
-func (*indexPair16) test(a, b Mem) {
+func (indexPair16) test(a, b Mem) {
 	r0, r1 := XMM(), XMM()
 	MOVOU(a, r0)
 	MOVOU(b, r1)
@@ -82,10 +80,12 @@ func (*indexPair16) test(a, b Mem) {
 	PMOVMSKB(r1, mask)
 	CMPL(mask, U32(0xFFFF))
 }
-func (*indexPair16) vpcmpeq(a, b, c VecVirtual) {
+func (indexPair16) vinit(Register) {
+}
+func (indexPair16) vpcmpeq(a, b, c VecVirtual) {
 	VPCMPEQQ(a, b, c)
 }
-func (*indexPair16) vpmovmskb(tmp, src VecVirtual, dst Register) {
+func (indexPair16) vpmovmskb(tmp, src VecVirtual, _, dst Register) {
 	// https://www.felixcloutier.com/x86/vpermq#vpermq--vex-256-encoded-version-
 	//
 	// Swap each quad word in the lower and upper half of the 32 bytes register,
@@ -98,18 +98,12 @@ func (*indexPair16) vpmovmskb(tmp, src VecVirtual, dst Register) {
 	VPMOVMSKB(tmp, dst)
 }
 
-type indexPair32 struct {
-	zero GPVirtual
-}
+type indexPair32 struct{}
 
-func (code *indexPair32) size() int {
+func (indexPair32) size() int {
 	return 32
 }
-func (code *indexPair32) init() {
-	code.zero = GP64()
-	MOVQ(U64(0), code.zero)
-}
-func (code *indexPair32) test(a, b Mem) {
+func (indexPair32) test(a, b Mem) {
 	r0, r1, r2, r3 := XMM(), XMM(), XMM(), XMM()
 	MOVOU(a, r0)
 	MOVOU(a.Offset(16), r1)
@@ -123,13 +117,16 @@ func (code *indexPair32) test(a, b Mem) {
 	ANDL(mask1, mask0)
 	CMPL(mask0, U32(0xFFFF))
 }
-func (code *indexPair32) vpcmpeq(a, b, c VecVirtual) {
+func (indexPair32) vinit(reg Register) {
+	MOVQ(U64(0), reg)
+}
+func (indexPair32) vpcmpeq(a, b, c VecVirtual) {
 	VPCMPEQQ(a, b, c)
 }
-func (code *indexPair32) vpmovmskb(_, src VecVirtual, dst Register) {
+func (indexPair32) vpmovmskb(_, src VecVirtual, zero, dst Register) {
 	VPMOVMSKB(src, dst)
 	CMPL(dst, U32(0xFFFFFFFF))
-	CMOVLNE(code.zero.As32(), dst)
+	CMOVLNE(zero, dst)
 }
 
 func generateIndexPair(code indexPair) {
@@ -145,8 +142,6 @@ func generateIndexPair(code indexPair) {
 	CMPQ(n, Imm(0))
 	JLE(LabelRef("done"))
 	SUBQ(Imm(uint64(size)), n)
-
-	code.init()
 
 	if _, ok := code.(indexPairAVX2); ok {
 		JumpIfFeature("avx2", cpu.AVX2)
@@ -256,6 +251,9 @@ func generateIndexPairAVX2(p Register, regA, regB []VecVirtual, masks []GPVirtua
 	size := code.size()
 	moves := make(map[int]VecVirtual)
 
+	spare := GP64()
+	code.vinit(spare)
+
 	for i, reg := range regA {
 		VMOVDQU((Mem{Base: p}).Offset(i*32), reg)
 		moves[i*32] = reg
@@ -281,10 +279,10 @@ func generateIndexPairAVX2(p Register, regA, regB []VecVirtual, masks []GPVirtua
 	}
 
 	for i := range regB {
-		code.vpmovmskb(regA[i], regB[i], masks[i].As32())
+		code.vpmovmskb(regA[i], regB[i], spare.As32(), masks[i].As32())
 	}
 
-	combinedMask := GP64()
+	combinedMask := spare
 	if len(masks) == 1 {
 		combinedMask = masks[0]
 	} else {
