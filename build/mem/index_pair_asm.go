@@ -118,7 +118,7 @@ func (indexPair32) test(a, b Mem) {
 	CMPL(mask0, U32(0xFFFF))
 }
 func (indexPair32) vinit(reg Register) {
-	MOVQ(U64(0), reg)
+	XORQ(reg, reg)
 }
 func (indexPair32) vpcmpeq(a, b, c VecVirtual) {
 	VPCMPEQQ(a, b, c)
@@ -179,7 +179,7 @@ func generateIndexPair(code indexPair) {
 		masks := make([]GPVirtual, avxLanes)
 		for i := range masks {
 			masks[i] = GP64()
-			MOVQ(U64(0), masks[i])
+			XORQ(masks[i], masks[i])
 		}
 
 		regA := make([]VecVirtual, avxLanes)
@@ -286,7 +286,7 @@ func generateIndexPairAVX2(p Register, regA, regB []VecVirtual, masks []GPVirtua
 	if len(masks) == 1 {
 		combinedMask = masks[0]
 	} else {
-		MOVQ(U64(0), combinedMask)
+		XORQ(combinedMask, combinedMask)
 		for _, mask := range masks {
 			ORQ(mask, combinedMask)
 		}
