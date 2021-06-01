@@ -78,96 +78,154 @@ func generateIndexPair(code indexPair) {
 	size := code.size()
 	TEXT(fmt.Sprintf("indexPair%d", size), NOSPLIT, "func(b []byte) int")
 
-	base := Load(Param("b").Base(), GP64())
-	count := Load(Param("b").Len(), GP64())
+	p := Load(Param("b").Base(), GP64())
+	n := Load(Param("b").Len(), GP64())
 
-	CMPQ(count, Imm(uint64(size))) // zero or one item
-	JBE(LabelRef("done"))
+	base := GP64()
+	MOVQ(p, base)
 
-	ptr := GP64()
-	end := GP64()
-	MOVQ(base, ptr)
-	MOVQ(base, end)
-	ADDQ(count, end)
-	SUBQ(Imm(uint64(size)), end)
+	CMPQ(n, Imm(0))
+	JLE(LabelRef("done"))
+	SUBQ(Imm(uint64(size)), n)
 
-	CMPQ(count, Imm(32+uint64(size)))
-	JBE(LabelRef("generic"))
-	JumpIfFeature("avx2", cpu.AVX2)
+	if size < 16 {
+		JumpIfFeature("avx2", cpu.AVX2)
+	}
+
+	Label("tail")
+	CMPQ(n, Imm(0))
+	JE(LabelRef("fail"))
 
 	Label("generic")
 	r0 := code.reg()
 	r1 := code.reg()
-	code.mov(Mem{Base: ptr}, r0)
-	code.mov((Mem{Base: ptr}).Offset(size), r1)
+	code.mov(Mem{Base: p}, r0)
+	code.mov((Mem{Base: p}).Offset(size), r1)
 	code.cmp(r0, r1)
-	JE(LabelRef("found"))
-	ADDQ(Imm(uint64(size)), ptr)
-	CMPQ(ptr, end)
-	JNE(LabelRef("generic"))
+	JE(LabelRef("done"))
+	ADDQ(Imm(uint64(size)), p)
+	SUBQ(Imm(uint64(size)), n)
+	CMPQ(n, Imm(0))
+	JA(LabelRef("generic"))
+
+	Label("fail")
+	ADDQ(Imm(uint64(size)), p)
 
 	Label("done")
-	Store(count, ReturnIndex(0))
-	RET()
-
-	Label("found")
 	// The delta between the base pointer and how far we advanced is the index of the pair.
-	index := ptr
+	index := p
 	SUBQ(base, index)
 	Store(index, ReturnIndex(0))
 	RET()
 
-	Label("avx2")
-	limit := GP64()
-	MOVQ(end, limit)
-	SUBQ(Imm(32+uint64(size)), limit)
-
-	mask := GP64()
-	MOVQ(U64(0), mask)
-
-	Label("avx2_loop")
-	VMOVDQU(Mem{Base: ptr}, Y0)
-	VMOVDQU((Mem{Base: ptr}).Offset(size), Y1)
-
 	switch size {
-	case 16:
-		VPCMPEQQ(Y0, Y1, Y1)
-		VPMOVMSKB(Y1, mask.As32())
-
-		hi := GP64()
-		lo := GP64()
-		MOVQ(mask, hi)
-		MOVQ(mask, lo)
-		SHRQ(Imm(16), hi)
-		ANDQ(U32(0xFFFF), lo)
-
-		MOVQ(U64(0), mask)
-		CMPQ(lo, U32(0xFFFF))
-		JE(LabelRef("avx2_found"))
-
-		MOVQ(U64(16), mask)
-		CMPQ(hi, U32(0xFFFF))
-		JE(LabelRef("avx2_found"))
-
+	case 1, 2, 4, 8:
 	default:
-		code.vpcmpeq(Y0, Y1, Y1)
-		VPMOVMSKB(Y1, mask.As32())
-		TZCNTQ(mask, mask)
-		CMPQ(mask, Imm(64))
-		JNE(LabelRef("avx2_found"))
+		return
 	}
 
-	ADDQ(Imm(32), ptr)
-	CMPQ(ptr, limit)
-	JBE(LabelRef("avx2_loop"))
+	const avxChunk = 256
+	const avxLanes = avxChunk / 32
+	Label("avx2")
+	CMPQ(n, U32(avxChunk+uint64(size)))
+	JB(LabelRef(fmt.Sprintf("avx2_tail%d", avxChunk/2)))
 
-	VZEROUPPER()
-	CMPQ(ptr, end)
-	JB(LabelRef("generic"))
-	JMP(LabelRef("done"))
+	masks := make([]GPVirtual, avxLanes)
+	for i := range masks {
+		masks[i] = GP64()
+		MOVQ(U64(0), masks[i])
+	}
 
-	Label("avx2_found")
-	ADDQ(mask, ptr)
+	regA := make([]VecVirtual, avxLanes)
+	regB := make([]VecVirtual, avxLanes)
+	for i := range regA {
+		regA[i] = YMM()
+		regB[i] = YMM()
+	}
+
+	Label(fmt.Sprintf("avx2_loop%d", avxChunk))
+	/*
+		switch size {
+		case 16:
+				VPCMPEQQ(Y0, Y1, Y1)
+				VPMOVMSKB(Y1, mask.As32())
+
+				hi := GP64()
+				lo := GP64()
+				MOVQ(mask, hi)
+				MOVQ(mask, lo)
+				SHRQ(Imm(16), hi)
+				ANDQ(U32(0xFFFF), lo)
+
+				MOVQ(U64(0), mask)
+				CMPQ(lo, U32(0xFFFF))
+				JE(LabelRef("avx2_found"))
+
+				MOVQ(U64(16), mask)
+				CMPQ(hi, U32(0xFFFF))
+				JE(LabelRef("avx2_found"))
+		}
+	*/
+
+	generateIndexPairAVX2(p, regA, regB, masks, code)
+	ADDQ(U32(avxChunk), p)
+	SUBQ(U32(avxChunk), n)
+	CMPQ(n, U32(avxChunk+uint64(size)))
+	JAE(LabelRef(fmt.Sprintf("avx2_loop%d", avxChunk)))
+
+	for chunk := avxChunk / 2; chunk >= 32; chunk /= 2 {
+		Label(fmt.Sprintf("avx2_tail%d", chunk))
+		CMPQ(n, Imm(uint64(chunk+size)))
+		JB(LabelRef(fmt.Sprintf("avx2_tail%d", chunk/2)))
+		lanes := chunk / 32
+		generateIndexPairAVX2(p, regA[:lanes], regB[:lanes], masks[:lanes], code)
+		ADDQ(U32(uint64(chunk)), p)
+		SUBQ(U32(uint64(chunk)), n)
+	}
+
+	Label("avx2_tail16")
+	CMPQ(n, Imm(uint64(16+size)))
+	JB(LabelRef("avx2_tail"))
+	generateIndexPairAVX2(p, []VecVirtual{XMM()}, []VecVirtual{XMM()}, masks[:1], code)
+	ADDQ(Imm(16), p)
+	SUBQ(Imm(16), n)
+
+	Label("avx2_tail")
 	VZEROUPPER()
-	JMP(LabelRef("found"))
+	JMP(LabelRef("tail"))
+
+	for i, mask := range masks {
+		Label(fmt.Sprintf("avx2_done%d", i))
+		if i > 0 {
+			ADDQ(U32(uint64(i*32)), p)
+			SUBQ(U32(uint64(i*32)), n)
+		}
+		ADDQ(mask, p)
+		SUBQ(mask, n)
+		VZEROUPPER()
+		JMP(LabelRef("done"))
+	}
+}
+
+func generateIndexPairAVX2(p Register, regA, regB []VecVirtual, masks []GPVirtual, code indexPair) {
+	size := code.size()
+	for i, reg := range regA {
+		VMOVDQU((Mem{Base: p}).Offset(i*32), reg)
+	}
+	for i, reg := range regB {
+		VMOVDQU((Mem{Base: p}).Offset(i*32+size), reg)
+	}
+	for i := range regA {
+		code.vpcmpeq(regA[i], regB[i], regB[i])
+	}
+	for i := range regB {
+		VPMOVMSKB(regB[i], masks[i].As32())
+	}
+	for _, mask := range masks {
+		TZCNTQ(mask, mask)
+	}
+	for i, mask := range masks {
+		CMPQ(mask, Imm(64))
+		JNE(LabelRef(fmt.Sprintf("avx2_done%d", i)))
+	}
 }

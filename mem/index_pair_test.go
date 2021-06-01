@@ -149,7 +149,7 @@ func TestIndexPair(t *testing.T) {
 
 func BenchmarkIndexPair(b *testing.B) {
 	for _, size := range indexPairSizes {
-		input := make([]byte, 4096)
+		input := make([]byte, 16*1024)
 		for i := range input {
 			input[i] = byte(i)
 		}
