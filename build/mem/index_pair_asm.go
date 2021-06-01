@@ -29,7 +29,6 @@ type indexPair interface {
 
 type indexPairAVX2 interface {
 	indexPair
-	vinit(Register)
 	vpcmpeq(src0, src1, dst VecVirtual)
 	vpmovmskb(tmp, src VecVirtual, spare, dst Register)
 }
@@ -38,7 +37,6 @@ type indexPair1 struct{}
 
 func (indexPair1) size() int                                { return 1 }
 func (indexPair1) test(a, b Mem)                            { generateIndexPairTest(MOVB, CMPB, GP8, a, b) }
-func (indexPair1) vinit(Register)                           {}
 func (indexPair1) vpcmpeq(a, b, c VecVirtual)               { VPCMPEQB(a, b, c) }
 func (indexPair1) vpmovmskb(_, a VecVirtual, _, b Register) { VPMOVMSKB(a, b) }
 
@@ -46,7 +44,6 @@ type indexPair2 struct{}
 
 func (indexPair2) size() int                                { return 2 }
 func (indexPair2) test(a, b Mem)                            { generateIndexPairTest(MOVW, CMPW, GP16, a, b) }
-func (indexPair2) vinit(Register)                           {}
 func (indexPair2) vpcmpeq(a, b, c VecVirtual)               { VPCMPEQW(a, b, c) }
 func (indexPair2) vpmovmskb(_, a VecVirtual, _, b Register) { VPMOVMSKB(a, b) }
 
@@ -54,7 +51,6 @@ type indexPair4 struct{}
 
 func (indexPair4) size() int                                { return 4 }
 func (indexPair4) test(a, b Mem)                            { generateIndexPairTest(MOVL, CMPL, GP32, a, b) }
-func (indexPair4) vinit(Register)                           {}
 func (indexPair4) vpcmpeq(a, b, c VecVirtual)               { VPCMPEQD(a, b, c) }
 func (indexPair4) vpmovmskb(_, a VecVirtual, _, b Register) { VPMOVMSKB(a, b) }
 
@@ -62,7 +58,6 @@ type indexPair8 struct{}
 
 func (indexPair8) size() int                                { return 8 }
 func (indexPair8) test(a, b Mem)                            { generateIndexPairTest(MOVQ, CMPQ, GP64, a, b) }
-func (indexPair8) vinit(Register)                           {}
 func (indexPair8) vpcmpeq(a, b, c VecVirtual)               { VPCMPEQQ(a, b, c) }
 func (indexPair8) vpmovmskb(_, a VecVirtual, _, b Register) { VPMOVMSKB(a, b) }
 
@@ -79,8 +74,6 @@ func (indexPair16) test(a, b Mem) {
 	PCMPEQQ(r0, r1)
 	PMOVMSKB(r1, mask)
 	CMPL(mask, U32(0xFFFF))
-}
-func (indexPair16) vinit(Register) {
 }
 func (indexPair16) vpcmpeq(a, b, c VecVirtual) {
 	VPCMPEQQ(a, b, c)
@@ -116,9 +109,6 @@ func (indexPair32) test(a, b Mem) {
 	PMOVMSKB(r3, mask1)
 	ANDL(mask1, mask0)
 	CMPL(mask0, U32(0xFFFF))
-}
-func (indexPair32) vinit(reg Register) {
-	XORQ(reg, reg)
 }
 func (indexPair32) vpcmpeq(a, b, c VecVirtual) {
 	VPCMPEQQ(a, b, c)
@@ -252,7 +242,15 @@ func generateIndexPairAVX2(p Register, regA, regB []VecVirtual, masks []GPVirtua
 	moves := make(map[int]VecVirtual)
 
 	spare := GP64()
-	code.vinit(spare)
+	if size == 32 {
+		// This is a bit of an implicit coupling to the 32 bytes specialication,
+		// but it did not seem worth the extra complexity to have more
+		// abstractions.
+		//
+		// The spare register is passed to vpmovmskb and must be initialized to
+		// zero as it may be used to clear the mask register.
+		XORQ(spare, spare)
+	}
 
 	for i, reg := range regA {
 		VMOVDQU((Mem{Base: p}).Offset(i*32), reg)
@@ -264,7 +262,24 @@ func generateIndexPairAVX2(p Register, regA, regB []VecVirtual, masks []GPVirtua
 		// offset in the previous loop. This optimization applies for items
 		// of size 32.
 		if moves[i*32+size] == nil {
-			VMOVDQU((Mem{Base: p}).Offset(i*32+size), reg)
+			lo := moves[i*32+(size-16)]
+			hi := moves[i*32+(size+16)]
+
+			if lo != nil && hi != nil {
+				// https://www.felixcloutier.com/x86/vperm2i128#vperm2i128
+				//
+				// The data was already loaded, but split across two registers.
+				// We recompose it using a permutation of the upper and lower
+				// halves of the registers holding the contiguous data.
+				//
+				// Note that in Go assembly the arguments are reversed;
+				// SRC1 is `lo` and SRC2 is `hi`, but we pass them in the
+				// reverse order.
+				const permutation = (1 << 0) | (2 << 4)
+				VPERM2I128(Imm(permutation), hi, lo, reg)
+			} else {
+				VMOVDQU((Mem{Base: p}).Offset(i*32+size), reg)
+			}
 		}
 	}
 
