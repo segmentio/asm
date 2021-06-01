@@ -13,7 +13,7 @@ TEXT ·indexPair1(SB), NOSPLIT, $0-32
 	MOVQ AX, BX
 	ADDQ CX, BX
 	SUBQ $0x01, BX
-	CMPQ CX, $0x80
+	CMPQ CX, $0x21
 	JBE  generic
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
@@ -49,7 +49,7 @@ avx2_loop:
 	TZCNTQ    DI, DI
 	CMPQ      DI, $0x40
 	JNE       avx2_found
-	ADDQ      $0x1f, DX
+	ADDQ      $0x20, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
@@ -58,8 +58,8 @@ avx2_loop:
 	JMP       done
 
 avx2_found:
-	ADDQ DI, DX
 	VZEROUPPER
+	ADDQ DI, DX
 	JMP  found
 
 // func indexPair2(b []byte) int
@@ -73,7 +73,7 @@ TEXT ·indexPair2(SB), NOSPLIT, $0-32
 	MOVQ AX, BX
 	ADDQ CX, BX
 	SUBQ $0x02, BX
-	CMPQ CX, $0x80
+	CMPQ CX, $0x22
 	JBE  generic
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
@@ -109,7 +109,7 @@ avx2_loop:
 	TZCNTQ    DI, DI
 	CMPQ      DI, $0x40
 	JNE       avx2_found
-	ADDQ      $0x1e, DX
+	ADDQ      $0x20, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
@@ -118,8 +118,8 @@ avx2_loop:
 	JMP       done
 
 avx2_found:
-	ADDQ DI, DX
 	VZEROUPPER
+	ADDQ DI, DX
 	JMP  found
 
 // func indexPair4(b []byte) int
@@ -133,7 +133,7 @@ TEXT ·indexPair4(SB), NOSPLIT, $0-32
 	MOVQ AX, BX
 	ADDQ CX, BX
 	SUBQ $0x04, BX
-	CMPQ CX, $0x80
+	CMPQ CX, $0x24
 	JBE  generic
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
@@ -169,7 +169,7 @@ avx2_loop:
 	TZCNTQ    DI, DI
 	CMPQ      DI, $0x40
 	JNE       avx2_found
-	ADDQ      $0x1c, DX
+	ADDQ      $0x20, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
@@ -178,8 +178,8 @@ avx2_loop:
 	JMP       done
 
 avx2_found:
-	ADDQ DI, DX
 	VZEROUPPER
+	ADDQ DI, DX
 	JMP  found
 
 // func indexPair8(b []byte) int
@@ -193,7 +193,7 @@ TEXT ·indexPair8(SB), NOSPLIT, $0-32
 	MOVQ AX, BX
 	ADDQ CX, BX
 	SUBQ $0x08, BX
-	CMPQ CX, $0x80
+	CMPQ CX, $0x28
 	JBE  generic
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
@@ -229,7 +229,7 @@ avx2_loop:
 	TZCNTQ    DI, DI
 	CMPQ      DI, $0x40
 	JNE       avx2_found
-	ADDQ      $0x18, DX
+	ADDQ      $0x20, DX
 	CMPQ      DX, SI
 	JBE       avx2_loop
 	VZEROUPPER
@@ -238,8 +238,8 @@ avx2_loop:
 	JMP       done
 
 avx2_found:
-	ADDQ DI, DX
 	VZEROUPPER
+	ADDQ DI, DX
 	JMP  found
 
 // func indexPair16(b []byte) int

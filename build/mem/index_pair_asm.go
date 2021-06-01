@@ -92,7 +92,7 @@ func generateIndexPair(code indexPair) {
 	SUBQ(Imm(uint64(size)), end)
 
 	if size < 16 {
-		CMPQ(count, Imm(128))
+		CMPQ(count, Imm(32+uint64(size)))
 		JBE(LabelRef("generic"))
 		JumpIfFeature("avx2", cpu.AVX2)
 	}
@@ -135,7 +135,7 @@ func generateIndexPair(code indexPair) {
 		TZCNTQ(mask, mask)
 		CMPQ(mask, Imm(64))
 		JNE(LabelRef("avx2_found"))
-		ADDQ(Imm(32-uint64(size)), ptr)
+		ADDQ(Imm(32), ptr)
 		CMPQ(ptr, limit)
 		JBE(LabelRef("avx2_loop"))
 
@@ -145,8 +145,8 @@ func generateIndexPair(code indexPair) {
 		JMP(LabelRef("done"))
 
 		Label("avx2_found")
-		ADDQ(mask, ptr)
 		VZEROUPPER()
+		ADDQ(mask, ptr)
 		JMP(LabelRef("found"))
 	}
 }
