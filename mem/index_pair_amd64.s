@@ -47,7 +47,7 @@ avx2:
 	MOVQ $0x0000000000000000, R10
 	MOVQ $0x0000000000000000, R11
 	MOVQ $0x0000000000000000, R12
-	MOVQ $0x0000000000000000, R15
+	MOVQ $0x0000000000000000, BX
 
 avx2_loop256:
 	VMOVDQU   (AX), Y0
@@ -82,22 +82,17 @@ avx2_loop256:
 	VPMOVMSKB Y11, R10
 	VPMOVMSKB Y13, R11
 	VPMOVMSKB Y15, R12
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
-	CMPQ      R9, $0x00
-	JNE       avx2_done4
-	CMPQ      R10, $0x00
-	JNE       avx2_done5
-	CMPQ      R11, $0x00
-	JNE       avx2_done6
-	CMPQ      R12, $0x00
-	JNE       avx2_done7
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	ORQ       R9, R13
+	ORQ       R10, R13
+	ORQ       R11, R13
+	ORQ       R12, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
 	CMPQ      CX, $0x00000101
@@ -122,14 +117,13 @@ avx2_tail128:
 	VPMOVMSKB Y3, SI
 	VPMOVMSKB Y5, DI
 	VPMOVMSKB Y7, R8
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
 
@@ -144,10 +138,11 @@ avx2_tail64:
 	VPCMPEQB  Y2, Y3, Y3
 	VPMOVMSKB Y1, BX
 	VPMOVMSKB Y3, SI
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
 
@@ -158,8 +153,10 @@ avx2_tail32:
 	VMOVDQU   1(AX), Y1
 	VPCMPEQB  Y0, Y1, Y1
 	VPMOVMSKB Y1, BX
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000020, AX
 	SUBQ      $0x00000020, CX
 
@@ -170,14 +167,34 @@ avx2_tail16:
 	VMOVDQU   1(AX), X1
 	VPCMPEQB  X0, X1, X1
 	VPMOVMSKB X1, BX
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x10, AX
 	SUBQ      $0x10, CX
 
 avx2_tail:
 	VZEROUPPER
 	JMP tail
+
+avx2_done:
+	CMPQ BX, $0x00
+	JNE  avx2_done0
+	CMPQ SI, $0x00
+	JNE  avx2_done1
+	CMPQ DI, $0x00
+	JNE  avx2_done2
+	CMPQ R8, $0x00
+	JNE  avx2_done3
+	CMPQ R9, $0x00
+	JNE  avx2_done4
+	CMPQ R10, $0x00
+	JNE  avx2_done5
+	CMPQ R11, $0x00
+	JNE  avx2_done6
+	CMPQ R12, $0x00
+	JNE  avx2_done7
 
 avx2_done0:
 	TZCNTQ BX, BX
@@ -294,7 +311,7 @@ avx2:
 	MOVQ $0x0000000000000000, R10
 	MOVQ $0x0000000000000000, R11
 	MOVQ $0x0000000000000000, R12
-	MOVQ $0x0000000000000000, R15
+	MOVQ $0x0000000000000000, BX
 
 avx2_loop256:
 	VMOVDQU   (AX), Y0
@@ -329,22 +346,17 @@ avx2_loop256:
 	VPMOVMSKB Y11, R10
 	VPMOVMSKB Y13, R11
 	VPMOVMSKB Y15, R12
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
-	CMPQ      R9, $0x00
-	JNE       avx2_done4
-	CMPQ      R10, $0x00
-	JNE       avx2_done5
-	CMPQ      R11, $0x00
-	JNE       avx2_done6
-	CMPQ      R12, $0x00
-	JNE       avx2_done7
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	ORQ       R9, R13
+	ORQ       R10, R13
+	ORQ       R11, R13
+	ORQ       R12, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
 	CMPQ      CX, $0x00000102
@@ -369,14 +381,13 @@ avx2_tail128:
 	VPMOVMSKB Y3, SI
 	VPMOVMSKB Y5, DI
 	VPMOVMSKB Y7, R8
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
 
@@ -391,10 +402,11 @@ avx2_tail64:
 	VPCMPEQW  Y2, Y3, Y3
 	VPMOVMSKB Y1, BX
 	VPMOVMSKB Y3, SI
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
 
@@ -405,8 +417,10 @@ avx2_tail32:
 	VMOVDQU   2(AX), Y1
 	VPCMPEQW  Y0, Y1, Y1
 	VPMOVMSKB Y1, BX
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000020, AX
 	SUBQ      $0x00000020, CX
 
@@ -417,14 +431,34 @@ avx2_tail16:
 	VMOVDQU   2(AX), X1
 	VPCMPEQW  X0, X1, X1
 	VPMOVMSKB X1, BX
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x10, AX
 	SUBQ      $0x10, CX
 
 avx2_tail:
 	VZEROUPPER
 	JMP tail
+
+avx2_done:
+	CMPQ BX, $0x00
+	JNE  avx2_done0
+	CMPQ SI, $0x00
+	JNE  avx2_done1
+	CMPQ DI, $0x00
+	JNE  avx2_done2
+	CMPQ R8, $0x00
+	JNE  avx2_done3
+	CMPQ R9, $0x00
+	JNE  avx2_done4
+	CMPQ R10, $0x00
+	JNE  avx2_done5
+	CMPQ R11, $0x00
+	JNE  avx2_done6
+	CMPQ R12, $0x00
+	JNE  avx2_done7
 
 avx2_done0:
 	TZCNTQ BX, BX
@@ -541,7 +575,7 @@ avx2:
 	MOVQ $0x0000000000000000, R10
 	MOVQ $0x0000000000000000, R11
 	MOVQ $0x0000000000000000, R12
-	MOVQ $0x0000000000000000, R15
+	MOVQ $0x0000000000000000, BX
 
 avx2_loop256:
 	VMOVDQU   (AX), Y0
@@ -576,22 +610,17 @@ avx2_loop256:
 	VPMOVMSKB Y11, R10
 	VPMOVMSKB Y13, R11
 	VPMOVMSKB Y15, R12
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
-	CMPQ      R9, $0x00
-	JNE       avx2_done4
-	CMPQ      R10, $0x00
-	JNE       avx2_done5
-	CMPQ      R11, $0x00
-	JNE       avx2_done6
-	CMPQ      R12, $0x00
-	JNE       avx2_done7
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	ORQ       R9, R13
+	ORQ       R10, R13
+	ORQ       R11, R13
+	ORQ       R12, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
 	CMPQ      CX, $0x00000104
@@ -616,14 +645,13 @@ avx2_tail128:
 	VPMOVMSKB Y3, SI
 	VPMOVMSKB Y5, DI
 	VPMOVMSKB Y7, R8
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
 
@@ -638,10 +666,11 @@ avx2_tail64:
 	VPCMPEQD  Y2, Y3, Y3
 	VPMOVMSKB Y1, BX
 	VPMOVMSKB Y3, SI
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
 
@@ -652,8 +681,10 @@ avx2_tail32:
 	VMOVDQU   4(AX), Y1
 	VPCMPEQD  Y0, Y1, Y1
 	VPMOVMSKB Y1, BX
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000020, AX
 	SUBQ      $0x00000020, CX
 
@@ -664,14 +695,34 @@ avx2_tail16:
 	VMOVDQU   4(AX), X1
 	VPCMPEQD  X0, X1, X1
 	VPMOVMSKB X1, BX
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x10, AX
 	SUBQ      $0x10, CX
 
 avx2_tail:
 	VZEROUPPER
 	JMP tail
+
+avx2_done:
+	CMPQ BX, $0x00
+	JNE  avx2_done0
+	CMPQ SI, $0x00
+	JNE  avx2_done1
+	CMPQ DI, $0x00
+	JNE  avx2_done2
+	CMPQ R8, $0x00
+	JNE  avx2_done3
+	CMPQ R9, $0x00
+	JNE  avx2_done4
+	CMPQ R10, $0x00
+	JNE  avx2_done5
+	CMPQ R11, $0x00
+	JNE  avx2_done6
+	CMPQ R12, $0x00
+	JNE  avx2_done7
 
 avx2_done0:
 	TZCNTQ BX, BX
@@ -788,7 +839,7 @@ avx2:
 	MOVQ $0x0000000000000000, R10
 	MOVQ $0x0000000000000000, R11
 	MOVQ $0x0000000000000000, R12
-	MOVQ $0x0000000000000000, R15
+	MOVQ $0x0000000000000000, BX
 
 avx2_loop256:
 	VMOVDQU   (AX), Y0
@@ -823,22 +874,17 @@ avx2_loop256:
 	VPMOVMSKB Y11, R10
 	VPMOVMSKB Y13, R11
 	VPMOVMSKB Y15, R12
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
-	CMPQ      R9, $0x00
-	JNE       avx2_done4
-	CMPQ      R10, $0x00
-	JNE       avx2_done5
-	CMPQ      R11, $0x00
-	JNE       avx2_done6
-	CMPQ      R12, $0x00
-	JNE       avx2_done7
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	ORQ       R9, R13
+	ORQ       R10, R13
+	ORQ       R11, R13
+	ORQ       R12, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
 	CMPQ      CX, $0x00000108
@@ -863,14 +909,13 @@ avx2_tail128:
 	VPMOVMSKB Y3, SI
 	VPMOVMSKB Y5, DI
 	VPMOVMSKB Y7, R8
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
 
@@ -885,10 +930,11 @@ avx2_tail64:
 	VPCMPEQQ  Y2, Y3, Y3
 	VPMOVMSKB Y1, BX
 	VPMOVMSKB Y3, SI
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
 
@@ -899,8 +945,10 @@ avx2_tail32:
 	VMOVDQU   8(AX), Y1
 	VPCMPEQQ  Y0, Y1, Y1
 	VPMOVMSKB Y1, BX
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000020, AX
 	SUBQ      $0x00000020, CX
 
@@ -911,14 +959,34 @@ avx2_tail16:
 	VMOVDQU   8(AX), X1
 	VPCMPEQQ  X0, X1, X1
 	VPMOVMSKB X1, BX
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x10, AX
 	SUBQ      $0x10, CX
 
 avx2_tail:
 	VZEROUPPER
 	JMP tail
+
+avx2_done:
+	CMPQ BX, $0x00
+	JNE  avx2_done0
+	CMPQ SI, $0x00
+	JNE  avx2_done1
+	CMPQ DI, $0x00
+	JNE  avx2_done2
+	CMPQ R8, $0x00
+	JNE  avx2_done3
+	CMPQ R9, $0x00
+	JNE  avx2_done4
+	CMPQ R10, $0x00
+	JNE  avx2_done5
+	CMPQ R11, $0x00
+	JNE  avx2_done6
+	CMPQ R12, $0x00
+	JNE  avx2_done7
 
 avx2_done0:
 	TZCNTQ BX, BX
@@ -1037,7 +1105,7 @@ avx2:
 	MOVQ $0x0000000000000000, R10
 	MOVQ $0x0000000000000000, R11
 	MOVQ $0x0000000000000000, R12
-	MOVQ $0x0000000000000000, R15
+	MOVQ $0x0000000000000000, BX
 
 avx2_loop256:
 	VMOVDQU   (AX), Y0
@@ -1088,22 +1156,17 @@ avx2_loop256:
 	VPERMQ    $0xb1, Y15, Y14
 	VPAND     Y15, Y14, Y14
 	VPMOVMSKB Y14, R12
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
-	CMPQ      R9, $0x00
-	JNE       avx2_done4
-	CMPQ      R10, $0x00
-	JNE       avx2_done5
-	CMPQ      R11, $0x00
-	JNE       avx2_done6
-	CMPQ      R12, $0x00
-	JNE       avx2_done7
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	ORQ       R9, R13
+	ORQ       R10, R13
+	ORQ       R11, R13
+	ORQ       R12, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
 	CMPQ      CX, $0x00000110
@@ -1136,14 +1199,13 @@ avx2_tail128:
 	VPERMQ    $0xb1, Y7, Y6
 	VPAND     Y7, Y6, Y6
 	VPMOVMSKB Y6, R8
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	ORQ       DI, R13
+	ORQ       R8, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
 
@@ -1162,10 +1224,11 @@ avx2_tail64:
 	VPERMQ    $0xb1, Y3, Y2
 	VPAND     Y3, Y2, Y2
 	VPMOVMSKB Y2, SI
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	ORQ       SI, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
 
@@ -1178,14 +1241,34 @@ avx2_tail32:
 	VPERMQ    $0xb1, Y1, Y0
 	VPAND     Y1, Y0, Y0
 	VPMOVMSKB Y0, BX
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000020, AX
 	SUBQ      $0x00000020, CX
 
 avx2_tail16:
 	VZEROUPPER
 	JMP tail
+
+avx2_done:
+	CMPQ BX, $0x00
+	JNE  avx2_done0
+	CMPQ SI, $0x00
+	JNE  avx2_done1
+	CMPQ DI, $0x00
+	JNE  avx2_done2
+	CMPQ R8, $0x00
+	JNE  avx2_done3
+	CMPQ R9, $0x00
+	JNE  avx2_done4
+	CMPQ R10, $0x00
+	JNE  avx2_done5
+	CMPQ R11, $0x00
+	JNE  avx2_done6
+	CMPQ R12, $0x00
+	JNE  avx2_done7
 
 avx2_done0:
 	TZCNTQ BX, BX
@@ -1309,7 +1392,7 @@ avx2:
 	MOVQ $0x0000000000000000, R10
 	MOVQ $0x0000000000000000, R11
 	MOVQ $0x0000000000000000, R12
-	MOVQ $0x0000000000000000, R15
+	MOVQ $0x0000000000000000, R13
 
 avx2_loop256:
 	VMOVDQU   (AX), Y0
@@ -1331,44 +1414,39 @@ avx2_loop256:
 	VPCMPEQQ  Y10, Y11, Y11
 	VPMOVMSKB Y1, BX
 	CMPL      BX, $0xffffffff
-	CMOVLNE   R15, BX
+	CMOVLNE   R13, BX
 	VPMOVMSKB Y3, SI
 	CMPL      SI, $0xffffffff
-	CMOVLNE   R15, SI
+	CMOVLNE   R13, SI
 	VPMOVMSKB Y0, DI
 	CMPL      DI, $0xffffffff
-	CMOVLNE   R15, DI
+	CMOVLNE   R13, DI
 	VPMOVMSKB Y6, R8
 	CMPL      R8, $0xffffffff
-	CMOVLNE   R15, R8
+	CMOVLNE   R13, R8
 	VPMOVMSKB Y2, R9
 	CMPL      R9, $0xffffffff
-	CMOVLNE   R15, R9
+	CMOVLNE   R13, R9
 	VPMOVMSKB Y4, R10
 	CMPL      R10, $0xffffffff
-	CMOVLNE   R15, R10
+	CMOVLNE   R13, R10
 	VPMOVMSKB Y5, R11
 	CMPL      R11, $0xffffffff
-	CMOVLNE   R15, R11
+	CMOVLNE   R13, R11
 	VPMOVMSKB Y11, R12
 	CMPL      R12, $0xffffffff
-	CMOVLNE   R15, R12
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
-	CMPQ      R9, $0x00
-	JNE       avx2_done4
-	CMPQ      R10, $0x00
-	JNE       avx2_done5
-	CMPQ      R11, $0x00
-	JNE       avx2_done6
-	CMPQ      R12, $0x00
-	JNE       avx2_done7
+	CMOVLNE   R13, R12
+	MOVQ      $0x0000000000000000, R14
+	ORQ       BX, R14
+	ORQ       SI, R14
+	ORQ       DI, R14
+	ORQ       R8, R14
+	ORQ       R9, R14
+	ORQ       R10, R14
+	ORQ       R11, R14
+	ORQ       R12, R14
+	CMPQ      R14, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
 	CMPQ      CX, $0x00000120
@@ -1388,24 +1466,23 @@ avx2_tail128:
 	VPCMPEQQ  Y5, Y6, Y6
 	VPMOVMSKB Y1, BX
 	CMPL      BX, $0xffffffff
-	CMOVLNE   R15, BX
+	CMOVLNE   R13, BX
 	VPMOVMSKB Y3, SI
 	CMPL      SI, $0xffffffff
-	CMOVLNE   R15, SI
+	CMOVLNE   R13, SI
 	VPMOVMSKB Y0, DI
 	CMPL      DI, $0xffffffff
-	CMOVLNE   R15, DI
+	CMOVLNE   R13, DI
 	VPMOVMSKB Y6, R8
 	CMPL      R8, $0xffffffff
-	CMOVLNE   R15, R8
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
-	CMPQ      DI, $0x00
-	JNE       avx2_done2
-	CMPQ      R8, $0x00
-	JNE       avx2_done3
+	CMOVLNE   R13, R8
+	MOVQ      $0x0000000000000000, R14
+	ORQ       BX, R14
+	ORQ       SI, R14
+	ORQ       DI, R14
+	ORQ       R8, R14
+	CMPQ      R14, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
 
@@ -1419,14 +1496,15 @@ avx2_tail64:
 	VPCMPEQQ  Y2, Y3, Y3
 	VPMOVMSKB Y1, BX
 	CMPL      BX, $0xffffffff
-	CMOVLNE   R15, BX
+	CMOVLNE   R13, BX
 	VPMOVMSKB Y3, SI
 	CMPL      SI, $0xffffffff
-	CMOVLNE   R15, SI
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
-	CMPQ      SI, $0x00
-	JNE       avx2_done1
+	CMOVLNE   R13, SI
+	MOVQ      $0x0000000000000000, R14
+	ORQ       BX, R14
+	ORQ       SI, R14
+	CMPQ      R14, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
 
@@ -1438,15 +1516,35 @@ avx2_tail32:
 	VPCMPEQQ  Y0, Y1, Y1
 	VPMOVMSKB Y1, BX
 	CMPL      BX, $0xffffffff
-	CMOVLNE   R15, BX
-	CMPQ      BX, $0x00
-	JNE       avx2_done0
+	CMOVLNE   R13, BX
+	MOVQ      $0x0000000000000000, R13
+	ORQ       BX, R13
+	CMPQ      R13, $0x00
+	JNE       avx2_done
 	ADDQ      $0x00000020, AX
 	SUBQ      $0x00000020, CX
 
 avx2_tail16:
 	VZEROUPPER
 	JMP tail
+
+avx2_done:
+	CMPQ BX, $0x00
+	JNE  avx2_done0
+	CMPQ SI, $0x00
+	JNE  avx2_done1
+	CMPQ DI, $0x00
+	JNE  avx2_done2
+	CMPQ R8, $0x00
+	JNE  avx2_done3
+	CMPQ R9, $0x00
+	JNE  avx2_done4
+	CMPQ R10, $0x00
+	JNE  avx2_done5
+	CMPQ R11, $0x00
+	JNE  avx2_done6
+	CMPQ R12, $0x00
+	JNE  avx2_done7
 
 avx2_done0:
 	TZCNTQ BX, BX
