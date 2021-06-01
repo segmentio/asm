@@ -30,6 +30,8 @@ func indexPair(b []byte, n int) int {
 		return indexPair8(b)
 	case 16:
 		return indexPair16(b)
+	case 32:
+		return indexPair32(b)
 	default:
 		return indexPairGeneric(b, n)
 	}
