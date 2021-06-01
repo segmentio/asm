@@ -58,8 +58,8 @@ avx2_loop:
 	JMP       done
 
 avx2_found:
-	VZEROUPPER
 	ADDQ DI, DX
+	VZEROUPPER
 	JMP  found
 
 // func indexPair2(b []byte) int
@@ -118,8 +118,8 @@ avx2_loop:
 	JMP       done
 
 avx2_found:
-	VZEROUPPER
 	ADDQ DI, DX
+	VZEROUPPER
 	JMP  found
 
 // func indexPair4(b []byte) int
@@ -178,8 +178,8 @@ avx2_loop:
 	JMP       done
 
 avx2_found:
-	VZEROUPPER
 	ADDQ DI, DX
+	VZEROUPPER
 	JMP  found
 
 // func indexPair8(b []byte) int
@@ -238,12 +238,12 @@ avx2_loop:
 	JMP       done
 
 avx2_found:
-	VZEROUPPER
 	ADDQ DI, DX
+	VZEROUPPER
 	JMP  found
 
 // func indexPair16(b []byte) int
-// Requires: SSE2, SSE4.1
+// Requires: AVX, AVX2, SSE2, SSE4.1
 TEXT ·indexPair16(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
@@ -253,6 +253,10 @@ TEXT ·indexPair16(SB), NOSPLIT, $0-32
 	MOVQ AX, BX
 	ADDQ CX, BX
 	SUBQ $0x10, BX
+	CMPQ CX, $0x30
+	JBE  generic
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS  avx2
 
 generic:
 	MOVOU    (DX), X0
@@ -273,3 +277,36 @@ found:
 	SUBQ AX, DX
 	MOVQ DX, ret+24(FP)
 	RET
+
+avx2:
+	MOVQ BX, SI
+	SUBQ $0x30, SI
+	MOVQ $0x0000000000000000, DI
+
+avx2_loop:
+	VMOVDQU   (DX), Y0
+	VMOVDQU   16(DX), Y1
+	VPCMPEQQ  Y0, Y1, Y1
+	VPMOVMSKB Y1, DI
+	MOVQ      DI, R8
+	MOVQ      DI, R9
+	SHRQ      $0x10, R8
+	ANDQ      $0x0000ffff, R9
+	MOVQ      $0x0000000000000000, DI
+	CMPQ      R9, $0x0000ffff
+	JE        avx2_found
+	MOVQ      $0x0000000000000010, DI
+	CMPQ      R8, $0x0000ffff
+	JE        avx2_found
+	ADDQ      $0x20, DX
+	CMPQ      DX, SI
+	JBE       avx2_loop
+	VZEROUPPER
+	CMPQ      DX, BX
+	JB        generic
+	JMP       done
+
+avx2_found:
+	ADDQ DI, DX
+	VZEROUPPER
+	JMP  found

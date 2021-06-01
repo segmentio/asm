@@ -91,11 +91,9 @@ func generateIndexPair(code indexPair) {
 	ADDQ(count, end)
 	SUBQ(Imm(uint64(size)), end)
 
-	if size < 16 {
-		CMPQ(count, Imm(32+uint64(size)))
-		JBE(LabelRef("generic"))
-		JumpIfFeature("avx2", cpu.AVX2)
-	}
+	CMPQ(count, Imm(32+uint64(size)))
+	JBE(LabelRef("generic"))
+	JumpIfFeature("avx2", cpu.AVX2)
 
 	Label("generic")
 	r0 := code.reg()
@@ -119,34 +117,57 @@ func generateIndexPair(code indexPair) {
 	Store(index, ReturnIndex(0))
 	RET()
 
-	if size < 16 {
-		Label("avx2")
-		limit := GP64()
-		MOVQ(end, limit)
-		SUBQ(Imm(32+uint64(size)), limit)
-		mask := GP64()
-		MOVQ(U64(0), mask)
+	Label("avx2")
+	limit := GP64()
+	MOVQ(end, limit)
+	SUBQ(Imm(32+uint64(size)), limit)
 
-		Label("avx2_loop")
-		VMOVDQU(Mem{Base: ptr}, Y0)
-		VMOVDQU((Mem{Base: ptr}).Offset(size), Y1)
+	mask := GP64()
+	MOVQ(U64(0), mask)
+
+	Label("avx2_loop")
+	VMOVDQU(Mem{Base: ptr}, Y0)
+	VMOVDQU((Mem{Base: ptr}).Offset(size), Y1)
+
+	switch size {
+	case 16:
+		VPCMPEQQ(Y0, Y1, Y1)
+		VPMOVMSKB(Y1, mask.As32())
+
+		hi := GP64()
+		lo := GP64()
+		MOVQ(mask, hi)
+		MOVQ(mask, lo)
+		SHRQ(Imm(16), hi)
+		ANDQ(U32(0xFFFF), lo)
+
+		MOVQ(U64(0), mask)
+		CMPQ(lo, U32(0xFFFF))
+		JE(LabelRef("avx2_found"))
+
+		MOVQ(U64(16), mask)
+		CMPQ(hi, U32(0xFFFF))
+		JE(LabelRef("avx2_found"))
+
+	default:
 		code.vpcmpeq(Y0, Y1, Y1)
 		VPMOVMSKB(Y1, mask.As32())
 		TZCNTQ(mask, mask)
 		CMPQ(mask, Imm(64))
 		JNE(LabelRef("avx2_found"))
-		ADDQ(Imm(32), ptr)
-		CMPQ(ptr, limit)
-		JBE(LabelRef("avx2_loop"))
-
-		VZEROUPPER()
-		CMPQ(ptr, end)
-		JB(LabelRef("generic"))
-		JMP(LabelRef("done"))
-
-		Label("avx2_found")
-		VZEROUPPER()
-		ADDQ(mask, ptr)
-		JMP(LabelRef("found"))
 	}
+
+	ADDQ(Imm(32), ptr)
+	CMPQ(ptr, limit)
+	JBE(LabelRef("avx2_loop"))
+
+	VZEROUPPER()
+	CMPQ(ptr, end)
+	JB(LabelRef("generic"))
+	JMP(LabelRef("done"))
+
+	Label("avx2_found")
+	ADDQ(mask, ptr)
+	VZEROUPPER()
+	JMP(LabelRef("found"))
 }
