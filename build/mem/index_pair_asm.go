@@ -272,9 +272,13 @@ func generateIndexPairAVX2(p Register, regA, regB []VecVirtual, masks []GPVirtua
 	}
 
 	combinedMask := GP64()
-	MOVQ(U64(0), combinedMask)
-	for _, mask := range masks {
-		ORQ(mask, combinedMask)
+	if len(masks) == 1 {
+		combinedMask = masks[0]
+	} else {
+		MOVQ(U64(0), combinedMask)
+		for _, mask := range masks {
+			ORQ(mask, combinedMask)
+		}
 	}
 
 	CMPQ(combinedMask, Imm(0))
