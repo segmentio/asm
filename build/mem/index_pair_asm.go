@@ -218,6 +218,7 @@ func generateIndexPair(code indexPair) {
 				ADDQ(U32(uint64(i*32)), p)
 				SUBQ(U32(uint64(i*32)), n)
 			}
+			TZCNTQ(mask, mask)
 			ADDQ(mask, p)
 			SUBQ(mask, n)
 			VZEROUPPER()
@@ -265,12 +266,8 @@ func generateIndexPairAVX2(p Register, regA, regB []VecVirtual, masks []GPVirtua
 		code.vpmovmskb(regA[i], regB[i], masks[i].As32())
 	}
 
-	for _, mask := range masks {
-		TZCNTQ(mask, mask) // TODO: move to avx2_done*
-	}
-
 	for i, mask := range masks {
-		CMPQ(mask, Imm(64))
+		CMPQ(mask, Imm(0))
 		JNE(LabelRef(fmt.Sprintf("avx2_done%d", i)))
 	}
 }
