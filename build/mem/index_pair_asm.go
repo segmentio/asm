@@ -235,21 +235,40 @@ func generateIndexPairTest(mov func(Op, Op), cmp func(Op, Op), reg func() GPVirt
 
 func generateIndexPairAVX2(p Register, regA, regB []VecVirtual, masks []GPVirtual, code indexPairAVX) {
 	size := code.size()
+	moves := make(map[int]VecVirtual)
+
 	for i, reg := range regA {
 		VMOVDQU((Mem{Base: p}).Offset(i*32), reg)
+		moves[i*32] = reg
 	}
+
 	for i, reg := range regB {
-		VMOVDQU((Mem{Base: p}).Offset(i*32+size), reg) // TODO: optimize, don't reload multiple times when already loaded by first loop (for size=32)
+		// Skip loading from memory a second time if we already loaded the
+		// offset in the previous loop. This optimization applies for items
+		// of size 32.
+		if moves[i*32+size] == nil {
+			VMOVDQU((Mem{Base: p}).Offset(i*32+size), reg)
+		}
 	}
+
 	for i := range regA {
-		code.vpcmpeq(regA[i], regB[i], regB[i])
+		// The load may have been elided if there was offset overlaps between
+		// the two sources.
+		if mov := moves[i*32+size]; mov != nil {
+			code.vpcmpeq(regA[i], mov, regB[i])
+		} else {
+			code.vpcmpeq(regA[i], regB[i], regB[i])
+		}
 	}
+
 	for i := range regB {
 		code.vpmovmskb(regA[i], regB[i], masks[i].As32())
 	}
+
 	for _, mask := range masks {
 		TZCNTQ(mask, mask) // TODO: move to avx2_done*
 	}
+
 	for i, mask := range masks {
 		CMPQ(mask, Imm(64))
 		JNE(LabelRef(fmt.Sprintf("avx2_done%d", i)))
