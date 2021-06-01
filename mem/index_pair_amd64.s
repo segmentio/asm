@@ -179,6 +179,7 @@ avx2_tail:
 	JMP tail
 
 avx2_done:
+	VZEROUPPER
 	CMPQ BX, $0x00
 	JNE  avx2_done0
 	CMPQ SI, $0x00
@@ -200,7 +201,6 @@ avx2_done0:
 	TZCNTQ BX, BX
 	ADDQ   BX, AX
 	SUBQ   BX, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done1:
@@ -209,7 +209,6 @@ avx2_done1:
 	TZCNTQ SI, SI
 	ADDQ   SI, AX
 	SUBQ   SI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done2:
@@ -218,7 +217,6 @@ avx2_done2:
 	TZCNTQ DI, DI
 	ADDQ   DI, AX
 	SUBQ   DI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done3:
@@ -227,7 +225,6 @@ avx2_done3:
 	TZCNTQ R8, R8
 	ADDQ   R8, AX
 	SUBQ   R8, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done4:
@@ -236,7 +233,6 @@ avx2_done4:
 	TZCNTQ R9, R9
 	ADDQ   R9, AX
 	SUBQ   R9, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done5:
@@ -245,7 +241,6 @@ avx2_done5:
 	TZCNTQ R10, R10
 	ADDQ   R10, AX
 	SUBQ   R10, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done6:
@@ -254,7 +249,6 @@ avx2_done6:
 	TZCNTQ R11, R11
 	ADDQ   R11, AX
 	SUBQ   R11, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done7:
@@ -263,7 +257,6 @@ avx2_done7:
 	TZCNTQ R12, R12
 	ADDQ   R12, AX
 	SUBQ   R12, CX
-	VZEROUPPER
 	JMP    done
 
 // func indexPair2(b []byte) int
@@ -443,6 +436,7 @@ avx2_tail:
 	JMP tail
 
 avx2_done:
+	VZEROUPPER
 	CMPQ BX, $0x00
 	JNE  avx2_done0
 	CMPQ SI, $0x00
@@ -464,7 +458,6 @@ avx2_done0:
 	TZCNTQ BX, BX
 	ADDQ   BX, AX
 	SUBQ   BX, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done1:
@@ -473,7 +466,6 @@ avx2_done1:
 	TZCNTQ SI, SI
 	ADDQ   SI, AX
 	SUBQ   SI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done2:
@@ -482,7 +474,6 @@ avx2_done2:
 	TZCNTQ DI, DI
 	ADDQ   DI, AX
 	SUBQ   DI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done3:
@@ -491,7 +482,6 @@ avx2_done3:
 	TZCNTQ R8, R8
 	ADDQ   R8, AX
 	SUBQ   R8, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done4:
@@ -500,7 +490,6 @@ avx2_done4:
 	TZCNTQ R9, R9
 	ADDQ   R9, AX
 	SUBQ   R9, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done5:
@@ -509,7 +498,6 @@ avx2_done5:
 	TZCNTQ R10, R10
 	ADDQ   R10, AX
 	SUBQ   R10, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done6:
@@ -518,7 +506,6 @@ avx2_done6:
 	TZCNTQ R11, R11
 	ADDQ   R11, AX
 	SUBQ   R11, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done7:
@@ -527,7 +514,6 @@ avx2_done7:
 	TZCNTQ R12, R12
 	ADDQ   R12, AX
 	SUBQ   R12, CX
-	VZEROUPPER
 	JMP    done
 
 // func indexPair4(b []byte) int
@@ -707,6 +693,7 @@ avx2_tail:
 	JMP tail
 
 avx2_done:
+	VZEROUPPER
 	CMPQ BX, $0x00
 	JNE  avx2_done0
 	CMPQ SI, $0x00
@@ -728,7 +715,6 @@ avx2_done0:
 	TZCNTQ BX, BX
 	ADDQ   BX, AX
 	SUBQ   BX, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done1:
@@ -737,7 +723,6 @@ avx2_done1:
 	TZCNTQ SI, SI
 	ADDQ   SI, AX
 	SUBQ   SI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done2:
@@ -746,7 +731,6 @@ avx2_done2:
 	TZCNTQ DI, DI
 	ADDQ   DI, AX
 	SUBQ   DI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done3:
@@ -755,7 +739,6 @@ avx2_done3:
 	TZCNTQ R8, R8
 	ADDQ   R8, AX
 	SUBQ   R8, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done4:
@@ -764,7 +747,6 @@ avx2_done4:
 	TZCNTQ R9, R9
 	ADDQ   R9, AX
 	SUBQ   R9, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done5:
@@ -773,7 +755,6 @@ avx2_done5:
 	TZCNTQ R10, R10
 	ADDQ   R10, AX
 	SUBQ   R10, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done6:
@@ -782,7 +763,6 @@ avx2_done6:
 	TZCNTQ R11, R11
 	ADDQ   R11, AX
 	SUBQ   R11, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done7:
@@ -791,7 +771,6 @@ avx2_done7:
 	TZCNTQ R12, R12
 	ADDQ   R12, AX
 	SUBQ   R12, CX
-	VZEROUPPER
 	JMP    done
 
 // func indexPair8(b []byte) int
@@ -971,6 +950,7 @@ avx2_tail:
 	JMP tail
 
 avx2_done:
+	VZEROUPPER
 	CMPQ BX, $0x00
 	JNE  avx2_done0
 	CMPQ SI, $0x00
@@ -992,7 +972,6 @@ avx2_done0:
 	TZCNTQ BX, BX
 	ADDQ   BX, AX
 	SUBQ   BX, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done1:
@@ -1001,7 +980,6 @@ avx2_done1:
 	TZCNTQ SI, SI
 	ADDQ   SI, AX
 	SUBQ   SI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done2:
@@ -1010,7 +988,6 @@ avx2_done2:
 	TZCNTQ DI, DI
 	ADDQ   DI, AX
 	SUBQ   DI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done3:
@@ -1019,7 +996,6 @@ avx2_done3:
 	TZCNTQ R8, R8
 	ADDQ   R8, AX
 	SUBQ   R8, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done4:
@@ -1028,7 +1004,6 @@ avx2_done4:
 	TZCNTQ R9, R9
 	ADDQ   R9, AX
 	SUBQ   R9, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done5:
@@ -1037,7 +1012,6 @@ avx2_done5:
 	TZCNTQ R10, R10
 	ADDQ   R10, AX
 	SUBQ   R10, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done6:
@@ -1046,7 +1020,6 @@ avx2_done6:
 	TZCNTQ R11, R11
 	ADDQ   R11, AX
 	SUBQ   R11, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done7:
@@ -1055,7 +1028,6 @@ avx2_done7:
 	TZCNTQ R12, R12
 	ADDQ   R12, AX
 	SUBQ   R12, CX
-	VZEROUPPER
 	JMP    done
 
 // func indexPair16(b []byte) int
@@ -1253,6 +1225,7 @@ avx2_tail16:
 	JMP tail
 
 avx2_done:
+	VZEROUPPER
 	CMPQ BX, $0x00
 	JNE  avx2_done0
 	CMPQ SI, $0x00
@@ -1274,7 +1247,6 @@ avx2_done0:
 	TZCNTQ BX, BX
 	ADDQ   BX, AX
 	SUBQ   BX, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done1:
@@ -1283,7 +1255,6 @@ avx2_done1:
 	TZCNTQ SI, SI
 	ADDQ   SI, AX
 	SUBQ   SI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done2:
@@ -1292,7 +1263,6 @@ avx2_done2:
 	TZCNTQ DI, DI
 	ADDQ   DI, AX
 	SUBQ   DI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done3:
@@ -1301,7 +1271,6 @@ avx2_done3:
 	TZCNTQ R8, R8
 	ADDQ   R8, AX
 	SUBQ   R8, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done4:
@@ -1310,7 +1279,6 @@ avx2_done4:
 	TZCNTQ R9, R9
 	ADDQ   R9, AX
 	SUBQ   R9, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done5:
@@ -1319,7 +1287,6 @@ avx2_done5:
 	TZCNTQ R10, R10
 	ADDQ   R10, AX
 	SUBQ   R10, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done6:
@@ -1328,7 +1295,6 @@ avx2_done6:
 	TZCNTQ R11, R11
 	ADDQ   R11, AX
 	SUBQ   R11, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done7:
@@ -1337,7 +1303,6 @@ avx2_done7:
 	TZCNTQ R12, R12
 	ADDQ   R12, AX
 	SUBQ   R12, CX
-	VZEROUPPER
 	JMP    done
 
 // func indexPair32(b []byte) int
@@ -1529,6 +1494,7 @@ avx2_tail16:
 	JMP tail
 
 avx2_done:
+	VZEROUPPER
 	CMPQ BX, $0x00
 	JNE  avx2_done0
 	CMPQ SI, $0x00
@@ -1550,7 +1516,6 @@ avx2_done0:
 	TZCNTQ BX, BX
 	ADDQ   BX, AX
 	SUBQ   BX, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done1:
@@ -1559,7 +1524,6 @@ avx2_done1:
 	TZCNTQ SI, SI
 	ADDQ   SI, AX
 	SUBQ   SI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done2:
@@ -1568,7 +1532,6 @@ avx2_done2:
 	TZCNTQ DI, DI
 	ADDQ   DI, AX
 	SUBQ   DI, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done3:
@@ -1577,7 +1540,6 @@ avx2_done3:
 	TZCNTQ R8, R8
 	ADDQ   R8, AX
 	SUBQ   R8, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done4:
@@ -1586,7 +1548,6 @@ avx2_done4:
 	TZCNTQ R9, R9
 	ADDQ   R9, AX
 	SUBQ   R9, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done5:
@@ -1595,7 +1556,6 @@ avx2_done5:
 	TZCNTQ R10, R10
 	ADDQ   R10, AX
 	SUBQ   R10, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done6:
@@ -1604,7 +1564,6 @@ avx2_done6:
 	TZCNTQ R11, R11
 	ADDQ   R11, AX
 	SUBQ   R11, CX
-	VZEROUPPER
 	JMP    done
 
 avx2_done7:
@@ -1613,5 +1572,4 @@ avx2_done7:
 	TZCNTQ R12, R12
 	ADDQ   R12, AX
 	SUBQ   R12, CX
-	VZEROUPPER
 	JMP    done

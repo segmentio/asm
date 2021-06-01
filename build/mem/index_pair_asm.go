@@ -212,6 +212,7 @@ func generateIndexPair(code indexPair) {
 		JMP(LabelRef("tail"))
 
 		Label("avx2_done")
+		VZEROUPPER()
 		for i, mask := range masks {
 			CMPQ(mask, Imm(0))
 			JNE(LabelRef(fmt.Sprintf("avx2_done%d", i)))
@@ -226,7 +227,6 @@ func generateIndexPair(code indexPair) {
 			TZCNTQ(mask, mask)
 			ADDQ(mask, p)
 			SUBQ(mask, n)
-			VZEROUPPER()
 			JMP(LabelRef("done"))
 		}
 	}
