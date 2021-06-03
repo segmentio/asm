@@ -2,4 +2,4 @@
 
 package mem
 
-func containsByteAVX2(haystack []byte, needle byte) bool
+func ContainsByte(haystack []byte, needle byte) bool

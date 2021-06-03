@@ -87,8 +87,8 @@ func BenchmarkContainsNaive(b *testing.B) {
 	})
 }
 
-func BenchmarkContainsIndexByte(b *testing.B) {
-	benchmarkContains(b, containsByteStd)
+func BenchmarkContainsGeneric(b *testing.B) {
+	benchmarkContains(b, containsGeneric)
 }
 
 func BenchmarkContains(b *testing.B) {

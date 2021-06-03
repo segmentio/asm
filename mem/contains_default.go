@@ -2,6 +2,6 @@
 
 package mem
 
-func containsByteAVX2(haystack []byte, needle byte) bool {
-	panic("not implemented on !amd64")
+func ContainsByte(haystack []byte, needle byte) bool {
+	return containsGeneric(haystack, needle)
 }
