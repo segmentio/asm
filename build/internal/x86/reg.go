@@ -69,6 +69,23 @@ func VecBroadcast(ir Op, xyz Register) Register {
 	vec := xyz.(Vec)
 	reg, size := load(ir)
 
+	// PINSR{B,W} accept either m{8,16} or r32. If the input was
+	// r{8,16} we need to cast to 32 bits.
+	if reg.Size() < 4 {
+		if gp, ok := reg.(GP); ok {
+			reg = gp.As32()
+		} else {
+			r32 := GP32()
+			switch reg.Size() {
+			case 1:
+				MOVBLZX(reg, r32)
+			case 2:
+				MOVWLZX(reg, r32)
+			}
+			reg = r32
+		}
+	}
+
 	switch size {
 	default:
 		panic("unsupported register size")
