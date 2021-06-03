@@ -48,7 +48,7 @@ func main() {
 	MOVB(U8(1), ret.Addr)
 	JMP(LabelRef("avx2_done"))
 
-	VariableLengthBytes([]Register{haystack}, length, VariableLengthBytesImpl{
+	VariableLengthBytes{
 		SetupXMM: func() {
 			PXOR(zero.AsX(), zero.AsX())
 			PINSRQ(Imm(0), needle, needleVec.AsX())
@@ -58,7 +58,7 @@ func main() {
 			VZEROUPPER()
 			VPBROADCASTQ(needleVec.AsX(), needleVec)
 		},
-		Generate: func(inputs []Register, memory ...Memory) {
+		Process: func(inputs []Register, memory ...Memory) {
 			haystack := inputs[0]
 
 			regs := make([]Op, len(memory))
@@ -131,7 +131,7 @@ func main() {
 				JCC(LabelRef("avx2_found"))
 			}
 		},
-	})
+	}.Generate([]Register{haystack}, length)
 }
 
 func reduce(ops []Op, op func(Op, Op) Op) Op {

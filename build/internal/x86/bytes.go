@@ -94,8 +94,8 @@ func GenerateCopy(name, doc string, transform []func(Op, Op)) {
 	CMOVQLT(x, n)
 	Store(n, ReturnIndex(0))
 
-	VariableLengthBytes([]Register{src, dst}, n, VariableLengthBytesImpl{
-		Generate: func(regs []Register, memory ...Memory) {
+	VariableLengthBytes{
+		Process: func(regs []Register, memory ...Memory) {
 			src, dst := regs[0], regs[1]
 
 			count := len(memory)
@@ -125,24 +125,24 @@ func GenerateCopy(name, doc string, transform []func(Op, Op)) {
 				m.Store(operands[i].(Register), dst)
 			}
 		},
-	})
+	}.Generate([]Register{src, dst}, n)
 }
 
-type VariableLengthBytesImpl struct {
-	SetupXMM func()
-	SetupYMM func()
-	Generate func(inputs []Register, memory ...Memory)
-	Epilogue func()
+type VariableLengthBytes struct {
+	SetupXMM  func()
+	SetupYMM  func()
+	Process   func(inputs []Register, memory ...Memory)
+	Epilogue  func()
 }
 
-func VariableLengthBytes(inputs []Register, n Register, impl VariableLengthBytesImpl) {
+func (v VariableLengthBytes) Generate(inputs []Register, n Register) {
 	Label("start")
 
-	if impl.SetupXMM != nil {
+	if v.SetupXMM != nil {
 		CMPQ(n, Imm(16))
 		JBE(LabelRef("tail"))
 
-		impl.SetupXMM()
+		v.SetupXMM()
 	}
 
 	Label("tail")
@@ -174,8 +174,8 @@ func VariableLengthBytes(inputs []Register, n Register, impl VariableLengthBytes
 
 	JumpUnlessFeature("generic", cpu.AVX2)
 
-	if impl.SetupYMM != nil {
-		impl.SetupYMM()
+	if v.SetupYMM != nil {
+		v.SetupYMM()
 	}
 
 	CMPQ(n, Imm(128))
@@ -183,7 +183,7 @@ func VariableLengthBytes(inputs []Register, n Register, impl VariableLengthBytes
 	JMP(LabelRef("avx2"))
 
 	Label("generic")
-	impl.Generate(inputs,
+	v.Process(inputs,
 		Memory{Size: 16},
 		Memory{Size: 16, Offset: 16},
 		Memory{Size: 16, Offset: 32},
@@ -201,43 +201,43 @@ func VariableLengthBytes(inputs []Register, n Register, impl VariableLengthBytes
 	RET()
 
 	Label("handle1")
-	impl.Generate(inputs, Memory{Size: 1})
+	v.Process(inputs, Memory{Size: 1})
 	RET()
 
 	Label("handle2to3")
-	impl.Generate(inputs,
+	v.Process(inputs,
 		Memory{Size: 2},
 		Memory{Size: 2, Index: n, Offset: -2})
 	RET()
 
 	Label("handle4")
-	impl.Generate(inputs, Memory{Size: 4})
+	v.Process(inputs, Memory{Size: 4})
 	RET()
 
 	Label("handle5to7")
-	impl.Generate(inputs,
+	v.Process(inputs,
 		Memory{Size: 4},
 		Memory{Size: 4, Index: n, Offset: -4})
 	RET()
 
 	Label("handle8")
-	impl.Generate(inputs, Memory{Size: 8})
+	v.Process(inputs, Memory{Size: 8})
 	RET()
 
 	Label("handle9to16")
-	impl.Generate(inputs,
+	v.Process(inputs,
 		Memory{Size: 8},
 		Memory{Size: 8, Index: n, Offset: -8})
 	RET()
 
 	Label("handle17to32")
-	impl.Generate(inputs,
+	v.Process(inputs,
 		Memory{Size: 16},
 		Memory{Size: 16, Index: n, Offset: -16})
 	RET()
 
 	Label("handle33to64")
-	impl.Generate(inputs,
+	v.Process(inputs,
 		Memory{Size: 16},
 		Memory{Size: 16, Offset: 16},
 		Memory{Size: 16, Index: n, Offset: -32},
@@ -246,7 +246,7 @@ func VariableLengthBytes(inputs []Register, n Register, impl VariableLengthBytes
 
 	Comment("AVX optimized version for medium to large size inputs.")
 	Label("avx2")
-	impl.Generate(inputs,
+	v.Process(inputs,
 		Memory{Size: 32},
 		Memory{Size: 32, Offset: 32},
 		Memory{Size: 32, Offset: 64},
@@ -262,7 +262,7 @@ func VariableLengthBytes(inputs []Register, n Register, impl VariableLengthBytes
 	Label("avx2_tail")
 	CMPQ(n, Imm(64)) // n > 0 && n <= 64
 	JBE(LabelRef("avx2_tail_1to64"))
-	impl.Generate(inputs,
+	v.Process(inputs,
 		Memory{Size: 32},
 		Memory{Size: 32, Offset: 32},
 		Memory{Size: 32, Offset: 64},
@@ -270,7 +270,7 @@ func VariableLengthBytes(inputs []Register, n Register, impl VariableLengthBytes
 	JMP(LabelRef("avx2_done"))
 
 	Label("avx2_tail_1to64")
-	impl.Generate(inputs,
+	v.Process(inputs,
 		Memory{Size: 32, Index: n, Offset: -64},
 		Memory{Size: 32, Index: n, Offset: -32})
 
@@ -278,8 +278,8 @@ func VariableLengthBytes(inputs []Register, n Register, impl VariableLengthBytes
 	VZEROUPPER()
 	RET()
 
-	if impl.Epilogue != nil {
-		impl.Epilogue()
+	if v.Epilogue != nil {
+		v.Epilogue()
 	}
 
 	Generate()
