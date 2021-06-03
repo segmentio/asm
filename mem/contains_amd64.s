@@ -5,26 +5,23 @@
 // func ContainsByte(haystack []byte, needle byte) bool
 // Requires: AVX, AVX2, BMI, SSE2, SSE4.1
 TEXT ·ContainsByte(SB), NOSPLIT, $0-33
-	MOVQ         haystack_base+0(FP), AX
-	MOVQ         haystack_len+8(FP), CX
-	XORQ         DX, DX
-	MOVB         needle+24(FP), DL
-	MOVQ         DX, BX
-	SHLQ         $0x08, BX
-	ORQ          BX, DX
-	MOVQ         DX, BX
-	SHLQ         $0x10, BX
-	ORQ          BX, DX
-	MOVQ         DX, BX
-	SHLQ         $0x20, BX
-	ORQ          BX, DX
-	PINSRQ       $0x00, DX, X0
-	VPBROADCASTQ X0, Y0
-	MOVQ         $0x0101010101010101, BX
-	MOVQ         $0x8080808080808080, SI
-	VPXOR        Y1, Y1, Y1
-	MOVB         $0x00, ret+32(FP)
-	JMP          impl
+	MOVQ haystack_base+0(FP), AX
+	MOVQ haystack_len+8(FP), CX
+	XORQ DX, DX
+	MOVB needle+24(FP), DL
+	MOVQ DX, BX
+	SHLQ $0x08, BX
+	ORQ  BX, DX
+	MOVQ DX, BX
+	SHLQ $0x10, BX
+	ORQ  BX, DX
+	MOVQ DX, BX
+	SHLQ $0x20, BX
+	ORQ  BX, DX
+	MOVQ $0x0101010101010101, BX
+	MOVQ $0x8080808080808080, SI
+	MOVB $0x00, ret+32(FP)
+	JMP  start
 
 found:
 	MOVB $0x01, ret+32(FP)
@@ -34,30 +31,38 @@ avx2_found:
 	MOVB $0x01, ret+32(FP)
 	JMP  avx2_done
 
-impl:
+start:
+	CMPQ   CX, $0x10
+	JBE    tail
+	PXOR   X1, X1
+	PINSRQ $0x00, DX, X0
+	PINSRQ $0x01, DX, X0
+
 tail:
-	CMPQ CX, $0x00
-	JE   done
-	CMPQ CX, $0x01
-	JE   handle1
-	CMPQ CX, $0x03
-	JBE  handle2to3
-	CMPQ CX, $0x04
-	JE   handle4
-	CMPQ CX, $0x08
-	JB   handle5to7
-	JE   handle8
-	CMPQ CX, $0x10
-	JBE  handle9to16
-	CMPQ CX, $0x20
-	JBE  handle17to32
-	CMPQ CX, $0x40
-	JBE  handle33to64
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCC  generic
-	CMPQ CX, $0x80
-	JBE  avx2_tail
-	JMP  avx2
+	CMPQ         CX, $0x00
+	JE           done
+	CMPQ         CX, $0x01
+	JE           handle1
+	CMPQ         CX, $0x03
+	JBE          handle2to3
+	CMPQ         CX, $0x04
+	JE           handle4
+	CMPQ         CX, $0x08
+	JB           handle5to7
+	JE           handle8
+	CMPQ         CX, $0x10
+	JBE          handle9to16
+	CMPQ         CX, $0x20
+	JBE          handle17to32
+	CMPQ         CX, $0x40
+	JBE          handle33to64
+	BTL          $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCC          generic
+	VZEROUPPER
+	VPBROADCASTQ X0, Y0
+	CMPQ         CX, $0x80
+	JBE          avx2_tail
+	JMP          avx2
 
 generic:
 	MOVOU   (AX), X2

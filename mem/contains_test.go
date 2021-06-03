@@ -76,20 +76,20 @@ func TestContainsByte(t *testing.T) {
 	}
 }
 
-func BenchmarkContainsNaive(b *testing.B) {
-	benchmarkContains(b, func(haystack []byte, needle byte) bool {
-		for _, v := range haystack {
-			if v == needle {
-				return true
-			}
-		}
-		return false
-	})
-}
-
-func BenchmarkContainsGeneric(b *testing.B) {
-	benchmarkContains(b, containsGeneric)
-}
+// func BenchmarkContainsNaive(b *testing.B) {
+// 	benchmarkContains(b, func(haystack []byte, needle byte) bool {
+// 		for _, v := range haystack {
+// 			if v == needle {
+// 				return true
+// 			}
+// 		}
+// 		return false
+// 	})
+// }
+//
+// func BenchmarkContainsGeneric(b *testing.B) {
+// 	benchmarkContains(b, containsGeneric)
+// }
 
 func BenchmarkContains(b *testing.B) {
 	benchmarkContains(b, ContainsByte)
