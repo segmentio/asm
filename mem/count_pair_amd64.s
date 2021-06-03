@@ -79,27 +79,27 @@ avx2_loop256:
 	VPMOVMSKB Y15, R12
 	POPCNTQ   BX, BX
 	SHRQ      $0x00, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x00, SI
-	ADDQ      SI, DX
 	POPCNTQ   DI, DI
 	SHRQ      $0x00, DI
-	ADDQ      DI, DX
 	POPCNTQ   R8, R8
 	SHRQ      $0x00, R8
-	ADDQ      R8, DX
 	POPCNTQ   R9, R9
 	SHRQ      $0x00, R9
-	ADDQ      R9, DX
 	POPCNTQ   R10, R10
 	SHRQ      $0x00, R10
-	ADDQ      R10, DX
 	POPCNTQ   R11, R11
 	SHRQ      $0x00, R11
-	ADDQ      R11, DX
 	POPCNTQ   R12, R12
 	SHRQ      $0x00, R12
+	ADDQ      BX, DX
+	ADDQ      SI, DX
+	ADDQ      DI, DX
+	ADDQ      R8, DX
+	ADDQ      R9, DX
+	ADDQ      R10, DX
+	ADDQ      R11, DX
 	ADDQ      R12, DX
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
@@ -127,15 +127,15 @@ avx2_tail128:
 	VPMOVMSKB Y7, R8
 	POPCNTQ   BX, BX
 	SHRQ      $0x00, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x00, SI
-	ADDQ      SI, DX
 	POPCNTQ   DI, DI
 	SHRQ      $0x00, DI
-	ADDQ      DI, DX
 	POPCNTQ   R8, R8
 	SHRQ      $0x00, R8
+	ADDQ      BX, DX
+	ADDQ      SI, DX
+	ADDQ      DI, DX
 	ADDQ      R8, DX
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
@@ -153,9 +153,9 @@ avx2_tail64:
 	VPMOVMSKB Y3, SI
 	POPCNTQ   BX, BX
 	SHRQ      $0x00, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x00, SI
+	ADDQ      BX, DX
 	ADDQ      SI, DX
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
@@ -267,27 +267,27 @@ avx2_loop256:
 	VPMOVMSKB Y15, R12
 	POPCNTQ   BX, BX
 	SHRQ      $0x01, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x01, SI
-	ADDQ      SI, DX
 	POPCNTQ   DI, DI
 	SHRQ      $0x01, DI
-	ADDQ      DI, DX
 	POPCNTQ   R8, R8
 	SHRQ      $0x01, R8
-	ADDQ      R8, DX
 	POPCNTQ   R9, R9
 	SHRQ      $0x01, R9
-	ADDQ      R9, DX
 	POPCNTQ   R10, R10
 	SHRQ      $0x01, R10
-	ADDQ      R10, DX
 	POPCNTQ   R11, R11
 	SHRQ      $0x01, R11
-	ADDQ      R11, DX
 	POPCNTQ   R12, R12
 	SHRQ      $0x01, R12
+	ADDQ      BX, DX
+	ADDQ      SI, DX
+	ADDQ      DI, DX
+	ADDQ      R8, DX
+	ADDQ      R9, DX
+	ADDQ      R10, DX
+	ADDQ      R11, DX
 	ADDQ      R12, DX
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
@@ -315,15 +315,15 @@ avx2_tail128:
 	VPMOVMSKB Y7, R8
 	POPCNTQ   BX, BX
 	SHRQ      $0x01, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x01, SI
-	ADDQ      SI, DX
 	POPCNTQ   DI, DI
 	SHRQ      $0x01, DI
-	ADDQ      DI, DX
 	POPCNTQ   R8, R8
 	SHRQ      $0x01, R8
+	ADDQ      BX, DX
+	ADDQ      SI, DX
+	ADDQ      DI, DX
 	ADDQ      R8, DX
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
@@ -341,9 +341,9 @@ avx2_tail64:
 	VPMOVMSKB Y3, SI
 	POPCNTQ   BX, BX
 	SHRQ      $0x01, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x01, SI
+	ADDQ      BX, DX
 	ADDQ      SI, DX
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
@@ -455,27 +455,27 @@ avx2_loop256:
 	VPMOVMSKB Y15, R12
 	POPCNTQ   BX, BX
 	SHRQ      $0x02, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x02, SI
-	ADDQ      SI, DX
 	POPCNTQ   DI, DI
 	SHRQ      $0x02, DI
-	ADDQ      DI, DX
 	POPCNTQ   R8, R8
 	SHRQ      $0x02, R8
-	ADDQ      R8, DX
 	POPCNTQ   R9, R9
 	SHRQ      $0x02, R9
-	ADDQ      R9, DX
 	POPCNTQ   R10, R10
 	SHRQ      $0x02, R10
-	ADDQ      R10, DX
 	POPCNTQ   R11, R11
 	SHRQ      $0x02, R11
-	ADDQ      R11, DX
 	POPCNTQ   R12, R12
 	SHRQ      $0x02, R12
+	ADDQ      BX, DX
+	ADDQ      SI, DX
+	ADDQ      DI, DX
+	ADDQ      R8, DX
+	ADDQ      R9, DX
+	ADDQ      R10, DX
+	ADDQ      R11, DX
 	ADDQ      R12, DX
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
@@ -503,15 +503,15 @@ avx2_tail128:
 	VPMOVMSKB Y7, R8
 	POPCNTQ   BX, BX
 	SHRQ      $0x02, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x02, SI
-	ADDQ      SI, DX
 	POPCNTQ   DI, DI
 	SHRQ      $0x02, DI
-	ADDQ      DI, DX
 	POPCNTQ   R8, R8
 	SHRQ      $0x02, R8
+	ADDQ      BX, DX
+	ADDQ      SI, DX
+	ADDQ      DI, DX
 	ADDQ      R8, DX
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
@@ -529,9 +529,9 @@ avx2_tail64:
 	VPMOVMSKB Y3, SI
 	POPCNTQ   BX, BX
 	SHRQ      $0x02, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x02, SI
+	ADDQ      BX, DX
 	ADDQ      SI, DX
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
@@ -643,27 +643,27 @@ avx2_loop256:
 	VPMOVMSKB Y15, R12
 	POPCNTQ   BX, BX
 	SHRQ      $0x03, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x03, SI
-	ADDQ      SI, DX
 	POPCNTQ   DI, DI
 	SHRQ      $0x03, DI
-	ADDQ      DI, DX
 	POPCNTQ   R8, R8
 	SHRQ      $0x03, R8
-	ADDQ      R8, DX
 	POPCNTQ   R9, R9
 	SHRQ      $0x03, R9
-	ADDQ      R9, DX
 	POPCNTQ   R10, R10
 	SHRQ      $0x03, R10
-	ADDQ      R10, DX
 	POPCNTQ   R11, R11
 	SHRQ      $0x03, R11
-	ADDQ      R11, DX
 	POPCNTQ   R12, R12
 	SHRQ      $0x03, R12
+	ADDQ      BX, DX
+	ADDQ      SI, DX
+	ADDQ      DI, DX
+	ADDQ      R8, DX
+	ADDQ      R9, DX
+	ADDQ      R10, DX
+	ADDQ      R11, DX
 	ADDQ      R12, DX
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
@@ -691,15 +691,15 @@ avx2_tail128:
 	VPMOVMSKB Y7, R8
 	POPCNTQ   BX, BX
 	SHRQ      $0x03, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x03, SI
-	ADDQ      SI, DX
 	POPCNTQ   DI, DI
 	SHRQ      $0x03, DI
-	ADDQ      DI, DX
 	POPCNTQ   R8, R8
 	SHRQ      $0x03, R8
+	ADDQ      BX, DX
+	ADDQ      SI, DX
+	ADDQ      DI, DX
 	ADDQ      R8, DX
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
@@ -717,9 +717,9 @@ avx2_tail64:
 	VPMOVMSKB Y3, SI
 	POPCNTQ   BX, BX
 	SHRQ      $0x03, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x03, SI
+	ADDQ      BX, DX
 	ADDQ      SI, DX
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
@@ -849,27 +849,27 @@ avx2_loop256:
 	VPMOVMSKB  Y14, R12
 	POPCNTQ    BX, BX
 	SHRQ       $0x04, BX
-	ADDQ       BX, DX
 	POPCNTQ    SI, SI
 	SHRQ       $0x04, SI
-	ADDQ       SI, DX
 	POPCNTQ    DI, DI
 	SHRQ       $0x04, DI
-	ADDQ       DI, DX
 	POPCNTQ    R8, R8
 	SHRQ       $0x04, R8
-	ADDQ       R8, DX
 	POPCNTQ    R9, R9
 	SHRQ       $0x04, R9
-	ADDQ       R9, DX
 	POPCNTQ    R10, R10
 	SHRQ       $0x04, R10
-	ADDQ       R10, DX
 	POPCNTQ    R11, R11
 	SHRQ       $0x04, R11
-	ADDQ       R11, DX
 	POPCNTQ    R12, R12
 	SHRQ       $0x04, R12
+	ADDQ       BX, DX
+	ADDQ       SI, DX
+	ADDQ       DI, DX
+	ADDQ       R8, DX
+	ADDQ       R9, DX
+	ADDQ       R10, DX
+	ADDQ       R11, DX
 	ADDQ       R12, DX
 	ADDQ       $0x00000100, AX
 	SUBQ       $0x00000100, CX
@@ -905,15 +905,15 @@ avx2_tail128:
 	VPMOVMSKB  Y6, R8
 	POPCNTQ    BX, BX
 	SHRQ       $0x04, BX
-	ADDQ       BX, DX
 	POPCNTQ    SI, SI
 	SHRQ       $0x04, SI
-	ADDQ       SI, DX
 	POPCNTQ    DI, DI
 	SHRQ       $0x04, DI
-	ADDQ       DI, DX
 	POPCNTQ    R8, R8
 	SHRQ       $0x04, R8
+	ADDQ       BX, DX
+	ADDQ       SI, DX
+	ADDQ       DI, DX
 	ADDQ       R8, DX
 	ADDQ       $0x00000080, AX
 	SUBQ       $0x00000080, CX
@@ -935,9 +935,9 @@ avx2_tail64:
 	VPMOVMSKB  Y2, SI
 	POPCNTQ    BX, BX
 	SHRQ       $0x04, BX
-	ADDQ       BX, DX
 	POPCNTQ    SI, SI
 	SHRQ       $0x04, SI
+	ADDQ       BX, DX
 	ADDQ       SI, DX
 	ADDQ       $0x00000040, AX
 	SUBQ       $0x00000040, CX
@@ -1038,27 +1038,27 @@ avx2_loop256:
 	VPMOVMSKB Y11, R12
 	POPCNTQ   BX, BX
 	SHRQ      $0x05, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x05, SI
-	ADDQ      SI, DX
 	POPCNTQ   DI, DI
 	SHRQ      $0x05, DI
-	ADDQ      DI, DX
 	POPCNTQ   R8, R8
 	SHRQ      $0x05, R8
-	ADDQ      R8, DX
 	POPCNTQ   R9, R9
 	SHRQ      $0x05, R9
-	ADDQ      R9, DX
 	POPCNTQ   R10, R10
 	SHRQ      $0x05, R10
-	ADDQ      R10, DX
 	POPCNTQ   R11, R11
 	SHRQ      $0x05, R11
-	ADDQ      R11, DX
 	POPCNTQ   R12, R12
 	SHRQ      $0x05, R12
+	ADDQ      BX, DX
+	ADDQ      SI, DX
+	ADDQ      DI, DX
+	ADDQ      R8, DX
+	ADDQ      R9, DX
+	ADDQ      R10, DX
+	ADDQ      R11, DX
 	ADDQ      R12, DX
 	ADDQ      $0x00000100, AX
 	SUBQ      $0x00000100, CX
@@ -1083,15 +1083,15 @@ avx2_tail128:
 	VPMOVMSKB Y6, R8
 	POPCNTQ   BX, BX
 	SHRQ      $0x05, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x05, SI
-	ADDQ      SI, DX
 	POPCNTQ   DI, DI
 	SHRQ      $0x05, DI
-	ADDQ      DI, DX
 	POPCNTQ   R8, R8
 	SHRQ      $0x05, R8
+	ADDQ      BX, DX
+	ADDQ      SI, DX
+	ADDQ      DI, DX
 	ADDQ      R8, DX
 	ADDQ      $0x00000080, AX
 	SUBQ      $0x00000080, CX
@@ -1108,9 +1108,9 @@ avx2_tail64:
 	VPMOVMSKB Y3, SI
 	POPCNTQ   BX, BX
 	SHRQ      $0x05, BX
-	ADDQ      BX, DX
 	POPCNTQ   SI, SI
 	SHRQ      $0x05, SI
+	ADDQ      BX, DX
 	ADDQ      SI, DX
 	ADDQ      $0x00000040, AX
 	SUBQ      $0x00000040, CX
