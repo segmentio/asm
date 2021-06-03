@@ -250,21 +250,13 @@ avx2_loop256:
 	VPCMPEQW  Y14, Y15, Y15
 	VPMOVMSKB Y15, R12
 	POPCNTQ   BX, BX
-	SHRQ      $0x01, BX
 	POPCNTQ   SI, SI
-	SHRQ      $0x01, SI
 	POPCNTQ   DI, DI
-	SHRQ      $0x01, DI
 	POPCNTQ   R8, R8
-	SHRQ      $0x01, R8
 	POPCNTQ   R9, R9
-	SHRQ      $0x01, R9
 	POPCNTQ   R10, R10
-	SHRQ      $0x01, R10
 	POPCNTQ   R11, R11
-	SHRQ      $0x01, R11
 	POPCNTQ   R12, R12
-	SHRQ      $0x01, R12
 	ADDQ      SI, BX
 	ADDQ      R8, DI
 	ADDQ      DI, BX
@@ -298,13 +290,9 @@ avx2_tail128:
 	VPCMPEQW  Y6, Y7, Y7
 	VPMOVMSKB Y7, R8
 	POPCNTQ   BX, BX
-	SHRQ      $0x01, BX
 	POPCNTQ   SI, SI
-	SHRQ      $0x01, SI
 	POPCNTQ   DI, DI
-	SHRQ      $0x01, DI
 	POPCNTQ   R8, R8
-	SHRQ      $0x01, R8
 	ADDQ      SI, BX
 	ADDQ      R8, DI
 	ADDQ      DI, BX
@@ -324,9 +312,7 @@ avx2_tail64:
 	VPCMPEQW  Y2, Y3, Y3
 	VPMOVMSKB Y3, SI
 	POPCNTQ   BX, BX
-	SHRQ      $0x01, BX
 	POPCNTQ   SI, SI
-	SHRQ      $0x01, SI
 	ADDQ      SI, BX
 	ADDQ      BX, DX
 	ADDQ      $0x00000040, AX
@@ -340,7 +326,6 @@ avx2_tail32:
 	VPCMPEQW  Y0, Y1, Y1
 	VPMOVMSKB Y1, BX
 	POPCNTQ   BX, BX
-	SHRQ      $0x01, BX
 	ADDQ      BX, DX
 	ADDQ      $0x00000020, AX
 	SUBQ      $0x00000020, CX
@@ -353,14 +338,14 @@ avx2_tail16:
 	VPCMPEQW  X0, X1, X1
 	VPMOVMSKB X1, BX
 	POPCNTQ   BX, BX
-	SHRQ      $0x01, BX
 	ADDQ      BX, DX
 	ADDQ      $0x10, AX
 	SUBQ      $0x10, CX
 
 avx2_tail:
 	VZEROUPPER
-	JMP tail
+	SHRQ $0x01, DX
+	JMP  tail
 
 // func countPair4(b []byte) int
 // Requires: AVX, AVX2, CMOV, POPCNT
@@ -438,21 +423,13 @@ avx2_loop256:
 	VPCMPEQD  Y14, Y15, Y15
 	VPMOVMSKB Y15, R12
 	POPCNTQ   BX, BX
-	SHRQ      $0x02, BX
 	POPCNTQ   SI, SI
-	SHRQ      $0x02, SI
 	POPCNTQ   DI, DI
-	SHRQ      $0x02, DI
 	POPCNTQ   R8, R8
-	SHRQ      $0x02, R8
 	POPCNTQ   R9, R9
-	SHRQ      $0x02, R9
 	POPCNTQ   R10, R10
-	SHRQ      $0x02, R10
 	POPCNTQ   R11, R11
-	SHRQ      $0x02, R11
 	POPCNTQ   R12, R12
-	SHRQ      $0x02, R12
 	ADDQ      SI, BX
 	ADDQ      R8, DI
 	ADDQ      DI, BX
@@ -486,13 +463,9 @@ avx2_tail128:
 	VPCMPEQD  Y6, Y7, Y7
 	VPMOVMSKB Y7, R8
 	POPCNTQ   BX, BX
-	SHRQ      $0x02, BX
 	POPCNTQ   SI, SI
-	SHRQ      $0x02, SI
 	POPCNTQ   DI, DI
-	SHRQ      $0x02, DI
 	POPCNTQ   R8, R8
-	SHRQ      $0x02, R8
 	ADDQ      SI, BX
 	ADDQ      R8, DI
 	ADDQ      DI, BX
@@ -512,9 +485,7 @@ avx2_tail64:
 	VPCMPEQD  Y2, Y3, Y3
 	VPMOVMSKB Y3, SI
 	POPCNTQ   BX, BX
-	SHRQ      $0x02, BX
 	POPCNTQ   SI, SI
-	SHRQ      $0x02, SI
 	ADDQ      SI, BX
 	ADDQ      BX, DX
 	ADDQ      $0x00000040, AX
@@ -528,7 +499,6 @@ avx2_tail32:
 	VPCMPEQD  Y0, Y1, Y1
 	VPMOVMSKB Y1, BX
 	POPCNTQ   BX, BX
-	SHRQ      $0x02, BX
 	ADDQ      BX, DX
 	ADDQ      $0x00000020, AX
 	SUBQ      $0x00000020, CX
@@ -541,14 +511,14 @@ avx2_tail16:
 	VPCMPEQD  X0, X1, X1
 	VPMOVMSKB X1, BX
 	POPCNTQ   BX, BX
-	SHRQ      $0x02, BX
 	ADDQ      BX, DX
 	ADDQ      $0x10, AX
 	SUBQ      $0x10, CX
 
 avx2_tail:
 	VZEROUPPER
-	JMP tail
+	SHRQ $0x02, DX
+	JMP  tail
 
 // func countPair8(b []byte) int
 // Requires: AVX, AVX2, CMOV, POPCNT
@@ -626,21 +596,13 @@ avx2_loop256:
 	VPCMPEQQ  Y14, Y15, Y15
 	VPMOVMSKB Y15, R12
 	POPCNTQ   BX, BX
-	SHRQ      $0x03, BX
 	POPCNTQ   SI, SI
-	SHRQ      $0x03, SI
 	POPCNTQ   DI, DI
-	SHRQ      $0x03, DI
 	POPCNTQ   R8, R8
-	SHRQ      $0x03, R8
 	POPCNTQ   R9, R9
-	SHRQ      $0x03, R9
 	POPCNTQ   R10, R10
-	SHRQ      $0x03, R10
 	POPCNTQ   R11, R11
-	SHRQ      $0x03, R11
 	POPCNTQ   R12, R12
-	SHRQ      $0x03, R12
 	ADDQ      SI, BX
 	ADDQ      R8, DI
 	ADDQ      DI, BX
@@ -674,13 +636,9 @@ avx2_tail128:
 	VPCMPEQQ  Y6, Y7, Y7
 	VPMOVMSKB Y7, R8
 	POPCNTQ   BX, BX
-	SHRQ      $0x03, BX
 	POPCNTQ   SI, SI
-	SHRQ      $0x03, SI
 	POPCNTQ   DI, DI
-	SHRQ      $0x03, DI
 	POPCNTQ   R8, R8
-	SHRQ      $0x03, R8
 	ADDQ      SI, BX
 	ADDQ      R8, DI
 	ADDQ      DI, BX
@@ -700,9 +658,7 @@ avx2_tail64:
 	VPCMPEQQ  Y2, Y3, Y3
 	VPMOVMSKB Y3, SI
 	POPCNTQ   BX, BX
-	SHRQ      $0x03, BX
 	POPCNTQ   SI, SI
-	SHRQ      $0x03, SI
 	ADDQ      SI, BX
 	ADDQ      BX, DX
 	ADDQ      $0x00000040, AX
@@ -716,7 +672,6 @@ avx2_tail32:
 	VPCMPEQQ  Y0, Y1, Y1
 	VPMOVMSKB Y1, BX
 	POPCNTQ   BX, BX
-	SHRQ      $0x03, BX
 	ADDQ      BX, DX
 	ADDQ      $0x00000020, AX
 	SUBQ      $0x00000020, CX
@@ -729,14 +684,14 @@ avx2_tail16:
 	VPCMPEQQ  X0, X1, X1
 	VPMOVMSKB X1, BX
 	POPCNTQ   BX, BX
-	SHRQ      $0x03, BX
 	ADDQ      BX, DX
 	ADDQ      $0x10, AX
 	SUBQ      $0x10, CX
 
 avx2_tail:
 	VZEROUPPER
-	JMP tail
+	SHRQ $0x03, DX
+	JMP  tail
 
 // func countPair16(b []byte) int
 // Requires: AVX, AVX2, CMOV, POPCNT, SSE2, SSE4.1
@@ -832,21 +787,13 @@ avx2_loop256:
 	VPAND      Y15, Y14, Y14
 	VPMOVMSKB  Y14, R12
 	POPCNTQ    BX, BX
-	SHRQ       $0x04, BX
 	POPCNTQ    SI, SI
-	SHRQ       $0x04, SI
 	POPCNTQ    DI, DI
-	SHRQ       $0x04, DI
 	POPCNTQ    R8, R8
-	SHRQ       $0x04, R8
 	POPCNTQ    R9, R9
-	SHRQ       $0x04, R9
 	POPCNTQ    R10, R10
-	SHRQ       $0x04, R10
 	POPCNTQ    R11, R11
-	SHRQ       $0x04, R11
 	POPCNTQ    R12, R12
-	SHRQ       $0x04, R12
 	ADDQ       SI, BX
 	ADDQ       R8, DI
 	ADDQ       DI, BX
@@ -888,13 +835,9 @@ avx2_tail128:
 	VPAND      Y7, Y6, Y6
 	VPMOVMSKB  Y6, R8
 	POPCNTQ    BX, BX
-	SHRQ       $0x04, BX
 	POPCNTQ    SI, SI
-	SHRQ       $0x04, SI
 	POPCNTQ    DI, DI
-	SHRQ       $0x04, DI
 	POPCNTQ    R8, R8
-	SHRQ       $0x04, R8
 	ADDQ       SI, BX
 	ADDQ       R8, DI
 	ADDQ       DI, BX
@@ -918,9 +861,7 @@ avx2_tail64:
 	VPAND      Y3, Y2, Y2
 	VPMOVMSKB  Y2, SI
 	POPCNTQ    BX, BX
-	SHRQ       $0x04, BX
 	POPCNTQ    SI, SI
-	SHRQ       $0x04, SI
 	ADDQ       SI, BX
 	ADDQ       BX, DX
 	ADDQ       $0x00000040, AX
@@ -936,14 +877,14 @@ avx2_tail32:
 	VPAND     Y1, Y0, Y0
 	VPMOVMSKB Y0, BX
 	POPCNTQ   BX, BX
-	SHRQ      $0x04, BX
 	ADDQ      BX, DX
 	ADDQ      $0x00000020, AX
 	SUBQ      $0x00000020, CX
 
 avx2_tail16:
 	VZEROUPPER
-	JMP tail
+	SHRQ $0x04, DX
+	JMP  tail
 
 // func countPair32(b []byte) int
 // Requires: AVX, AVX2, CMOV, POPCNT, SSE2, SSE4.1
@@ -1021,20 +962,20 @@ avx2_loop256:
 	VPCMPEQQ  Y10, Y11, Y11
 	VPMOVMSKB Y11, R12
 	POPCNTQ   BX, BX
-	SHRQ      $0x05, BX
 	POPCNTQ   SI, SI
-	SHRQ      $0x05, SI
 	POPCNTQ   DI, DI
-	SHRQ      $0x05, DI
 	POPCNTQ   R8, R8
-	SHRQ      $0x05, R8
 	POPCNTQ   R9, R9
-	SHRQ      $0x05, R9
 	POPCNTQ   R10, R10
-	SHRQ      $0x05, R10
 	POPCNTQ   R11, R11
-	SHRQ      $0x05, R11
 	POPCNTQ   R12, R12
+	SHRQ      $0x05, BX
+	SHRQ      $0x05, SI
+	SHRQ      $0x05, DI
+	SHRQ      $0x05, R8
+	SHRQ      $0x05, R9
+	SHRQ      $0x05, R10
+	SHRQ      $0x05, R11
 	SHRQ      $0x05, R12
 	ADDQ      SI, BX
 	ADDQ      R8, DI
@@ -1066,12 +1007,12 @@ avx2_tail128:
 	VPCMPEQQ  Y5, Y6, Y6
 	VPMOVMSKB Y6, R8
 	POPCNTQ   BX, BX
-	SHRQ      $0x05, BX
 	POPCNTQ   SI, SI
-	SHRQ      $0x05, SI
 	POPCNTQ   DI, DI
-	SHRQ      $0x05, DI
 	POPCNTQ   R8, R8
+	SHRQ      $0x05, BX
+	SHRQ      $0x05, SI
+	SHRQ      $0x05, DI
 	SHRQ      $0x05, R8
 	ADDQ      SI, BX
 	ADDQ      R8, DI
@@ -1091,8 +1032,8 @@ avx2_tail64:
 	VPCMPEQQ  Y2, Y3, Y3
 	VPMOVMSKB Y3, SI
 	POPCNTQ   BX, BX
-	SHRQ      $0x05, BX
 	POPCNTQ   SI, SI
+	SHRQ      $0x05, BX
 	SHRQ      $0x05, SI
 	ADDQ      SI, BX
 	ADDQ      BX, DX

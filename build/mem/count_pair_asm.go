@@ -199,6 +199,11 @@ func generateCountPair(code countPair) {
 
 		Label("avx2_tail")
 		VZEROUPPER()
+		if size < 32 {
+			if shift := divideShift(size); shift > 0 {
+				SHRQ(Imm(uint64(shift)), r)
+			}
+		}
 		JMP(LabelRef("tail"))
 	}
 }
@@ -258,8 +263,13 @@ func generateCountPairAVX2(r, p Register, regA, regB []VecVirtual, masks []GPVir
 
 	for _, mask := range masks {
 		POPCNTQ(mask, mask)
-		if shift := divideShift(size); shift > 0 {
-			SHRQ(Imm(uint64(shift)), mask)
+	}
+
+	if size == 32 {
+		for _, mask := range masks {
+			if size == 32 {
+				SHRQ(Imm(uint64(divideShift(size))), mask)
+			}
 		}
 	}
 
