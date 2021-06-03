@@ -76,36 +76,21 @@ func TestContainsByte(t *testing.T) {
 	}
 }
 
-// func BenchmarkContainsNaive(b *testing.B) {
-// 	benchmarkContains(b, func(haystack []byte, needle byte) bool {
-// 		for _, v := range haystack {
-// 			if v == needle {
-// 				return true
-// 			}
-// 		}
-// 		return false
-// 	})
-// }
-//
-// func BenchmarkContainsGeneric(b *testing.B) {
-// 	benchmarkContains(b, containsGeneric)
-// }
-
-func BenchmarkContains(b *testing.B) {
-	benchmarkContains(b, ContainsByte)
+func BenchmarkContainsByte(b *testing.B) {
+	benchmarkContainsByte(b, ContainsByte)
 }
 
-func benchmarkContains(b *testing.B, contains func([]byte, byte) bool) {
+func benchmarkContainsByte(b *testing.B, contains func([]byte, byte) bool) {
 	large := bytes.Repeat([]byte{'a'}, 8*1024)
 
-	b.Run("empty", benchmarkContainsCase(contains, nil, 'x'))
-	b.Run("small-not-found", benchmarkContainsCase(contains, []byte("abcdef"), 'x'))
-	b.Run("small-found-at-end", benchmarkContainsCase(contains, []byte("abcdefx"), 'x'))
-	b.Run("large-not-found", benchmarkContainsCase(contains, large, 'x'))
-	b.Run("large-found-at-end", benchmarkContainsCase(contains, append(large, 'x'), 'x'))
+	b.Run("empty", benchmarkContainsByteCase(contains, nil, 'x'))
+	b.Run("small-not-found", benchmarkContainsByteCase(contains, []byte("abcdef"), 'x'))
+	b.Run("small-found-at-end", benchmarkContainsByteCase(contains, []byte("abcdefx"), 'x'))
+	b.Run("large-not-found", benchmarkContainsByteCase(contains, large, 'x'))
+	b.Run("large-found-at-end", benchmarkContainsByteCase(contains, append(large, 'x'), 'x'))
 }
 
-func benchmarkContainsCase(contains func([]byte, byte) bool, haystack []byte, needle byte) func(*testing.B) {
+func benchmarkContainsByteCase(contains func([]byte, byte) bool, haystack []byte, needle byte) func(*testing.B) {
 	return func(b *testing.B) {
 		b.SetBytes(int64(len(haystack)))
 		b.ResetTimer()
