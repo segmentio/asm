@@ -15,7 +15,7 @@ func CountPair(b []byte, n int) int {
 	// Delegate to countPair to keep the function cost low and allow the size
 	// check to be inlined and the modulo optimized away for power of two sizes
 	// known at compile time.
-	return countPairGeneric(b, n)
+	return countPair(b, n)
 }
 
 func countPair(b []byte, n int) int {

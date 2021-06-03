@@ -3,186 +3,172 @@
 #include "textflag.h"
 
 // func countPair1(b []byte) int
+// Requires: CMOV
 TEXT ·countPair1(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
-	MOVQ AX, DX
+	XORQ DX, DX
+	MOVQ AX, BX
+	SUBQ $0x01, CX
 	CMPQ CX, $0x00
 	JLE  done
-	SUBQ $0x01, CX
-	CMPQ CX, $0x00
-	JE   fail
 
 generic:
-	MOVB (AX), BL
-	MOVB 1(AX), SI
-	CMPB BL, SI
-	JE   done
-	ADDQ $0x01, AX
-	SUBQ $0x01, CX
-	CMPQ CX, $0x00
-	JA   generic
-
-fail:
-	ADDQ $0x01, AX
+	MOVQ    DX, BX
+	INCQ    BX
+	MOVB    (AX), SI
+	MOVB    1(AX), DI
+	CMPB    SI, DI
+	CMOVQEQ BX, DX
+	ADDQ    $0x01, AX
+	SUBQ    $0x01, CX
+	CMPQ    CX, $0x00
+	JA      generic
 
 done:
-	SUBQ DX, AX
-	MOVQ AX, ret+24(FP)
+	MOVQ DX, ret+24(FP)
 	RET
 
 // func countPair2(b []byte) int
+// Requires: CMOV
 TEXT ·countPair2(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
-	MOVQ AX, DX
+	XORQ DX, DX
+	MOVQ AX, BX
+	SUBQ $0x02, CX
 	CMPQ CX, $0x00
 	JLE  done
-	SUBQ $0x02, CX
-	CMPQ CX, $0x00
-	JE   fail
 
 generic:
-	MOVW (AX), BX
-	MOVW 2(AX), SI
-	CMPW BX, SI
-	JE   done
-	ADDQ $0x02, AX
-	SUBQ $0x02, CX
-	CMPQ CX, $0x00
-	JA   generic
-
-fail:
-	ADDQ $0x02, AX
+	MOVQ    DX, BX
+	INCQ    BX
+	MOVW    (AX), SI
+	MOVW    2(AX), DI
+	CMPW    SI, DI
+	CMOVQEQ BX, DX
+	ADDQ    $0x02, AX
+	SUBQ    $0x02, CX
+	CMPQ    CX, $0x00
+	JA      generic
 
 done:
-	SUBQ DX, AX
-	MOVQ AX, ret+24(FP)
+	MOVQ DX, ret+24(FP)
 	RET
 
 // func countPair4(b []byte) int
+// Requires: CMOV
 TEXT ·countPair4(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
-	MOVQ AX, DX
+	XORQ DX, DX
+	MOVQ AX, BX
+	SUBQ $0x04, CX
 	CMPQ CX, $0x00
 	JLE  done
-	SUBQ $0x04, CX
-	CMPQ CX, $0x00
-	JE   fail
 
 generic:
-	MOVL (AX), BX
-	MOVL 4(AX), SI
-	CMPL BX, SI
-	JE   done
-	ADDQ $0x04, AX
-	SUBQ $0x04, CX
-	CMPQ CX, $0x00
-	JA   generic
-
-fail:
-	ADDQ $0x04, AX
+	MOVQ    DX, BX
+	INCQ    BX
+	MOVL    (AX), SI
+	MOVL    4(AX), DI
+	CMPL    SI, DI
+	CMOVQEQ BX, DX
+	ADDQ    $0x04, AX
+	SUBQ    $0x04, CX
+	CMPQ    CX, $0x00
+	JA      generic
 
 done:
-	SUBQ DX, AX
-	MOVQ AX, ret+24(FP)
+	MOVQ DX, ret+24(FP)
 	RET
 
 // func countPair8(b []byte) int
+// Requires: CMOV
 TEXT ·countPair8(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
-	MOVQ AX, DX
+	XORQ DX, DX
+	MOVQ AX, BX
+	SUBQ $0x08, CX
 	CMPQ CX, $0x00
 	JLE  done
-	SUBQ $0x08, CX
-	CMPQ CX, $0x00
-	JE   fail
 
 generic:
-	MOVQ (AX), BX
-	MOVQ 8(AX), SI
-	CMPQ BX, SI
-	JE   done
-	ADDQ $0x08, AX
-	SUBQ $0x08, CX
-	CMPQ CX, $0x00
-	JA   generic
-
-fail:
-	ADDQ $0x08, AX
+	MOVQ    DX, BX
+	INCQ    BX
+	MOVQ    (AX), SI
+	MOVQ    8(AX), DI
+	CMPQ    SI, DI
+	CMOVQEQ BX, DX
+	ADDQ    $0x08, AX
+	SUBQ    $0x08, CX
+	CMPQ    CX, $0x00
+	JA      generic
 
 done:
-	SUBQ DX, AX
-	MOVQ AX, ret+24(FP)
+	MOVQ DX, ret+24(FP)
 	RET
 
 // func countPair16(b []byte) int
-// Requires: SSE2, SSE4.1
+// Requires: CMOV, SSE2, SSE4.1
 TEXT ·countPair16(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
-	MOVQ AX, DX
-	CMPQ CX, $0x00
-	JLE  done
+	XORQ DX, DX
+	MOVQ AX, BX
 	SUBQ $0x10, CX
 	CMPQ CX, $0x00
-	JE   fail
+	JLE  done
 
 generic:
+	MOVQ     DX, BX
+	INCQ     BX
 	MOVOU    (AX), X0
 	MOVOU    16(AX), X1
 	PCMPEQQ  X0, X1
-	PMOVMSKB X1, BX
-	CMPL     BX, $0x0000ffff
-	JE       done
+	PMOVMSKB X1, SI
+	CMPL     SI, $0x0000ffff
+	CMOVQEQ  BX, DX
 	ADDQ     $0x10, AX
 	SUBQ     $0x10, CX
 	CMPQ     CX, $0x00
 	JA       generic
 
-fail:
-	ADDQ $0x10, AX
-
 done:
-	SUBQ DX, AX
-	MOVQ AX, ret+24(FP)
+	MOVQ DX, ret+24(FP)
 	RET
 
 // func countPair32(b []byte) int
-// Requires: SSE2, SSE4.1
+// Requires: CMOV, SSE2, SSE4.1
 TEXT ·countPair32(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
-	MOVQ AX, DX
-	CMPQ CX, $0x00
-	JLE  done
+	XORQ DX, DX
+	MOVQ AX, BX
 	SUBQ $0x20, CX
 	CMPQ CX, $0x00
-	JE   fail
+	JLE  done
 
 generic:
+	MOVQ     DX, BX
+	INCQ     BX
 	MOVOU    (AX), X0
 	MOVOU    16(AX), X1
 	MOVOU    32(AX), X2
 	MOVOU    48(AX), X3
 	PCMPEQQ  X0, X2
 	PCMPEQQ  X1, X3
-	PMOVMSKB X2, BX
-	PMOVMSKB X3, SI
-	ANDL     SI, BX
-	CMPL     BX, $0x0000ffff
-	JE       done
+	PMOVMSKB X2, SI
+	PMOVMSKB X3, DI
+	ANDL     DI, SI
+	CMPL     SI, $0x0000ffff
+	CMOVQEQ  BX, DX
 	ADDQ     $0x20, AX
 	SUBQ     $0x20, CX
 	CMPQ     CX, $0x00
 	JA       generic
 
-fail:
-	ADDQ $0x20, AX
-
 done:
-	SUBQ DX, AX
-	MOVQ AX, ret+24(FP)
+	MOVQ DX, ret+24(FP)
 	RET

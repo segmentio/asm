@@ -137,13 +137,17 @@ func generateIndexPair(code countPair) {
 
 	p := Load(Param("b").Base(), GP64())
 	n := Load(Param("b").Len(), GP64())
+	c := GP64()
+	x := GP64()
+	XORQ(c, c)
 
 	base := GP64()
 	MOVQ(p, base)
 
+	SUBQ(Imm(uint64(size)), n)
+	Label("tail")
 	CMPQ(n, Imm(0))
 	JLE(LabelRef("done"))
-	SUBQ(Imm(uint64(size)), n)
 
 	/*
 		if _, ok := code.(countPairAVX2); ok {
@@ -151,26 +155,19 @@ func generateIndexPair(code countPair) {
 		}
 	*/
 
-	Label("tail")
-	CMPQ(n, Imm(0))
-	JE(LabelRef("fail"))
-
 	Label("generic")
+	MOVQ(c, x)
+	INCQ(x)
 	code.test(Mem{Base: p}, (Mem{Base: p}).Offset(size))
-	JE(LabelRef("done"))
+	CMOVQEQ(x, c)
 	ADDQ(Imm(uint64(size)), p)
 	SUBQ(Imm(uint64(size)), n)
 	CMPQ(n, Imm(0))
 	JA(LabelRef("generic"))
 
-	Label("fail")
-	ADDQ(Imm(uint64(size)), p)
-
 	Label("done")
 	// The delta between the base pointer and how far we advanced is the index of the pair.
-	index := p
-	SUBQ(base, index)
-	Store(index, ReturnIndex(0))
+	Store(c, ReturnIndex(0))
 	RET()
 
 	/*
