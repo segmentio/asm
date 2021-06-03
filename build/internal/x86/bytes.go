@@ -95,6 +95,7 @@ func GenerateCopy(name, doc string, transform []func(Op, Op)) {
 	Store(n, ReturnIndex(0))
 
 	VariableLengthBytes{
+		Unroll: 128,
 		Process: func(regs []Register, memory ...Memory) {
 			src, dst := regs[0], regs[1]
 
@@ -129,13 +130,19 @@ func GenerateCopy(name, doc string, transform []func(Op, Op)) {
 }
 
 type VariableLengthBytes struct {
-	SetupXMM  func()
-	SetupYMM  func()
-	Process   func(inputs []Register, memory ...Memory)
-	Epilogue  func()
+	SetupXMM func()
+	SetupYMM func()
+	Process  func(inputs []Register, memory ...Memory)
+	Epilogue func()
+	Unroll   int
 }
 
 func (v VariableLengthBytes) Generate(inputs []Register, n Register) {
+	unroll := uint64(v.Unroll)
+	if unroll != 128 && unroll != 256 {
+		panic("unsupported unroll")
+	}
+
 	Label("start")
 
 	if v.SetupXMM != nil {
@@ -178,8 +185,8 @@ func (v VariableLengthBytes) Generate(inputs []Register, n Register) {
 		v.SetupYMM()
 	}
 
-	CMPQ(n, Imm(128))
-	JBE(LabelRef("avx2_tail"))
+	CMPQ(n, U32(unroll))
+	JB(LabelRef("avx2_tail"))
 	JMP(LabelRef("avx2"))
 
 	Label("generic")
@@ -244,32 +251,36 @@ func (v VariableLengthBytes) Generate(inputs []Register, n Register) {
 		Memory{Size: 16, Index: n, Offset: -16})
 	RET()
 
+	// We have at least `unroll` bytes.
 	Comment("AVX optimized version for medium to large size inputs.")
 	Label("avx2")
-	v.Process(inputs,
-		Memory{Size: 32},
-		Memory{Size: 32, Offset: 32},
-		Memory{Size: 32, Offset: 64},
-		Memory{Size: 32, Offset: 96})
-	for i := range inputs {
-		ADDQ(Imm(128), inputs[i])
+	var memory []Memory
+	for i := 0; i < int(unroll / 32); i++ {
+		memory = append(memory, Memory{Size: 32, Offset: i * 32})
 	}
-	SUBQ(Imm(128), n)
-	CMPQ(n, Imm(128))
-	JAE(LabelRef("avx2"))
+	v.Process(inputs, memory...)
+	for i := range inputs {
+		ADDQ(U32(unroll), inputs[i])
+	}
+	SUBQ(U32(unroll), n)
 	JZ(LabelRef("avx2_done"))
+	CMPQ(n, U32(unroll))
+	JAE(LabelRef("avx2"))
 
+	// We have between [1, unroll) bytes.
 	Label("avx2_tail")
-	CMPQ(n, Imm(64)) // n > 0 && n <= 64
-	JBE(LabelRef("avx2_tail_1to64"))
+	CMPQ(n, Imm(64))
+	JB(LabelRef("avx2_tail_1to63"))
 	v.Process(inputs,
 		Memory{Size: 32},
-		Memory{Size: 32, Offset: 32},
-		Memory{Size: 32, Offset: 64},
-		Memory{Size: 32, Index: n, Offset: -32})
-	JMP(LabelRef("avx2_done"))
+		Memory{Size: 32, Offset: 32})
+	for i := range inputs {
+		ADDQ(Imm(64), inputs[i])
+	}
+	SUBQ(Imm(64), n)
+	JMP(LabelRef("avx2_tail"))
 
-	Label("avx2_tail_1to64")
+	Label("avx2_tail_1to63")
 	v.Process(inputs,
 		Memory{Size: 32, Index: n, Offset: -64},
 		Memory{Size: 32, Index: n, Offset: -32})

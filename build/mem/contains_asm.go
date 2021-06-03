@@ -49,6 +49,7 @@ func main() {
 	JMP(LabelRef("avx2_done"))
 
 	VariableLengthBytes{
+		Unroll:   256,
 		SetupXMM: func() {
 			PXOR(zero.AsX(), zero.AsX())
 			PINSRQ(Imm(0), needle, needleVec.AsX())
@@ -63,7 +64,11 @@ func main() {
 
 			regs := make([]Op, len(memory))
 			for i, m := range memory {
-				regs[i] = m.Load(haystack)
+				if m.Size == 32 {
+					regs[i] = m.Resolve(haystack)
+				} else {
+					regs[i] = m.Load(haystack)
+				}
 			}
 
 			switch memory[0].Size {
@@ -123,10 +128,12 @@ func main() {
 				PTEST(result, zero.AsX())
 				JCC(LabelRef("found"))
 			case 32:
+				results := make([]Op, len(memory))
 				for i := range memory {
-					VPCMPEQB(needleVec, regs[i], regs[i])
+					results[i] = YMM()
+					VPCMPEQB(regs[i], needleVec, results[i])
 				}
-				result := reduce(regs, vex(VPOR))
+				result := reduce(results, vex(VPOR))
 				VPTEST(result, zero)
 				JCC(LabelRef("avx2_found"))
 			}

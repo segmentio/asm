@@ -33,8 +33,8 @@ tail:
 	JBE  handle33to64
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC  generic
-	CMPQ DX, $0x80
-	JBE  avx2_tail
+	CMPQ DX, $0x00000080
+	JB   avx2_tail
 	JMP  avx2
 
 generic:
@@ -162,31 +162,28 @@ avx2:
 	VMOVDQU Y1, 32(AX)
 	VMOVDQU Y2, 64(AX)
 	VMOVDQU Y3, 96(AX)
-	ADDQ    $0x80, CX
-	ADDQ    $0x80, AX
-	SUBQ    $0x80, DX
-	CMPQ    DX, $0x80
-	JAE     avx2
+	ADDQ    $0x00000080, CX
+	ADDQ    $0x00000080, AX
+	SUBQ    $0x00000080, DX
 	JZ      avx2_done
+	CMPQ    DX, $0x00000080
+	JAE     avx2
 
 avx2_tail:
 	CMPQ    DX, $0x40
-	JBE     avx2_tail_1to64
+	JB      avx2_tail_1to63
 	VMOVDQU (CX), Y0
 	VMOVDQU 32(CX), Y1
-	VMOVDQU 64(CX), Y2
-	VMOVDQU -32(CX)(DX*1), Y3
 	VPAND   (AX), Y0, Y0
 	VPAND   32(AX), Y1, Y1
-	VPAND   64(AX), Y2, Y2
-	VPAND   -32(AX)(DX*1), Y3, Y3
 	VMOVDQU Y0, (AX)
 	VMOVDQU Y1, 32(AX)
-	VMOVDQU Y2, 64(AX)
-	VMOVDQU Y3, -32(AX)(DX*1)
-	JMP     avx2_done
+	ADDQ    $0x40, CX
+	ADDQ    $0x40, AX
+	SUBQ    $0x40, DX
+	JMP     avx2_tail
 
-avx2_tail_1to64:
+avx2_tail_1to63:
 	VMOVDQU -64(CX)(DX*1), Y0
 	VMOVDQU -32(CX)(DX*1), Y1
 	VPAND   -64(AX)(DX*1), Y0, Y0

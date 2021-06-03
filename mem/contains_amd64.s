@@ -60,8 +60,8 @@ tail:
 	JCC          generic
 	VZEROUPPER
 	VPBROADCASTQ X0, Y0
-	CMPQ         CX, $0x80
-	JBE          avx2_tail
+	CMPQ         CX, $0x00000100
+	JB           avx2_tail
 	JMP          avx2
 
 generic:
@@ -191,50 +191,46 @@ handle33to64:
 
 	// AVX optimized version for medium to large size inputs.
 avx2:
-	VMOVDQU  (AX), Y2
-	VMOVDQU  32(AX), Y3
-	VMOVDQU  64(AX), Y4
-	VMOVDQU  96(AX), Y5
-	VPCMPEQB Y0, Y2, Y2
-	VPCMPEQB Y0, Y3, Y3
-	VPCMPEQB Y0, Y4, Y4
-	VPCMPEQB Y0, Y5, Y5
+	VPCMPEQB (AX), Y0, Y2
+	VPCMPEQB 32(AX), Y0, Y3
+	VPCMPEQB 64(AX), Y0, Y4
+	VPCMPEQB 96(AX), Y0, Y5
+	VPCMPEQB 128(AX), Y0, Y6
+	VPCMPEQB 160(AX), Y0, Y7
+	VPCMPEQB 192(AX), Y0, Y8
+	VPCMPEQB 224(AX), Y0, Y9
 	VPOR     Y2, Y3, Y3
 	VPOR     Y4, Y5, Y5
+	VPOR     Y6, Y7, Y7
+	VPOR     Y8, Y9, Y9
 	VPOR     Y3, Y5, Y5
-	VPTEST   Y5, Y1
+	VPOR     Y7, Y9, Y9
+	VPOR     Y5, Y9, Y9
+	VPTEST   Y9, Y1
 	JCC      avx2_found
-	ADDQ     $0x80, AX
-	SUBQ     $0x80, CX
-	CMPQ     CX, $0x80
-	JAE      avx2
+	ADDQ     $0x00000100, AX
+	SUBQ     $0x00000100, CX
 	JZ       avx2_done
+	CMPQ     CX, $0x00000100
+	JAE      avx2
 
 avx2_tail:
 	CMPQ     CX, $0x40
-	JBE      avx2_tail_1to64
-	VMOVDQU  (AX), Y2
-	VMOVDQU  32(AX), Y3
-	VMOVDQU  64(AX), Y4
-	VMOVDQU  -32(AX)(CX*1), Y5
-	VPCMPEQB Y0, Y2, Y2
-	VPCMPEQB Y0, Y3, Y3
-	VPCMPEQB Y0, Y4, Y4
-	VPCMPEQB Y0, Y5, Y5
-	VPOR     Y2, Y3, Y3
-	VPOR     Y4, Y5, Y5
-	VPOR     Y3, Y5, Y5
-	VPTEST   Y5, Y1
-	JCC      avx2_found
-	JMP      avx2_done
-
-avx2_tail_1to64:
-	VMOVDQU  -64(AX)(CX*1), Y2
-	VMOVDQU  -32(AX)(CX*1), Y3
-	VPCMPEQB Y0, Y2, Y2
-	VPCMPEQB Y0, Y3, Y3
+	JB       avx2_tail_1to63
+	VPCMPEQB (AX), Y0, Y2
+	VPCMPEQB 32(AX), Y0, Y3
 	VPOR     Y2, Y3, Y3
 	VPTEST   Y3, Y1
+	JCC      avx2_found
+	ADDQ     $0x40, AX
+	SUBQ     $0x40, CX
+	JMP      avx2_tail
+
+avx2_tail_1to63:
+	VPCMPEQB -64(AX)(CX*1), Y0, Y2
+	VPCMPEQB -32(AX)(CX*1), Y0, Y0
+	VPOR     Y2, Y0, Y0
+	VPTEST   Y0, Y1
 	JCC      avx2_found
 
 avx2_done:
