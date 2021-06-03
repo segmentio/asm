@@ -216,17 +216,41 @@ avx2:
 
 avx2_tail:
 	CMPQ     CX, $0x40
-	JB       avx2_tail_1to63
+	JBE      avx2_tail_1to64
+	CMPQ     CX, $0x80
+	JBE      avx2_tail_65to128
 	VPCMPEQB (AX), Y0, Y2
 	VPCMPEQB 32(AX), Y0, Y3
+	VPCMPEQB 64(AX), Y0, Y4
+	VPCMPEQB 96(AX), Y0, Y5
+	VPCMPEQB -128(AX)(CX*1), Y0, Y6
+	VPCMPEQB -96(AX)(CX*1), Y0, Y7
+	VPCMPEQB -64(AX)(CX*1), Y0, Y8
+	VPCMPEQB -32(AX)(CX*1), Y0, Y0
 	VPOR     Y2, Y3, Y3
-	VPTEST   Y3, Y1
+	VPOR     Y4, Y5, Y5
+	VPOR     Y6, Y7, Y7
+	VPOR     Y8, Y0, Y0
+	VPOR     Y3, Y5, Y5
+	VPOR     Y7, Y0, Y0
+	VPOR     Y5, Y0, Y0
+	VPTEST   Y0, Y1
 	JCC      avx2_found
-	ADDQ     $0x40, AX
-	SUBQ     $0x40, CX
-	JMP      avx2_tail
+	JMP      avx2_done
 
-avx2_tail_1to63:
+avx2_tail_65to128:
+	VPCMPEQB (AX), Y0, Y2
+	VPCMPEQB 32(AX), Y0, Y3
+	VPCMPEQB -64(AX)(CX*1), Y0, Y4
+	VPCMPEQB -32(AX)(CX*1), Y0, Y0
+	VPOR     Y2, Y3, Y3
+	VPOR     Y4, Y0, Y0
+	VPOR     Y3, Y0, Y0
+	VPTEST   Y0, Y1
+	JCC      avx2_found
+	JMP      avx2_done
+
+avx2_tail_1to64:
 	VPCMPEQB -64(AX)(CX*1), Y0, Y2
 	VPCMPEQB -32(AX)(CX*1), Y0, Y0
 	VPOR     Y2, Y0, Y0

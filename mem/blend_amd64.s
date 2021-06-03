@@ -171,19 +171,22 @@ avx2:
 
 avx2_tail:
 	CMPQ    DX, $0x40
-	JB      avx2_tail_1to63
+	JBE     avx2_tail_1to64
 	VMOVDQU (CX), Y0
 	VMOVDQU 32(CX), Y1
+	VMOVDQU -64(CX)(DX*1), Y2
+	VMOVDQU -32(CX)(DX*1), Y3
 	VPOR    (AX), Y0, Y0
 	VPOR    32(AX), Y1, Y1
+	VPOR    -64(AX)(DX*1), Y2, Y2
+	VPOR    -32(AX)(DX*1), Y3, Y3
 	VMOVDQU Y0, (AX)
 	VMOVDQU Y1, 32(AX)
-	ADDQ    $0x40, CX
-	ADDQ    $0x40, AX
-	SUBQ    $0x40, DX
-	JMP     avx2_tail
+	VMOVDQU Y2, -64(AX)(DX*1)
+	VMOVDQU Y3, -32(AX)(DX*1)
+	JMP     avx2_done
 
-avx2_tail_1to63:
+avx2_tail_1to64:
 	VMOVDQU -64(CX)(DX*1), Y0
 	VMOVDQU -32(CX)(DX*1), Y1
 	VPOR    -64(AX)(DX*1), Y0, Y0

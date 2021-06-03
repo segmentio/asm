@@ -270,17 +270,33 @@ func (v VariableLengthBytes) Generate(inputs []Register, n Register) {
 	// We have between [1, unroll) bytes.
 	Label("avx2_tail")
 	CMPQ(n, Imm(64))
-	JB(LabelRef("avx2_tail_1to63"))
+	JBE(LabelRef("avx2_tail_1to64"))
+
+	if unroll == 256 {
+		CMPQ(n, Imm(128))
+		JBE(LabelRef("avx2_tail_65to128"))
+		Label("avx2_tail_129to256")
+		v.Process(inputs,
+			Memory{Size: 32},
+			Memory{Size: 32, Offset: 32},
+			Memory{Size: 32, Offset: 64},
+			Memory{Size: 32, Offset: 96},
+			Memory{Size: 32, Index: n, Offset: -128},
+			Memory{Size: 32, Index: n, Offset: -96},
+			Memory{Size: 32, Index: n, Offset: -64},
+			Memory{Size: 32, Index: n, Offset: -32})
+		JMP(LabelRef("avx2_done"))
+	}
+
+	Label("avx2_tail_65to128")
 	v.Process(inputs,
 		Memory{Size: 32},
-		Memory{Size: 32, Offset: 32})
-	for i := range inputs {
-		ADDQ(Imm(64), inputs[i])
-	}
-	SUBQ(Imm(64), n)
-	JMP(LabelRef("avx2_tail"))
+		Memory{Size: 32, Offset: 32},
+		Memory{Size: 32, Index: n, Offset: -64},
+		Memory{Size: 32, Index: n, Offset: -32})
+	JMP(LabelRef("avx2_done"))
 
-	Label("avx2_tail_1to63")
+	Label("avx2_tail_1to64")
 	v.Process(inputs,
 		Memory{Size: 32, Index: n, Offset: -64},
 		Memory{Size: 32, Index: n, Offset: -32})
