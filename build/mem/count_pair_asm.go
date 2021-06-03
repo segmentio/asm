@@ -263,13 +263,8 @@ func generateCountPairAVX2(r, p Register, regA, regB []VecVirtual, masks []GPVir
 
 	for _, mask := range masks {
 		POPCNTQ(mask, mask)
-	}
-
-	if size == 32 {
-		for _, mask := range masks {
-			if size == 32 {
-				SHRQ(Imm(uint64(divideShift(size))), mask)
-			}
+		if size == 32 {
+			SHRQ(Imm(uint64(divideShift(size))), mask)
 		}
 	}
 
