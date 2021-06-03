@@ -133,7 +133,6 @@ type VariableLengthBytes struct {
 	SetupXMM func()
 	SetupYMM func()
 	Process  func(inputs []Register, memory ...Memory)
-	Epilogue func()
 	Unroll   int
 }
 
@@ -304,10 +303,6 @@ func (v VariableLengthBytes) Generate(inputs []Register, n Register) {
 	Label("avx2_done")
 	VZEROUPPER()
 	RET()
-
-	if v.Epilogue != nil {
-		v.Epilogue()
-	}
 
 	Generate()
 }

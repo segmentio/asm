@@ -101,7 +101,8 @@ func main() {
 				}
 				for i := range memory {
 					SUBL(lsb.As32(), results[i])
-					ANDNL(results[i], regs[i], results[i])
+					NOTL(regs[i])
+					ANDL(regs[i], results[i])
 				}
 				result := reduce(results, binary(ORL))
 				ANDL(msb.As32(), result)
@@ -115,7 +116,8 @@ func main() {
 				}
 				for i := range memory {
 					SUBQ(lsb, results[i])
-					ANDNQ(results[i], regs[i], results[i])
+					NOTQ(regs[i])
+					ANDQ(regs[i], results[i])
 				}
 				result := reduce(results, binary(ORQ))
 				ANDQ(msb, result)

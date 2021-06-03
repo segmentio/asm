@@ -3,7 +3,7 @@
 #include "textflag.h"
 
 // func ContainsByte(haystack []byte, needle byte) bool
-// Requires: AVX, AVX2, BMI, SSE2, SSE4.1
+// Requires: AVX, AVX2, SSE2, SSE4.1
 TEXT ·ContainsByte(SB), NOSPLIT, $0-33
 	MOVQ haystack_base+0(FP), AX
 	MOVQ haystack_len+8(FP), CX
@@ -57,7 +57,7 @@ tail:
 	CMPQ         CX, $0x40
 	JBE          handle33to64
 	BTL          $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCC          generic
+	JCS          generic
 	VZEROUPPER
 	VPBROADCASTQ X0, Y0
 	CMPQ         CX, $0x00000100
@@ -112,55 +112,61 @@ handle2to3:
 	RET
 
 handle4:
-	MOVL  (AX), AX
-	XORL  DX, AX
-	MOVL  AX, CX
-	SUBL  BX, CX
-	ANDNL CX, AX, CX
-	ANDL  SI, CX
-	JNZ   found
+	MOVL (AX), AX
+	XORL DX, AX
+	MOVL AX, CX
+	SUBL BX, CX
+	NOTL AX
+	ANDL AX, CX
+	ANDL SI, CX
+	JNZ  found
 	RET
 
 handle5to7:
-	MOVL  (AX), DI
-	MOVL  -4(AX)(CX*1), AX
-	XORL  DX, DI
-	MOVL  DI, CX
-	XORL  DX, AX
-	MOVL  AX, DX
-	SUBL  BX, CX
-	ANDNL CX, DI, CX
-	SUBL  BX, DX
-	ANDNL DX, AX, DX
-	ORL   CX, DX
-	ANDL  SI, DX
-	JNZ   found
+	MOVL (AX), DI
+	MOVL -4(AX)(CX*1), AX
+	XORL DX, DI
+	MOVL DI, CX
+	XORL DX, AX
+	MOVL AX, DX
+	SUBL BX, CX
+	NOTL DI
+	ANDL DI, CX
+	SUBL BX, DX
+	NOTL AX
+	ANDL AX, DX
+	ORL  CX, DX
+	ANDL SI, DX
+	JNZ  found
 	RET
 
 handle8:
-	MOVQ  (AX), AX
-	XORQ  DX, AX
-	MOVQ  AX, CX
-	SUBQ  BX, CX
-	ANDNQ CX, AX, CX
-	ANDQ  SI, CX
-	JNZ   found
+	MOVQ (AX), AX
+	XORQ DX, AX
+	MOVQ AX, CX
+	SUBQ BX, CX
+	NOTQ AX
+	ANDQ AX, CX
+	ANDQ SI, CX
+	JNZ  found
 	RET
 
 handle9to16:
-	MOVQ  (AX), DI
-	MOVQ  -8(AX)(CX*1), AX
-	XORQ  DX, DI
-	MOVQ  DI, CX
-	XORQ  DX, AX
-	MOVQ  AX, DX
-	SUBQ  BX, CX
-	ANDNQ CX, DI, CX
-	SUBQ  BX, DX
-	ANDNQ DX, AX, DX
-	ORQ   CX, DX
-	ANDQ  SI, DX
-	JNZ   found
+	MOVQ (AX), DI
+	MOVQ -8(AX)(CX*1), AX
+	XORQ DX, DI
+	MOVQ DI, CX
+	XORQ DX, AX
+	MOVQ AX, DX
+	SUBQ BX, CX
+	NOTQ DI
+	ANDQ DI, CX
+	SUBQ BX, DX
+	NOTQ AX
+	ANDQ AX, DX
+	ORQ  CX, DX
+	ANDQ SI, DX
+	JNZ  found
 	RET
 
 handle17to32:
