@@ -263,11 +263,28 @@ func generateCountPairAVX2(r, p Register, regA, regB []VecVirtual, masks []GPVir
 		}
 	}
 
-	for _, mask := range masks {
-		ADDQ(mask, r)
-	}
+	ADDQ(divideAndConquerSum(masks), r)
 }
 
 func divideShift(size int) int {
 	return bits.TrailingZeros(uint(size))
+}
+
+func divideAndConquerSum(regs []GPVirtual) GPVirtual {
+	switch len(regs) {
+	case 1:
+		return regs[0]
+
+	case 2:
+		r0, r1 := regs[0], regs[1]
+		ADDQ(r1, r0)
+		return r0
+
+	default:
+		i := len(regs) / 2
+		r0 := divideAndConquerSum(regs[:i])
+		r1 := divideAndConquerSum(regs[i:])
+		ADDQ(r1, r0)
+		return r0
+	}
 }
