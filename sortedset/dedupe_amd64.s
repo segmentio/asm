@@ -8,29 +8,34 @@ TEXT ·dedupe1(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
 	CMPQ CX, $0x01
-	JLE  none
-	XORQ DX, DX
-	MOVQ $0x0000000000000001, BX
-	CMPQ BX, CX
-	JGE  none
-
-generic:
-	MOVQ    DX, SI
-	ADDQ    $0x01, SI
-	MOVB    (AX)(DX*1), DI
-	CMPB    DI, (AX)(BX*1)
-	CMOVQNE SI, DX
-	MOVB    (AX)(BX*1), SI
-	MOVB    SI, (AX)(DX*1)
-	ADDQ    $0x01, BX
-	CMPQ    BX, CX
-	JL      generic
-	ADDQ    $0x01, DX
-	MOVQ    DX, ret+24(FP)
+	JG   init
+	MOVQ CX, ret+24(FP)
 	RET
 
-none:
-	MOVQ CX, ret+24(FP)
+init:
+	MOVQ AX, DX
+	MOVQ AX, BX
+	ADDQ $0x01, DX
+	SUBQ $0x01, CX
+	CMPQ CX, $0x00
+	JLE  done
+
+generic:
+	MOVQ    BX, SI
+	ADDQ    $0x01, SI
+	MOVB    (DX), DI
+	CMPB    DI, (BX)
+	CMOVQNE SI, BX
+	MOVB    DI, (BX)
+	ADDQ    $0x01, DX
+	SUBQ    $0x01, CX
+	CMPQ    CX, $0x00
+	JG      generic
+
+done:
+	ADDQ $0x01, BX
+	SUBQ AX, BX
+	MOVQ BX, ret+24(FP)
 	RET
 
 // func dedupe2(b []byte) int
@@ -39,29 +44,34 @@ TEXT ·dedupe2(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
 	CMPQ CX, $0x02
-	JLE  none
-	XORQ DX, DX
-	MOVQ $0x0000000000000002, BX
-	CMPQ BX, CX
-	JGE  none
-
-generic:
-	MOVQ    DX, SI
-	ADDQ    $0x02, SI
-	MOVW    (AX)(DX*1), DI
-	CMPW    DI, (AX)(BX*1)
-	CMOVQNE SI, DX
-	MOVW    (AX)(BX*1), SI
-	MOVW    SI, (AX)(DX*1)
-	ADDQ    $0x02, BX
-	CMPQ    BX, CX
-	JL      generic
-	ADDQ    $0x02, DX
-	MOVQ    DX, ret+24(FP)
+	JG   init
+	MOVQ CX, ret+24(FP)
 	RET
 
-none:
-	MOVQ CX, ret+24(FP)
+init:
+	MOVQ AX, DX
+	MOVQ AX, BX
+	ADDQ $0x02, DX
+	SUBQ $0x02, CX
+	CMPQ CX, $0x00
+	JLE  done
+
+generic:
+	MOVQ    BX, SI
+	ADDQ    $0x02, SI
+	MOVW    (DX), DI
+	CMPW    DI, (BX)
+	CMOVQNE SI, BX
+	MOVW    DI, (BX)
+	ADDQ    $0x02, DX
+	SUBQ    $0x02, CX
+	CMPQ    CX, $0x00
+	JG      generic
+
+done:
+	ADDQ $0x02, BX
+	SUBQ AX, BX
+	MOVQ BX, ret+24(FP)
 	RET
 
 // func dedupe4(b []byte) int
@@ -70,29 +80,34 @@ TEXT ·dedupe4(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
 	CMPQ CX, $0x04
-	JLE  none
-	XORQ DX, DX
-	MOVQ $0x0000000000000004, BX
-	CMPQ BX, CX
-	JGE  none
-
-generic:
-	MOVQ    DX, SI
-	ADDQ    $0x04, SI
-	MOVL    (AX)(DX*1), DI
-	CMPL    DI, (AX)(BX*1)
-	CMOVQNE SI, DX
-	MOVL    (AX)(BX*1), SI
-	MOVL    SI, (AX)(DX*1)
-	ADDQ    $0x04, BX
-	CMPQ    BX, CX
-	JL      generic
-	ADDQ    $0x04, DX
-	MOVQ    DX, ret+24(FP)
+	JG   init
+	MOVQ CX, ret+24(FP)
 	RET
 
-none:
-	MOVQ CX, ret+24(FP)
+init:
+	MOVQ AX, DX
+	MOVQ AX, BX
+	ADDQ $0x04, DX
+	SUBQ $0x04, CX
+	CMPQ CX, $0x00
+	JLE  done
+
+generic:
+	MOVQ    BX, SI
+	ADDQ    $0x04, SI
+	MOVL    (DX), DI
+	CMPL    DI, (BX)
+	CMOVQNE SI, BX
+	MOVL    DI, (BX)
+	ADDQ    $0x04, DX
+	SUBQ    $0x04, CX
+	CMPQ    CX, $0x00
+	JG      generic
+
+done:
+	ADDQ $0x04, BX
+	SUBQ AX, BX
+	MOVQ BX, ret+24(FP)
 	RET
 
 // func dedupe8(b []byte) int
@@ -101,29 +116,34 @@ TEXT ·dedupe8(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
 	CMPQ CX, $0x08
-	JLE  none
-	XORQ DX, DX
-	MOVQ $0x0000000000000008, BX
-	CMPQ BX, CX
-	JGE  none
-
-generic:
-	MOVQ    DX, SI
-	ADDQ    $0x08, SI
-	MOVQ    (AX)(DX*1), DI
-	CMPQ    DI, (AX)(BX*1)
-	CMOVQNE SI, DX
-	MOVQ    (AX)(BX*1), SI
-	MOVQ    SI, (AX)(DX*1)
-	ADDQ    $0x08, BX
-	CMPQ    BX, CX
-	JL      generic
-	ADDQ    $0x08, DX
-	MOVQ    DX, ret+24(FP)
+	JG   init
+	MOVQ CX, ret+24(FP)
 	RET
 
-none:
-	MOVQ CX, ret+24(FP)
+init:
+	MOVQ AX, DX
+	MOVQ AX, BX
+	ADDQ $0x08, DX
+	SUBQ $0x08, CX
+	CMPQ CX, $0x00
+	JLE  done
+
+generic:
+	MOVQ    BX, SI
+	ADDQ    $0x08, SI
+	MOVQ    (DX), DI
+	CMPQ    DI, (BX)
+	CMOVQNE SI, BX
+	MOVQ    DI, (BX)
+	ADDQ    $0x08, DX
+	SUBQ    $0x08, CX
+	CMPQ    CX, $0x00
+	JG      generic
+
+done:
+	ADDQ $0x08, BX
+	SUBQ AX, BX
+	MOVQ BX, ret+24(FP)
 	RET
 
 // func dedupe16(b []byte) int
@@ -132,32 +152,37 @@ TEXT ·dedupe16(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
 	CMPQ CX, $0x10
-	JLE  none
-	XORQ DX, DX
-	MOVQ $0x0000000000000010, BX
-	CMPQ BX, CX
-	JGE  none
+	JG   init
+	MOVQ CX, ret+24(FP)
+	RET
+
+init:
+	MOVQ AX, DX
+	MOVQ AX, BX
+	ADDQ $0x10, DX
+	SUBQ $0x10, CX
+	CMPQ CX, $0x00
+	JLE  done
 
 generic:
-	MOVQ     DX, SI
+	MOVQ     BX, SI
 	ADDQ     $0x10, SI
-	MOVOU    (AX)(DX*1), X0
-	MOVOU    (AX)(BX*1), X1
+	MOVOU    (DX), X0
+	MOVOU    (BX), X1
 	PCMPEQQ  X0, X1
 	PMOVMSKB X1, DI
 	CMPL     DI, $0x0000ffff
-	CMOVQNE  SI, DX
-	MOVOU    (AX)(BX*1), X0
-	MOVOU    X0, (AX)(DX*1)
-	ADDQ     $0x10, BX
-	CMPQ     BX, CX
-	JL       generic
+	CMOVQNE  SI, BX
+	MOVOU    X0, (BX)
 	ADDQ     $0x10, DX
-	MOVQ     DX, ret+24(FP)
-	RET
+	SUBQ     $0x10, CX
+	CMPQ     CX, $0x00
+	JG       generic
 
-none:
-	MOVQ CX, ret+24(FP)
+done:
+	ADDQ $0x10, BX
+	SUBQ AX, BX
+	MOVQ BX, ret+24(FP)
 	RET
 
 // func dedupe32(b []byte) int
@@ -166,37 +191,41 @@ TEXT ·dedupe32(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
 	CMPQ CX, $0x20
-	JLE  none
-	XORQ DX, DX
-	MOVQ $0x0000000000000020, BX
-	CMPQ BX, CX
-	JGE  none
+	JG   init
+	MOVQ CX, ret+24(FP)
+	RET
+
+init:
+	MOVQ AX, DX
+	MOVQ AX, BX
+	ADDQ $0x20, DX
+	SUBQ $0x20, CX
+	CMPQ CX, $0x00
+	JLE  done
 
 generic:
-	MOVQ     DX, SI
+	MOVQ     BX, SI
 	ADDQ     $0x20, SI
-	MOVOU    (AX)(DX*1), X0
-	MOVOU    16(AX)(DX*1), X1
-	MOVOU    (AX)(BX*1), X2
-	MOVOU    16(AX)(BX*1), X3
+	MOVOU    (DX), X0
+	MOVOU    16(DX), X1
+	MOVOU    (BX), X2
+	MOVOU    16(BX), X3
 	PCMPEQQ  X0, X2
 	PCMPEQQ  X1, X3
 	PMOVMSKB X2, DI
 	PMOVMSKB X3, R8
 	ANDL     R8, DI
 	CMPL     DI, $0x0000ffff
-	CMOVQNE  SI, DX
-	MOVOU    (AX)(BX*1), X0
-	MOVOU    16(AX)(BX*1), X1
-	MOVOU    X0, (AX)(DX*1)
-	MOVOU    X1, 16(AX)(DX*1)
-	ADDQ     $0x20, BX
-	CMPQ     BX, CX
-	JL       generic
+	CMOVQNE  SI, BX
+	MOVOU    X0, (BX)
+	MOVOU    X1, 16(BX)
 	ADDQ     $0x20, DX
-	MOVQ     DX, ret+24(FP)
-	RET
+	SUBQ     $0x20, CX
+	CMPQ     CX, $0x00
+	JG       generic
 
-none:
-	MOVQ CX, ret+24(FP)
+done:
+	ADDQ $0x20, BX
+	SUBQ AX, BX
+	MOVQ BX, ret+24(FP)
 	RET
