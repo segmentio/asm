@@ -27,6 +27,24 @@ func shiftForSize(size uint64) uint64 {
 	return uint64(math.Log2(float64(size)))
 }
 
+func less(size uint64, register func() VecVirtual, a, b, ones Op, withMasks func (neMask, ltMask Op)) {
+	ne := register()
+	lt := register()
+	VPCMPEQB(a, b, ne)
+	VPXOR(ne, ones, ne)
+	VPMINUB(a, b, lt)
+	VPCMPEQB(a, lt, lt)
+	VPAND(lt, ne, lt)
+	neMask := GP32()
+	ltMask := GP32()
+	VPMOVMSKB(ne, neMask)
+	VPMOVMSKB(lt, ltMask)
+	withMasks(neMask, ltMask)
+	unequalByteIndex := GP32()
+	BSFL(neMask, unequalByteIndex)
+	BTSL(unequalByteIndex, ltMask)
+}
+
 func insertionsort(size uint64, register func() VecVirtual) {
 	TEXT(fmt.Sprintf("insertionsort%d", size), NOSPLIT, "func(data *byte, lo, hi int)")
 
@@ -61,22 +79,10 @@ func insertionsort(size uint64, register func() VecVirtual) {
 	prev := register()
 	VMOVDQU(Mem{Base: j, Disp: -int(size)}, prev)
 
-	ne := register()
-	lt := register()
-	VPCMPEQB(item, prev, ne)
-	VPXOR(ne, ones, ne)
-	VPMINUB(item, prev, lt)
-	VPCMPEQB(item, lt, lt)
-	VPAND(lt, ne, lt)
-	neMask := GP32()
-	ltMask := GP32()
-	VPMOVMSKB(ne, neMask)
-	VPMOVMSKB(lt, ltMask)
-	TESTL(neMask, neMask)
-	JZ(LabelRef("outer"))
-	unequalByteIndex := GP32()
-	BSFL(neMask, unequalByteIndex)
-	BTSL(unequalByteIndex, ltMask)
+	less(size, register, item, prev, ones, func (neMask, ltMask Op) {
+		TESTL(neMask, neMask)
+		JZ(LabelRef("outer"))
+	})
 	JCC(LabelRef("outer"))
 
 	VMOVDQU(prev, Mem{Base: j})
@@ -143,23 +149,11 @@ func distributeForward(size uint64, register func() VecVirtual) {
 	VMOVDQU(Mem{Base: lo}, next)
 
 	// Compare the item with the pivot.
-	ne := register()
-	lt := register()
-	VPCMPEQB(next, pivot, ne)
-	VPXOR(ne, ones, ne)
-	VPMINUB(next, pivot, lt)
-	VPCMPEQB(next, lt, lt)
-	VPAND(lt, ne, lt)
-	neMask := GP32()
-	ltMask := GP32()
-	VPMOVMSKB(ne, neMask)
-	VPMOVMSKB(lt, ltMask)
-	TESTL(neMask, neMask)
 	hasUnequalByte := GP8()
-	SETNE(hasUnequalByte)
-	unequalByteIndex := GP32()
-	BSFL(neMask, unequalByteIndex)
-	BTSL(unequalByteIndex, ltMask)
+	less(size, register, next, pivot, ones, func (neMask, ltMask Op) {
+		TESTL(neMask, neMask)
+		SETNE(hasUnequalByte)
+	})
 	SETCS(isLess.As8())
 	ANDB(hasUnequalByte, isLess.As8())
 	XORB(Imm(1), isLess.As8())
@@ -240,23 +234,11 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 	VMOVDQU(Mem{Base: hi}, next)
 
 	// Compare the item with the pivot.
-	ne := register()
-	lt := register()
-	VPCMPEQB(next, pivot, ne)
-	VPXOR(ne, ones, ne)
-	VPMINUB(next, pivot, lt)
-	VPCMPEQB(next, lt, lt)
-	VPAND(lt, ne, lt)
-	neMask := GP32()
-	ltMask := GP32()
-	VPMOVMSKB(ne, neMask)
-	VPMOVMSKB(lt, ltMask)
-	TESTL(neMask, neMask)
 	hasUnequalByte := GP8()
-	SETNE(hasUnequalByte)
-	unequalByteIndex := GP32()
-	BSFL(neMask, unequalByteIndex)
-	BTSL(unequalByteIndex, ltMask)
+	less(size, register, next, pivot, ones, func (neMask, ltMask Op) {
+		TESTL(neMask, neMask)
+		SETNE(hasUnequalByte)
+	})
 	SETCS(isLess.As8())
 	ANDB(hasUnequalByte, isLess.As8())
 

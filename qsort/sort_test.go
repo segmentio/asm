@@ -42,7 +42,7 @@ func testSort(t *testing.T, size int) {
 
 		// Test with/without duplicates.
 		repeat := randint(0, count)
-		for j := repeat; repeat > 0 && j < len(slice) && j + repeat < len(slice); j += repeat {
+		for j := repeat; repeat > 0 && j < len(slice) && j+repeat < len(slice); j += repeat {
 			copy(slice[j:j+repeat], slice[:repeat])
 		}
 
