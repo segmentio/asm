@@ -2,34 +2,40 @@ package sortedset
 
 import (
 	"bytes"
-
-	"github.com/segmentio/asm/cpu"
 )
 
-// Dedupe scans a slice containing contiguous chunks of a specific size,
+// Dedupe scans a slice containing contiguous chunks of size n,
 // and removes duplicates in place.
-func Dedupe(b []byte, size int) []byte {
-	if size <= 0 || len(b)%size != 0 {
-		panic("len(b) % size != 0")
+func Dedupe(b []byte, n int) []byte {
+	if len(b)%n != 0 {
+		panic("input length is not a multiple of the item size")
 	}
-	if len(b) <= size {
-		return b
-	}
+	return b[:dedupe(b, n)]
+}
 
-	var pos int
-	switch {
-	case size == 16 && cpu.X86.Has(cpu.SSE4):
-		pos = dedupe16(b)
-	case size == 32 && cpu.X86.Has(cpu.AVX2):
-		pos = dedupe32(b)
+func dedupe(b []byte, n int) int {
+	switch n {
+	case 1:
+		return dedupe1(b)
+	case 2:
+		return dedupe2(b)
+	case 4:
+		return dedupe4(b)
+	case 8:
+		return dedupe8(b)
+	case 16:
+		return dedupe16(b)
+	case 32:
+		return dedupe32(b)
 	default:
-		pos = dedupeGeneric(b, size)
+		return dedupeGeneric(b, n)
 	}
-
-	return b[:pos]
 }
 
 func dedupeGeneric(b []byte, size int) int {
+	if len(b) <= size {
+		return len(b)
+	}
 	pos := size
 	prev := b[:size]
 	for i := size; i < len(b); i += size {
