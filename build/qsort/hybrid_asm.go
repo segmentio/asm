@@ -76,16 +76,21 @@ func insertionsort32() {
 func distributeForward32() {
 	TEXT("distributeForward32", NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
 
+	// Load inputs.
 	data := Load(Param("data"), GP64())
 	scratch := Load(Param("scratch"), GP64())
 	limit := Load(Param("limit"), GP64())
 	loIndex := Load(Param("lo"), GP64())
 	hiIndex := Load(Param("hi"), GP64())
 	pivotIndex := Load(Param("pivot"), GP64())
+
+	// Convert indices to offsets (shift left by 5 == multiply by 32).
 	SHLQ(Imm(5), limit)
 	SHLQ(Imm(5), loIndex)
 	SHLQ(Imm(5), hiIndex)
 	SHLQ(Imm(5), pivotIndex)
+
+	// Prepare read/cmp pointers.
 	lo := GP64()
 	hi := GP64()
 	tail := GP64()
@@ -93,6 +98,7 @@ func distributeForward32() {
 	LEAQ(Mem{Base: data, Index: hiIndex, Scale: 1}, hi)
 	LEAQ(Mem{Base: scratch, Index: limit, Scale: 1, Disp: -32}, tail)
 
+	// Load the pivot item.
 	pivot := YMM()
 	VMOVDQU(Mem{Base: data, Index: pivotIndex, Scale: 1}, pivot)
 
@@ -101,11 +107,17 @@ func distributeForward32() {
 	XORQ(offset, offset)
 	XORQ(isLess, isLess)
 
+	// We'll be keeping a negative offset. Negate the limit so we can
+	// compare the two in the loop.
+	NEGQ(limit)
+
 	Label("loop")
-	CMPQ(lo, hi)
-	JA(LabelRef("done"))
+
+	// Load the next item.
 	next := YMM()
 	VMOVDQU(Mem{Base: lo}, next)
+
+	// Compare the item with the pivot.
 	lte := YMM()
 	eq := YMM()
 	VPMINUB(next, pivot, lte)
@@ -126,6 +138,8 @@ func distributeForward32() {
 	ANDB(hasUnequalByte, isLess.As8())
 	XORB(Imm(1), isLess.As8())
 
+	// Conditionally write to either the beginning of the data slice, or
+	// end of the scratch slice.
 	dst := GP64()
 	MOVQ(lo, dst)
 	CMOVQNE(tail, dst)
@@ -134,12 +148,13 @@ func distributeForward32() {
 	SUBQ(isLess, offset)
 	ADDQ(Imm(32), lo)
 
-	hmm := GP64()
-	LEAQ(Mem{Base: tail, Index: offset, Scale: 1, Disp: 32}, hmm)
-	CMPQ(hmm, scratch)
-	JBE(LabelRef("done"))
-	JMP(LabelRef("loop"))
+	// Loop while we have more input, and enough room in the scratch slice.
+	CMPQ(lo, hi)
+	JA(LabelRef("done"))
+	CMPQ(offset, limit)
+	JNE(LabelRef("loop"))
 
+	// Return the number of items written to the data slice.
 	Label("done")
 	SUBQ(data, lo)
 	ADDQ(offset, lo)
@@ -153,21 +168,27 @@ func distributeForward32() {
 func distributeBackward32() {
 	TEXT("distributeBackward32", NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
 
+	// Load inputs.
 	data := Load(Param("data"), GP64())
 	scratch := Load(Param("scratch"), GP64())
 	limit := Load(Param("limit"), GP64())
 	loIndex := Load(Param("lo"), GP64())
 	hiIndex := Load(Param("hi"), GP64())
 	pivotIndex := Load(Param("pivot"), GP64())
+
+	// Convert indices to offsets (shift left by 5 == multiply by 32).
 	SHLQ(Imm(5), limit)
 	SHLQ(Imm(5), loIndex)
 	SHLQ(Imm(5), hiIndex)
 	SHLQ(Imm(5), pivotIndex)
+
+	// Prepare read/cmp pointers.
 	lo := GP64()
 	hi := GP64()
 	LEAQ(Mem{Base: data, Index: loIndex, Scale: 1}, lo)
 	LEAQ(Mem{Base: data, Index: hiIndex, Scale: 1}, hi)
 
+	// Load the pivot item.
 	pivot := YMM()
 	VMOVDQU(Mem{Base: data, Index: pivotIndex, Scale: 1}, pivot)
 
@@ -176,9 +197,12 @@ func distributeBackward32() {
 	XORQ(offset, offset)
 	XORQ(isLess, isLess)
 
-	Label("loop")
 	CMPQ(hi, lo)
 	JBE(LabelRef("done"))
+
+	Label("loop")
+
+	// Compare the item with the pivot.
 	next := YMM()
 	VMOVDQU(Mem{Base: hi}, next)
 	lte := YMM()
@@ -199,21 +223,24 @@ func distributeBackward32() {
 	CMPL(eqMask, lteMask)
 	SETEQ(isLess.As8())
 	ANDB(hasUnequalByte, isLess.As8())
-	XORB(Imm(1), isLess.As8())
 
+	// Conditionally write to either the end of the data slice, or
+	// beginning of the scratch slice.
 	dst := GP64()
 	MOVQ(scratch, dst)
-	CMOVQNE(hi, dst)
+	CMOVQEQ(hi, dst)
 	VMOVDQU(next, Mem{Base: dst, Index: offset, Scale: 1})
-	XORQ(Imm(1), isLess)
 	SHLQ(Imm(5), isLess)
 	ADDQ(isLess, offset)
 	SUBQ(Imm(32), hi)
 
+	// Loop while we have more input, and enough room in the scratch slice.
+	CMPQ(hi, lo)
+	JBE(LabelRef("done"))
 	CMPQ(offset, limit)
-	JE(LabelRef("done"))
-	JMP(LabelRef("loop"))
+	JNE(LabelRef("loop"))
 
+	// Return the number of items written to the data slice.
 	Label("done")
 	SUBQ(data, hi)
 	ADDQ(offset, hi)

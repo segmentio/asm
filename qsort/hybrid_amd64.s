@@ -61,14 +61,13 @@ TEXT ·distributeForward32(SB), NOSPLIT, $0-56
 	SHLQ    $0x05, DI
 	LEAQ    (AX)(BX*1), BX
 	LEAQ    (AX)(SI*1), SI
-	LEAQ    -32(CX)(DX*1), DX
+	LEAQ    -32(CX)(DX*1), CX
 	VMOVDQU (AX)(DI*1), Y0
 	XORQ    DI, DI
 	XORQ    R8, R8
+	NEGQ    DX
 
 loop:
-	CMPQ      BX, SI
-	JA        done
 	VMOVDQU   (BX), Y1
 	VPMINUB   Y1, Y0, Y2
 	VPCMPEQB  Y1, Y0, Y3
@@ -85,15 +84,15 @@ loop:
 	ANDB      R11, R8
 	XORB      $0x01, R8
 	MOVQ      BX, R9
-	CMOVQNE   DX, R9
+	CMOVQNE   CX, R9
 	VMOVDQU   Y1, (R9)(DI*1)
 	SHLQ      $0x05, R8
 	SUBQ      R8, DI
 	ADDQ      $0x20, BX
-	LEAQ      32(DX)(DI*1), R9
-	CMPQ      R9, CX
-	JBE       done
-	JMP       loop
+	CMPQ      BX, SI
+	JA        done
+	CMPQ      DI, DX
+	JNE       loop
 
 done:
 	SUBQ AX, BX
@@ -122,10 +121,10 @@ TEXT ·distributeBackward32(SB), NOSPLIT, $0-56
 	VMOVDQU (AX)(DI*1), Y0
 	XORQ    DI, DI
 	XORQ    R8, R8
+	CMPQ    SI, BX
+	JBE     done
 
 loop:
-	CMPQ      SI, BX
-	JBE       done
 	VMOVDQU   (SI), Y1
 	VPMINUB   Y1, Y0, Y2
 	VPCMPEQB  Y1, Y0, Y3
@@ -140,17 +139,16 @@ loop:
 	CMPL      R9, R10
 	SETEQ     R8
 	ANDB      R11, R8
-	XORB      $0x01, R8
 	MOVQ      CX, R9
-	CMOVQNE   SI, R9
+	CMOVQEQ   SI, R9
 	VMOVDQU   Y1, (R9)(DI*1)
-	XORQ      $0x01, R8
 	SHLQ      $0x05, R8
 	ADDQ      R8, DI
 	SUBQ      $0x20, SI
+	CMPQ      SI, BX
+	JBE       done
 	CMPQ      DI, DX
-	JE        done
-	JMP       loop
+	JNE       loop
 
 done:
 	SUBQ AX, SI
