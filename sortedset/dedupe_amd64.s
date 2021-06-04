@@ -186,7 +186,7 @@ done:
 	RET
 
 // func dedupe32(b []byte) int
-// Requires: CMOV, SSE2, SSE4.1
+// Requires: AVX, AVX2, CMOV, SSE2, SSE4.1
 TEXT ·dedupe32(SB), NOSPLIT, $0-32
 	MOVQ b_base+0(FP), AX
 	MOVQ b_len+8(FP), CX
@@ -200,6 +200,10 @@ init:
 	MOVQ AX, BX
 	ADDQ $0x20, DX
 	SUBQ $0x20, CX
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS  avx2
+
+tail:
 	CMPQ CX, $0x00
 	JLE  done
 
@@ -229,3 +233,42 @@ done:
 	SUBQ AX, BX
 	MOVQ BX, ret+24(FP)
 	RET
+
+avx2:
+	XORQ SI, SI
+	LEAQ dedupe32_blend_mask<>+0(SB), DI
+	CMPQ CX, $0x00000020
+	JL   avx2_tail16
+
+avx2_loop32:
+	VMOVDQU   (DX), Y0
+	VMOVDQU   (BX), Y1
+	VPCMPEQQ  Y0, Y1, Y2
+	VMOVMSKPD Y2, SI
+	INCQ      SI
+	SHRQ      $0x04, SI
+	NOTQ      SI
+	ANDQ      $0x01, SI
+	SHLQ      $0x05, SI
+	VMOVDQU   (DI)(SI*1), Y2
+	VBLENDVPD Y2, Y1, Y0, Y1
+	VMOVDQU   Y1, (BX)(SI*1)
+	ADDQ      SI, BX
+	ADDQ      $0x00000020, DX
+	SUBQ      $0x00000020, CX
+	CMPQ      CX, $0x00000020
+	JGE       avx2_loop32
+
+avx2_tail16:
+	VZEROUPPER
+	JMP tail
+
+DATA dedupe32_blend_mask<>+0(SB)/8, $0xffffffffffffffff
+DATA dedupe32_blend_mask<>+8(SB)/8, $0xffffffffffffffff
+DATA dedupe32_blend_mask<>+16(SB)/8, $0xffffffffffffffff
+DATA dedupe32_blend_mask<>+24(SB)/8, $0xffffffffffffffff
+DATA dedupe32_blend_mask<>+32(SB)/8, $0x0000000000000000
+DATA dedupe32_blend_mask<>+40(SB)/8, $0x0000000000000000
+DATA dedupe32_blend_mask<>+48(SB)/8, $0x0000000000000000
+DATA dedupe32_blend_mask<>+56(SB)/8, $0x0000000000000000
+GLOBL dedupe32_blend_mask<>(SB), RODATA|NOPTR, $64

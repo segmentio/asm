@@ -4,10 +4,12 @@ package main
 
 import (
 	"fmt"
+	"math/bits"
 
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
+	. "github.com/segmentio/asm/build/internal/asm"
 	. "github.com/segmentio/asm/build/internal/x86"
 	"github.com/segmentio/asm/cpu"
 )
@@ -29,6 +31,8 @@ type dedupe interface {
 
 type dedupeAVX2 interface {
 	dedupe
+	vmask() Mem
+	vcopy(shuff Mem, tmp, src, dst VecVirtual, off GPVirtual)
 }
 
 type dedupe1 struct{}
@@ -54,6 +58,7 @@ func (dedupe8) copy(r, w, x GPVirtual) { generateDedupeX86(MOVQ, CMPQ, GP64, r, 
 type dedupe16 struct{}
 
 func (dedupe16) size() int { return 16 }
+
 func (dedupe16) copy(r, w, x GPVirtual) {
 	a, b := XMM(), XMM()
 	MOVOU(Mem{Base: r}, a)
@@ -69,6 +74,7 @@ func (dedupe16) copy(r, w, x GPVirtual) {
 type dedupe32 struct{}
 
 func (dedupe32) size() int { return 32 }
+
 func (dedupe32) copy(r, w, x GPVirtual) {
 	a, b, c, d := XMM(), XMM(), XMM(), XMM()
 	MOVOU(Mem{Base: r}, a)
@@ -85,6 +91,52 @@ func (dedupe32) copy(r, w, x GPVirtual) {
 	CMOVQNE(x, w)
 	MOVOU(a, Mem{Base: w})
 	MOVOU(b, Mem{Base: w}.Offset(16))
+}
+
+func (dedupe32) vmask() Mem {
+	return ConstBytes("dedupe32_blend_mask", []byte{
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	})
+}
+
+func (dedupe32) vcopy(shuff Mem, tmp, src, dst VecVirtual, off GPVirtual) {
+	VPCMPEQQ(src, dst, tmp)
+	// This gives a bitmask with these possible values:
+	// * 0b0000
+	// * 0b0001
+	// * ...
+	// * 0b1111
+	//
+	// We only care about the last case because it indicates that the full 32
+	// bytes are equal.
+	//
+	// We want to divide by 15, which will either produce a result of 0 or 1.
+	// Rather than dividing, we add 1 and shift right by 4.
+	VMOVMSKPD(tmp, off.As32())
+	INCQ(off)
+	SHRQ(Imm(4), off)
+	// The off register now has the value 0 or 1, the former indicates that
+	// items were not equal (advance), the latter that they were. We flip the
+	// bit so 1 indicate that we want to eventually increment the write pointer.
+	NOTQ(off)
+	ANDQ(Imm(1), off)
+	// There are two 32 bytes blend masks collocated in the global variable,
+	// the offset is off*32, so we shift left by 5 to determine the offset,
+	// which also turns out to be the number of bytes that we copy so off
+	// contains the number of bytes to increment by.
+	SHLQ(Imm(5), off)
+	// Pick the part of the mask that corresponds to either a copy or a no-op,
+	// depending on whether the source and destination would be the same or not.
+	VMOVDQU(shuff.Idx(off, 1), tmp)
+	VBLENDVPD(tmp, dst, src, dst)
 }
 
 func generateDedupe(dedupe dedupe) {
@@ -106,7 +158,7 @@ func generateDedupe(dedupe dedupe) {
 	ADDQ(Imm(uint64(size)), r)
 	SUBQ(Imm(uint64(size)), n)
 
-	if _, ok := dedupe.(dedupeAVX2); ok && false {
+	if _, ok := dedupe.(dedupeAVX2); ok {
 		JumpIfFeature("avx2", cpu.AVX2)
 	}
 
@@ -130,61 +182,65 @@ func generateDedupe(dedupe dedupe) {
 	Store(w, ReturnIndex(0))
 	RET()
 
-	/*
-		if avx, ok := dedupe.(dedupeAVX2); ok {
-				const avxChunk = 256
-				const avxLanes = avxChunk / 32
-				Label("avx2")
-				r := GP64()
-				MOVQ(n, r)
-				SUBQ(Imm(uint64(size)), r)
-				CMPQ(r, U32(avxChunk))
-				JL(LabelRef(fmt.Sprintf("avx2_tail%d", avxChunk/2)))
+	if avx, ok := dedupe.(dedupeAVX2); ok {
+		const avxChunk = 32
+		const avxLanes = avxChunk / 32
+		Label("avx2")
 
-				masks := make([]GPVirtual, avxLanes)
-				for i := range masks {
-					masks[i] = GP64()
-					//XORQ(masks[i], masks[i])
-				}
-
-				regA := make([]VecVirtual, avxLanes)
-				regB := make([]VecVirtual, avxLanes)
-				for i := range regA {
-					regA[i] = YMM()
-					regB[i] = YMM()
-				}
-
-				Label(fmt.Sprintf("avx2_loop%d", avxChunk))
-				generateDedupeAVX2(p, i, j, regA, regB, masks, avx)
-				ADDQ(U32(uint64(avxChunk)), j)
-				SUBQ(U32(uint64(avxChunk)), r)
-				CMPQ(r, U32(avxChunk))
-				JGE(LabelRef(fmt.Sprintf("avx2_loop%d", avxChunk)))
-
-				for chunk := avxChunk / 2; chunk >= 32; chunk /= 2 {
-					Label(fmt.Sprintf("avx2_tail%d", chunk))
-					CMPQ(r, Imm(uint64(chunk)))
-					JL(LabelRef(fmt.Sprintf("avx2_tail%d", chunk/2)))
-					lanes := chunk / 32
-					generateDedupeAVX2(p, i, j, regA[:lanes], regB[:lanes], masks, avx)
-					ADDQ(Imm(uint64(chunk)), j)
-					SUBQ(Imm(uint64(chunk)), r)
-				}
-
-				Label("avx2_tail16")
-				if size < 16 {
-					CMPQ(r, Imm(uint64(16+size)))
-					JL(LabelRef("avx2_tail"))
-					generateDedupeAVX2(p, i, j, []VecVirtual{XMM()}, []VecVirtual{XMM()}, masks, avx)
-					ADDQ(Imm(16), p)
-					SUBQ(Imm(16), n)
-				}
-
-				Label("avx2_tail")
-				VZEROUPPER()
-				JMP(LabelRef("tail"))
+		off := make([]GPVirtual, avxLanes)
+		for i := range off {
+			off[i] = GP64()
+			XORQ(off[i], off[i])
 		}
-	*/
+
+		src := make([]VecVirtual, avxLanes)
+		dst := make([]VecVirtual, avxLanes)
+		tmp := make([]VecVirtual, avxLanes)
+		for i := range src {
+			src[i] = YMM()
+			dst[i] = YMM()
+			tmp[i] = YMM()
+		}
+
+		shuff := GP64()
+		LEAQ(avx.vmask(), shuff)
+
+		CMPQ(n, U32(avxChunk))
+		JL(LabelRef(fmt.Sprintf("avx2_tail%d", avxChunk/2)))
+
+		Label(fmt.Sprintf("avx2_loop%d", avxChunk))
+		generateDedupeAVX2(r, w, shuff, tmp, src, dst, off, avx)
+		ADDQ(U32(uint64(avxChunk)), r)
+		SUBQ(U32(uint64(avxChunk)), n)
+		CMPQ(n, U32(avxChunk))
+		JGE(LabelRef(fmt.Sprintf("avx2_loop%d", avxChunk)))
+
+		for chunk := avxChunk / 2; chunk >= 32; chunk /= 2 {
+			Label(fmt.Sprintf("avx2_tail%d", chunk))
+			CMPQ(n, Imm(uint64(chunk)))
+			JL(LabelRef(fmt.Sprintf("avx2_tail%d", chunk/2)))
+			lanes := chunk / 32
+			generateDedupeAVX2(r, w, shuff, tmp[:lanes], src[:lanes], dst[:lanes], off[:lanes], avx)
+			ADDQ(Imm(uint64(chunk)), r)
+			SUBQ(Imm(uint64(chunk)), n)
+		}
+
+		Label("avx2_tail16")
+		if size < 16 {
+			CMPQ(n, Imm(uint64(16+size)))
+			JL(LabelRef("avx2_tail"))
+			tmp := []VecVirtual{XMM()}
+			src := []VecVirtual{XMM()}
+			dst := []VecVirtual{XMM()}
+			generateDedupeAVX2(r, w, shuff, tmp, src, dst, off[:1], avx)
+			ADDQ(Imm(16), r)
+			SUBQ(Imm(16), n)
+		}
+
+		Label("avx2_tail")
+		VZEROUPPER()
+		JMP(LabelRef("tail"))
+	}
 }
 
 func generateDedupeX86(mov func(Op, Op), cmp func(Op, Op), reg func() GPVirtual, r, w, x GPVirtual) {
@@ -195,20 +251,41 @@ func generateDedupeX86(mov func(Op, Op), cmp func(Op, Op), reg func() GPVirtual,
 	mov(tmp, Mem{Base: w})
 }
 
-func generateDedupeAVX2(p, i, j Register, regA, regB []VecVirtual, masks []GPVirtual, dedupe dedupeAVX2) {
-	//size := dedupe.size()
-
-	//for off, reg := range regA {
-	//VMOVDQU(Mem{Base: p}.Idx(i, 1).Offset(off*32), reg)
-	//}
-
-	for off, reg := range regB {
-		VMOVDQU(Mem{Base: p}.Idx(j, 1).Offset(off*32), reg)
+func generateDedupeAVX2(r, w, shuff GPVirtual, tmp, src, dst []VecVirtual, off []GPVirtual, dedupe dedupeAVX2) {
+	for i, reg := range src {
+		VMOVDQU(Mem{Base: r}.Offset(i*32), reg)
 	}
-
-	for off, reg := range regB {
-		VMOVDQU(reg, Mem{Base: p}.Idx(i, 1).Offset(off*32))
+	for i, reg := range dst {
+		VMOVDQU(Mem{Base: w}.Offset(i*32), reg)
 	}
+	for i := range src {
+		dedupe.vcopy(Mem{Base: shuff}, tmp[i], src[i], dst[i], off[i])
+	}
+	for i := range dst {
+		VMOVDQU(dst[i], Mem{Base: w}.Idx(off[i], 1))
+		ADDQ(off[i], w)
+	}
+}
 
-	ADDQ(U32(uint64(32*len(regB))), i)
+func shift(size int) int {
+	return bits.TrailingZeros(uint(size))
+}
+
+func divideAndConquerSum(regs []GPVirtual) GPVirtual {
+	switch len(regs) {
+	case 1:
+		return regs[0]
+
+	case 2:
+		r0, r1 := regs[0], regs[1]
+		ADDQ(r1, r0)
+		return r0
+
+	default:
+		i := len(regs) / 2
+		r0 := divideAndConquerSum(regs[:i])
+		r1 := divideAndConquerSum(regs[i:])
+		ADDQ(r1, r0)
+		return r0
+	}
 }
