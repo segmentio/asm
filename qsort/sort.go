@@ -25,11 +25,9 @@ func Sort(data []byte, size int, swap func(int, int)) {
 
 	// If no indirect swapping is required, try to use the hybrid partitioning scheme from
 	// https://blog.reverberate.org/2020/05/29/hoares-rebuttal-bubble-sorts-comeback.html
-	if swap == nil {
-		if size == 32 && cpu.X86.Has(cpu.AVX2) {
-			hybridQuicksort(data, size)
-			return
-		}
+	if swap == nil && (size == 16 || size == 32) && cpu.X86.Has(cpu.AVX2) {
+		hybridQuicksort(data, size)
+		return
 	}
 
 	// Byte swap each qword prior to sorting. Doing a single pass here, and

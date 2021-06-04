@@ -7,3 +7,9 @@ func insertionsort32(data *byte, lo int, hi int)
 func distributeForward32(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 
 func distributeBackward32(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+
+func insertionsort16(data *byte, lo int, hi int)
+
+func distributeForward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+
+func distributeBackward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int

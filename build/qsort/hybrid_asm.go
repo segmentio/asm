@@ -3,26 +3,40 @@
 package main
 
 import (
+	"fmt"
+	"math"
+
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
+	. "github.com/mmcloughlin/avo/reg"
 )
 
 func main() {
-	insertionsort32()
-	distributeForward32()
-	distributeBackward32()
+	insertionsort(32, YMM)
+	distributeForward(32, YMM)
+	distributeBackward(32, YMM)
+
+	insertionsort(16, XMM)
+	distributeForward(16, XMM)
+	distributeBackward(16, XMM)
 
 	Generate()
 }
 
-func insertionsort32() {
-	TEXT("insertionsort32", NOSPLIT, "func(data *byte, lo, hi int)")
+func shiftForSize(size uint64) uint64 {
+	return uint64(math.Log2(float64(size)))
+}
+
+func insertionsort(size uint64, register func() VecVirtual) {
+	TEXT(fmt.Sprintf("insertionsort%d", size), NOSPLIT, "func(data *byte, lo, hi int)")
+
+	shift := shiftForSize(size)
 
 	data := Load(Param("data"), GP64())
 	loIndex := Load(Param("lo"), GP64())
 	hiIndex := Load(Param("hi"), GP64())
-	SHLQ(Imm(5), loIndex)
-	SHLQ(Imm(5), hiIndex)
+	SHLQ(Imm(shift), loIndex)
+	SHLQ(Imm(shift), hiIndex)
 	lo := GP64()
 	hi := GP64()
 	LEAQ(Mem{Base: data, Index: loIndex, Scale: 1}, lo)
@@ -32,20 +46,20 @@ func insertionsort32() {
 	MOVQ(lo, i)
 
 	Label("outer")
-	ADDQ(Imm(32), i)
+	ADDQ(Imm(size), i)
 	CMPQ(i, hi)
 	JA(LabelRef("done"))
-	item := YMM()
+	item := register()
 	VMOVDQU(Mem{Base: i}, item)
 	j := GP64()
 	MOVQ(i, j)
 
 	Label("inner")
-	prev := YMM()
-	VMOVDQU(Mem{Base: j, Disp: -32}, prev)
+	prev := register()
+	VMOVDQU(Mem{Base: j, Disp: -int(size)}, prev)
 
-	lte := YMM()
-	eq := YMM()
+	lte := register()
+	eq := register()
 	VPMINUB(item, prev, lte)
 	VPCMPEQB(item, prev, eq)
 	VPCMPEQB(item, lte, lte)
@@ -53,7 +67,7 @@ func insertionsort32() {
 	lteMask := GP32()
 	VPMOVMSKB(lte, lteMask)
 	VPMOVMSKB(eq, eqMask)
-	XORL(U32(0xFFFFFFFF), eqMask)
+	XORL(U32(1<<size-1), eqMask)
 	JZ(LabelRef("outer"))
 	ANDL(eqMask, lteMask)
 	BSFL(eqMask, eqMask)
@@ -62,19 +76,23 @@ func insertionsort32() {
 	JNE(LabelRef("outer"))
 
 	VMOVDQU(prev, Mem{Base: j})
-	VMOVDQU(item, Mem{Base: j, Disp: -32})
-	SUBQ(Imm(32), j)
+	VMOVDQU(item, Mem{Base: j, Disp: -int(size)})
+	SUBQ(Imm(size), j)
 	CMPQ(j, lo)
 	JA(LabelRef("inner"))
 	JMP(LabelRef("outer"))
 
 	Label("done")
-	VZEROUPPER()
+	if size > 16 {
+		VZEROUPPER()
+	}
 	RET()
 }
 
-func distributeForward32() {
-	TEXT("distributeForward32", NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
+func distributeForward(size uint64, register func() VecVirtual) {
+	TEXT(fmt.Sprintf("distributeForward%d", size), NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
+
+	shift := shiftForSize(size)
 
 	// Load inputs.
 	data := Load(Param("data"), GP64())
@@ -84,11 +102,11 @@ func distributeForward32() {
 	hiIndex := Load(Param("hi"), GP64())
 	pivotIndex := Load(Param("pivot"), GP64())
 
-	// Convert indices to offsets (shift left by 5 == multiply by 32).
-	SHLQ(Imm(5), limit)
-	SHLQ(Imm(5), loIndex)
-	SHLQ(Imm(5), hiIndex)
-	SHLQ(Imm(5), pivotIndex)
+	// Convert indices to byte offsets.
+	SHLQ(Imm(shift), limit)
+	SHLQ(Imm(shift), loIndex)
+	SHLQ(Imm(shift), hiIndex)
+	SHLQ(Imm(shift), pivotIndex)
 
 	// Prepare read/cmp pointers.
 	lo := GP64()
@@ -96,10 +114,10 @@ func distributeForward32() {
 	tail := GP64()
 	LEAQ(Mem{Base: data, Index: loIndex, Scale: 1}, lo)
 	LEAQ(Mem{Base: data, Index: hiIndex, Scale: 1}, hi)
-	LEAQ(Mem{Base: scratch, Index: limit, Scale: 1, Disp: -32}, tail)
+	LEAQ(Mem{Base: scratch, Index: limit, Scale: 1, Disp: -int(size)}, tail)
 
 	// Load the pivot item.
-	pivot := YMM()
+	pivot := register()
 	VMOVDQU(Mem{Base: data, Index: pivotIndex, Scale: 1}, pivot)
 
 	offset := GP64()
@@ -114,12 +132,12 @@ func distributeForward32() {
 	Label("loop")
 
 	// Load the next item.
-	next := YMM()
+	next := register()
 	VMOVDQU(Mem{Base: lo}, next)
 
 	// Compare the item with the pivot.
-	lte := YMM()
-	eq := YMM()
+	lte := register()
+	eq := register()
 	VPMINUB(next, pivot, lte)
 	VPCMPEQB(next, pivot, eq)
 	VPCMPEQB(next, lte, lte)
@@ -127,7 +145,7 @@ func distributeForward32() {
 	lteMask := GP32()
 	VPMOVMSKB(lte, lteMask)
 	VPMOVMSKB(eq, eqMask)
-	XORL(U32(0xFFFFFFFF), eqMask)
+	XORL(U32(1<<size-1), eqMask)
 	ANDL(eqMask, lteMask)
 	hasUnequalByte := GP8()
 	SETNE(hasUnequalByte)
@@ -144,9 +162,9 @@ func distributeForward32() {
 	MOVQ(lo, dst)
 	CMOVQNE(tail, dst)
 	VMOVDQU(next, Mem{Base: dst, Index: offset, Scale: 1})
-	SHLQ(Imm(5), isLess)
+	SHLQ(Imm(shift), isLess)
 	SUBQ(isLess, offset)
-	ADDQ(Imm(32), lo)
+	ADDQ(Imm(size), lo)
 
 	// Loop while we have more input, and enough room in the scratch slice.
 	CMPQ(lo, hi)
@@ -158,15 +176,19 @@ func distributeForward32() {
 	Label("done")
 	SUBQ(data, lo)
 	ADDQ(offset, lo)
-	SHRQ(Imm(5), lo)
+	SHRQ(Imm(shift), lo)
 	DECQ(lo)
 	Store(lo, ReturnIndex(0))
-	VZEROUPPER()
+	if size > 16 {
+		VZEROUPPER()
+	}
 	RET()
 }
 
-func distributeBackward32() {
-	TEXT("distributeBackward32", NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
+func distributeBackward(size uint64, register func() VecVirtual) {
+	TEXT(fmt.Sprintf("distributeBackward%d", size), NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
+
+	shift := shiftForSize(size)
 
 	// Load inputs.
 	data := Load(Param("data"), GP64())
@@ -176,11 +198,11 @@ func distributeBackward32() {
 	hiIndex := Load(Param("hi"), GP64())
 	pivotIndex := Load(Param("pivot"), GP64())
 
-	// Convert indices to offsets (shift left by 5 == multiply by 32).
-	SHLQ(Imm(5), limit)
-	SHLQ(Imm(5), loIndex)
-	SHLQ(Imm(5), hiIndex)
-	SHLQ(Imm(5), pivotIndex)
+	// Convert indices to byte offsets.
+	SHLQ(Imm(shift), limit)
+	SHLQ(Imm(shift), loIndex)
+	SHLQ(Imm(shift), hiIndex)
+	SHLQ(Imm(shift), pivotIndex)
 
 	// Prepare read/cmp pointers.
 	lo := GP64()
@@ -189,7 +211,7 @@ func distributeBackward32() {
 	LEAQ(Mem{Base: data, Index: hiIndex, Scale: 1}, hi)
 
 	// Load the pivot item.
-	pivot := YMM()
+	pivot := register()
 	VMOVDQU(Mem{Base: data, Index: pivotIndex, Scale: 1}, pivot)
 
 	offset := GP64()
@@ -202,11 +224,13 @@ func distributeBackward32() {
 
 	Label("loop")
 
-	// Compare the item with the pivot.
-	next := YMM()
+	// Load the next item.
+	next := register()
 	VMOVDQU(Mem{Base: hi}, next)
-	lte := YMM()
-	eq := YMM()
+
+	// Compare the item with the pivot.
+	lte := register()
+	eq := register()
 	VPMINUB(next, pivot, lte)
 	VPCMPEQB(next, pivot, eq)
 	VPCMPEQB(next, lte, lte)
@@ -214,7 +238,7 @@ func distributeBackward32() {
 	lteMask := GP32()
 	VPMOVMSKB(lte, lteMask)
 	VPMOVMSKB(eq, eqMask)
-	XORL(U32(0xFFFFFFFF), eqMask)
+	XORL(U32(1<<size-1), eqMask)
 	ANDL(eqMask, lteMask)
 	hasUnequalByte := GP8()
 	SETNE(hasUnequalByte)
@@ -230,9 +254,9 @@ func distributeBackward32() {
 	MOVQ(scratch, dst)
 	CMOVQEQ(hi, dst)
 	VMOVDQU(next, Mem{Base: dst, Index: offset, Scale: 1})
-	SHLQ(Imm(5), isLess)
+	SHLQ(Imm(shift), isLess)
 	ADDQ(isLess, offset)
-	SUBQ(Imm(32), hi)
+	SUBQ(Imm(size), hi)
 
 	// Loop while we have more input, and enough room in the scratch slice.
 	CMPQ(hi, lo)
@@ -244,8 +268,10 @@ func distributeBackward32() {
 	Label("done")
 	SUBQ(data, hi)
 	ADDQ(offset, hi)
-	SHRQ(Imm(5), hi)
+	SHRQ(Imm(shift), hi)
 	Store(hi, ReturnIndex(0))
-	VZEROUPPER()
+	if size > 16 {
+		VZEROUPPER()
+	}
 	RET()
 }

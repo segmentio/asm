@@ -157,3 +157,156 @@ done:
 	MOVQ SI, ret+48(FP)
 	VZEROUPPER
 	RET
+
+// func insertionsort16(data *byte, lo int, hi int)
+// Requires: AVX
+TEXT ·insertionsort16(SB), NOSPLIT, $0-24
+	MOVQ data+0(FP), AX
+	MOVQ lo+8(FP), CX
+	MOVQ hi+16(FP), DX
+	SHLQ $0x04, CX
+	SHLQ $0x04, DX
+	LEAQ (AX)(CX*1), CX
+	LEAQ (AX)(DX*1), AX
+	MOVQ CX, DX
+
+outer:
+	ADDQ    $0x10, DX
+	CMPQ    DX, AX
+	JA      done
+	VMOVDQU (DX), X0
+	MOVQ    DX, BX
+
+inner:
+	VMOVDQU   -16(BX), X1
+	VPMINUB   X0, X1, X2
+	VPCMPEQB  X0, X1, X3
+	VPCMPEQB  X0, X2, X2
+	VPMOVMSKB X2, DI
+	VPMOVMSKB X3, SI
+	XORL      $0x0000ffff, SI
+	JZ        outer
+	ANDL      SI, DI
+	BSFL      SI, SI
+	BSFL      DI, DI
+	CMPL      SI, DI
+	JNE       outer
+	VMOVDQU   X1, (BX)
+	VMOVDQU   X0, -16(BX)
+	SUBQ      $0x10, BX
+	CMPQ      BX, CX
+	JA        inner
+	JMP       outer
+
+done:
+	RET
+
+// func distributeForward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+// Requires: AVX, CMOV
+TEXT ·distributeForward16(SB), NOSPLIT, $0-56
+	MOVQ    data+0(FP), AX
+	MOVQ    scratch+8(FP), CX
+	MOVQ    limit+16(FP), DX
+	MOVQ    lo+24(FP), BX
+	MOVQ    hi+32(FP), SI
+	MOVQ    pivot+40(FP), DI
+	SHLQ    $0x04, DX
+	SHLQ    $0x04, BX
+	SHLQ    $0x04, SI
+	SHLQ    $0x04, DI
+	LEAQ    (AX)(BX*1), BX
+	LEAQ    (AX)(SI*1), SI
+	LEAQ    -16(CX)(DX*1), CX
+	VMOVDQU (AX)(DI*1), X0
+	XORQ    DI, DI
+	XORQ    R8, R8
+	NEGQ    DX
+
+loop:
+	VMOVDQU   (BX), X1
+	VPMINUB   X1, X0, X2
+	VPCMPEQB  X1, X0, X3
+	VPCMPEQB  X1, X2, X2
+	VPMOVMSKB X2, R10
+	VPMOVMSKB X3, R9
+	XORL      $0x0000ffff, R9
+	ANDL      R9, R10
+	SETNE     R11
+	BSFL      R9, R9
+	BSFL      R10, R10
+	CMPL      R9, R10
+	SETEQ     R8
+	ANDB      R11, R8
+	XORB      $0x01, R8
+	MOVQ      BX, R9
+	CMOVQNE   CX, R9
+	VMOVDQU   X1, (R9)(DI*1)
+	SHLQ      $0x04, R8
+	SUBQ      R8, DI
+	ADDQ      $0x10, BX
+	CMPQ      BX, SI
+	JA        done
+	CMPQ      DI, DX
+	JNE       loop
+
+done:
+	SUBQ AX, BX
+	ADDQ DI, BX
+	SHRQ $0x04, BX
+	DECQ BX
+	MOVQ BX, ret+48(FP)
+	RET
+
+// func distributeBackward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+// Requires: AVX, CMOV
+TEXT ·distributeBackward16(SB), NOSPLIT, $0-56
+	MOVQ    data+0(FP), AX
+	MOVQ    scratch+8(FP), CX
+	MOVQ    limit+16(FP), DX
+	MOVQ    lo+24(FP), BX
+	MOVQ    hi+32(FP), SI
+	MOVQ    pivot+40(FP), DI
+	SHLQ    $0x04, DX
+	SHLQ    $0x04, BX
+	SHLQ    $0x04, SI
+	SHLQ    $0x04, DI
+	LEAQ    (AX)(BX*1), BX
+	LEAQ    (AX)(SI*1), SI
+	VMOVDQU (AX)(DI*1), X0
+	XORQ    DI, DI
+	XORQ    R8, R8
+	CMPQ    SI, BX
+	JBE     done
+
+loop:
+	VMOVDQU   (SI), X1
+	VPMINUB   X1, X0, X2
+	VPCMPEQB  X1, X0, X3
+	VPCMPEQB  X1, X2, X2
+	VPMOVMSKB X2, R10
+	VPMOVMSKB X3, R9
+	XORL      $0x0000ffff, R9
+	ANDL      R9, R10
+	SETNE     R11
+	BSFL      R9, R9
+	BSFL      R10, R10
+	CMPL      R9, R10
+	SETEQ     R8
+	ANDB      R11, R8
+	MOVQ      CX, R9
+	CMOVQEQ   SI, R9
+	VMOVDQU   X1, (R9)(DI*1)
+	SHLQ      $0x04, R8
+	ADDQ      R8, DI
+	SUBQ      $0x10, SI
+	CMPQ      SI, BX
+	JBE       done
+	CMPQ      DI, DX
+	JNE       loop
+
+done:
+	SUBQ AX, SI
+	ADDQ DI, SI
+	SHRQ $0x04, SI
+	MOVQ SI, ret+48(FP)
+	RET
