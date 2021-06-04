@@ -18,8 +18,7 @@ generic:
 	MOVQ    DX, SI
 	ADDQ    $0x01, SI
 	MOVB    (AX)(DX*1), DI
-	MOVB    (AX)(BX*1), R8
-	CMPB    DI, R8
+	CMPB    DI, (AX)(BX*1)
 	CMOVQNE SI, DX
 	MOVB    (AX)(BX*1), SI
 	MOVB    SI, (AX)(DX*1)
@@ -50,8 +49,7 @@ generic:
 	MOVQ    DX, SI
 	ADDQ    $0x02, SI
 	MOVW    (AX)(DX*1), DI
-	MOVW    (AX)(BX*1), R8
-	CMPW    DI, R8
+	CMPW    DI, (AX)(BX*1)
 	CMOVQNE SI, DX
 	MOVW    (AX)(BX*1), SI
 	MOVW    SI, (AX)(DX*1)
@@ -82,8 +80,7 @@ generic:
 	MOVQ    DX, SI
 	ADDQ    $0x04, SI
 	MOVL    (AX)(DX*1), DI
-	MOVL    (AX)(BX*1), R8
-	CMPL    DI, R8
+	CMPL    DI, (AX)(BX*1)
 	CMOVQNE SI, DX
 	MOVL    (AX)(BX*1), SI
 	MOVL    SI, (AX)(DX*1)
@@ -114,8 +111,7 @@ generic:
 	MOVQ    DX, SI
 	ADDQ    $0x08, SI
 	MOVQ    (AX)(DX*1), DI
-	MOVQ    (AX)(BX*1), R8
-	CMPQ    DI, R8
+	CMPQ    DI, (AX)(BX*1)
 	CMOVQNE SI, DX
 	MOVQ    (AX)(BX*1), SI
 	MOVQ    SI, (AX)(DX*1)

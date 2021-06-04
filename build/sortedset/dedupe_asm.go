@@ -235,10 +235,9 @@ func generateDedupe(code dedupe) {
 }
 
 func generateDedupeTest(mov func(Op, Op), cmp func(Op, Op), reg func() GPVirtual, a, b Mem) {
-	r0, r1 := reg(), reg()
-	mov(a, r0)
-	mov(b, r1)
-	cmp(r0, r1)
+	r := reg()
+	mov(a, r)
+	cmp(r, b)
 }
 
 func generateDedupeMove(mov func(Op, Op), reg func() GPVirtual, a, b Mem) {
