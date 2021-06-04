@@ -1,5 +1,7 @@
 package qsort
 
+import "unsafe"
+
 // The amount of stack space reserved for the scratch buffer.
 const stackSize = 1024
 
@@ -14,10 +16,14 @@ func hybridQuicksort(data []byte, size int) {
 	}
 }
 
+func ptr(slice []uint256) *byte {
+	return (*byte)(unsafe.Pointer(&slice[0]))
+}
+
 func hybridQuicksort32(data, tmp []uint256, lo, hi int) {
 	for lo < hi {
 		if hi-lo < smallCutoff/32*2 {
-			insertionsort32(data, lo, hi)
+			insertionsort32(ptr(data), lo, hi)
 			return
 		}
 		mid := lo + (hi-lo)/2
@@ -36,7 +42,7 @@ func hybridQuicksort32(data, tmp []uint256, lo, hi int) {
 func hybridPartition32(data, tmp []uint256, lo, hi int) int {
 	pivot := lo
 	lo++
-	p := distributeForward32(data, tmp, lo, hi, pivot)
+	p := distributeForward32(ptr(data), ptr(tmp), len(tmp), lo, hi, pivot)
 	if hi-p <= len(tmp) {
 		copy(data[p+1:], tmp[len(tmp)-hi+p:])
 		data[pivot], data[p] = data[p], data[pivot]
@@ -44,12 +50,12 @@ func hybridPartition32(data, tmp []uint256, lo, hi int) int {
 	}
 	lo = p + len(tmp)
 	for {
-		hi = distributeBackward32(data, data[lo-len(tmp)+1:lo+1], lo, hi, pivot) - len(tmp)
+		hi = distributeBackward32(ptr(data), ptr(data[lo+1-len(tmp):]), len(tmp), lo, hi, pivot) - len(tmp)
 		if hi < lo {
 			p = hi
 			break
 		}
-		lo = distributeForward32(data, data[hi+1:hi+1+len(tmp)], lo, hi, pivot) + len(tmp)
+		lo = distributeForward32(ptr(data), ptr(data[hi+1:]), len(tmp), lo, hi, pivot) + len(tmp)
 		if hi < lo {
 			p = lo - len(tmp)
 			break
@@ -59,9 +65,3 @@ func hybridPartition32(data, tmp []uint256, lo, hi int) int {
 	data[pivot], data[p] = data[p], data[pivot]
 	return p
 }
-
-func insertionsort32(data []uint256, lo, hi int) int
-
-func distributeForward32(data, tmp []uint256, lo, hi, pivot int) int
-
-func distributeBackward32(data, tmp []uint256, lo, hi, pivot int) int
