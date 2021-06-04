@@ -12,13 +12,15 @@ import (
 )
 
 func main() {
-	insertionsort(32, YMM)
-	distributeForward(32, YMM)
-	distributeBackward(32, YMM)
-
+	medianOfThree(16, XMM)
 	insertionsort(16, XMM)
 	distributeForward(16, XMM)
 	distributeBackward(16, XMM)
+
+	medianOfThree(32, YMM)
+	insertionsort(32, YMM)
+	distributeForward(32, YMM)
+	distributeBackward(32, YMM)
 
 	Generate()
 }
@@ -27,7 +29,10 @@ func shiftForSize(size uint64) uint64 {
 	return uint64(math.Log2(float64(size)))
 }
 
-func less(size uint64, register func() VecVirtual, a, b, ones Op, withMasks func (neMask, ltMask Op)) {
+// less compares two vector registers. If they're equal, the handleEqual()
+// function is called after ZF is set (ZF=1 when equal). After less()
+// returns, CF is set if a<b.
+func less(size uint64, register func() VecVirtual, a, b, ones Op, handleEqual func ()) {
 	ne := register()
 	lt := register()
 	VPCMPEQB(a, b, ne)
@@ -39,10 +44,69 @@ func less(size uint64, register func() VecVirtual, a, b, ones Op, withMasks func
 	ltMask := GP32()
 	VPMOVMSKB(ne, neMask)
 	VPMOVMSKB(lt, ltMask)
-	withMasks(neMask, ltMask)
+	if handleEqual != nil {
+		TESTL(neMask, neMask)
+		handleEqual()
+	}
 	unequalByteIndex := GP32()
 	BSFL(neMask, unequalByteIndex)
 	BTSL(unequalByteIndex, ltMask)
+}
+
+func medianOfThree(size uint64, register func() VecVirtual) {
+	TEXT(fmt.Sprintf("medianOfThree%d", size), NOSPLIT, "func(data *byte, a, b, c int)")
+
+	shift := shiftForSize(size)
+
+	data := Load(Param("data"), GP64())
+	aPtr := Load(Param("a"), GP64())
+	bPtr := Load(Param("b"), GP64())
+	cPtr := Load(Param("c"), GP64())
+	SHLQ(Imm(shift), aPtr)
+	SHLQ(Imm(shift), bPtr)
+	SHLQ(Imm(shift), cPtr)
+	ADDQ(data, aPtr)
+	ADDQ(data, bPtr)
+	ADDQ(data, cPtr)
+
+	a := register()
+	b := register()
+	c := register()
+	tmp := register()
+	VMOVDQU(Mem{Base: aPtr}, a)
+	VMOVDQU(Mem{Base: bPtr}, b)
+	VMOVDQU(Mem{Base: cPtr}, c)
+
+	ones := register()
+	VPCMPEQB(ones, ones, ones)
+
+	// Swap a/b if b<a.
+	less(size, register, b, a, ones, nil)
+	JCC(LabelRef("part2"))
+	VMOVDQU(b, Mem{Base: aPtr})
+	VMOVDQU(a, Mem{Base: bPtr})
+	VMOVDQA(b, tmp)
+	VMOVDQA(a, b)
+	VMOVDQA(tmp, a)
+
+	// Swap b/c if c<b.
+	Label("part2")
+	less(size, register, c, b, ones, nil)
+	JCC(LabelRef("done"))
+	VMOVDQU(c, Mem{Base: bPtr})
+	VMOVDQU(b, Mem{Base: cPtr})
+
+	// Check a/c are in order.
+	less(size, register, c, a, ones, nil)
+	JCC(LabelRef("done"))
+	VMOVDQU(c, Mem{Base: aPtr})
+	VMOVDQU(a, Mem{Base: bPtr})
+
+	Label("done")
+	if size > 16 {
+		VZEROUPPER()
+	}
+	RET()
 }
 
 func insertionsort(size uint64, register func() VecVirtual) {
@@ -79,8 +143,7 @@ func insertionsort(size uint64, register func() VecVirtual) {
 	prev := register()
 	VMOVDQU(Mem{Base: j, Disp: -int(size)}, prev)
 
-	less(size, register, item, prev, ones, func (neMask, ltMask Op) {
-		TESTL(neMask, neMask)
+	less(size, register, item, prev, ones, func () {
 		JZ(LabelRef("outer"))
 	})
 	JCC(LabelRef("outer"))
@@ -150,8 +213,7 @@ func distributeForward(size uint64, register func() VecVirtual) {
 
 	// Compare the item with the pivot.
 	hasUnequalByte := GP8()
-	less(size, register, next, pivot, ones, func (neMask, ltMask Op) {
-		TESTL(neMask, neMask)
+	less(size, register, next, pivot, ones, func () {
 		SETNE(hasUnequalByte)
 	})
 	SETCS(isLess.As8())
@@ -235,8 +297,7 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 
 	// Compare the item with the pivot.
 	hasUnequalByte := GP8()
-	less(size, register, next, pivot, ones, func (neMask, ltMask Op) {
-		TESTL(neMask, neMask)
+	less(size, register, next, pivot, ones, func () {
 		SETNE(hasUnequalByte)
 	})
 	SETCS(isLess.As8())

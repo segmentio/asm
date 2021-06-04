@@ -33,7 +33,7 @@ func hybridQuicksort16(data, tmp []uint128, lo, hi int) {
 			return
 		}
 		mid := lo + (hi-lo)/2
-		medianOfThree128(data, mid, lo, hi, nil)
+		medianOfThree16(ptr16(data), mid, lo, hi)
 		p := hybridPartition16(data, tmp, lo, hi)
 		if p-lo < hi-p {
 			hybridQuicksort16(data, tmp, lo, p-1)
@@ -52,7 +52,7 @@ func hybridQuicksort32(data, tmp []uint256, lo, hi int) {
 			return
 		}
 		mid := lo + (hi-lo)/2
-		medianOfThree256(data, mid, lo, hi, nil)
+		medianOfThree32(ptr32(data), mid, lo, hi)
 		p := hybridPartition32(data, tmp, lo, hi)
 		if p-lo < hi-p {
 			hybridQuicksort32(data, tmp, lo, p-1)
