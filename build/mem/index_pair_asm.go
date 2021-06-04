@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
@@ -130,7 +131,7 @@ func generateIndexPair(code indexPair) {
 	MOVQ(p, base)
 
 	CMPQ(n, Imm(0))
-	JLE(LabelRef("done"))
+	JLE(LabelRef("fail"))
 	SUBQ(Imm(uint64(size)), n)
 
 	if _, ok := code.(indexPairAVX2); ok {
@@ -149,12 +150,14 @@ func generateIndexPair(code indexPair) {
 	CMPQ(n, Imm(0))
 	JA(LabelRef("generic"))
 
+	index := p
 	Label("fail")
-	ADDQ(Imm(uint64(size)), p)
+	MOVQ(U64(math.MaxUint64), index)
+	Store(index, ReturnIndex(0))
+	RET()
 
 	Label("done")
 	// The delta between the base pointer and how far we advanced is the index of the pair.
-	index := p
 	SUBQ(base, index)
 	Store(index, ReturnIndex(0))
 	RET()

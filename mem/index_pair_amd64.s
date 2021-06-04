@@ -9,7 +9,7 @@ TEXT ·indexPair1(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	MOVQ AX, DX
 	CMPQ CX, $0x00
-	JLE  done
+	JLE  fail
 	SUBQ $0x01, CX
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
@@ -29,7 +29,9 @@ generic:
 	JA   generic
 
 fail:
-	ADDQ $0x01, AX
+	MOVQ $0xffffffffffffffff, AX
+	MOVQ AX, ret+24(FP)
+	RET
 
 done:
 	SUBQ DX, AX
@@ -261,7 +263,7 @@ TEXT ·indexPair2(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	MOVQ AX, DX
 	CMPQ CX, $0x00
-	JLE  done
+	JLE  fail
 	SUBQ $0x02, CX
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
@@ -281,7 +283,9 @@ generic:
 	JA   generic
 
 fail:
-	ADDQ $0x02, AX
+	MOVQ $0xffffffffffffffff, AX
+	MOVQ AX, ret+24(FP)
+	RET
 
 done:
 	SUBQ DX, AX
@@ -513,7 +517,7 @@ TEXT ·indexPair4(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	MOVQ AX, DX
 	CMPQ CX, $0x00
-	JLE  done
+	JLE  fail
 	SUBQ $0x04, CX
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
@@ -533,7 +537,9 @@ generic:
 	JA   generic
 
 fail:
-	ADDQ $0x04, AX
+	MOVQ $0xffffffffffffffff, AX
+	MOVQ AX, ret+24(FP)
+	RET
 
 done:
 	SUBQ DX, AX
@@ -765,7 +771,7 @@ TEXT ·indexPair8(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	MOVQ AX, DX
 	CMPQ CX, $0x00
-	JLE  done
+	JLE  fail
 	SUBQ $0x08, CX
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
@@ -785,7 +791,9 @@ generic:
 	JA   generic
 
 fail:
-	ADDQ $0x08, AX
+	MOVQ $0xffffffffffffffff, AX
+	MOVQ AX, ret+24(FP)
+	RET
 
 done:
 	SUBQ DX, AX
@@ -1017,7 +1025,7 @@ TEXT ·indexPair16(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	MOVQ AX, DX
 	CMPQ CX, $0x00
-	JLE  done
+	JLE  fail
 	SUBQ $0x10, CX
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
@@ -1039,7 +1047,9 @@ generic:
 	JA       generic
 
 fail:
-	ADDQ $0x10, AX
+	MOVQ $0xffffffffffffffff, AX
+	MOVQ AX, ret+24(FP)
+	RET
 
 done:
 	SUBQ DX, AX
@@ -1289,7 +1299,7 @@ TEXT ·indexPair32(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	MOVQ AX, DX
 	CMPQ CX, $0x00
-	JLE  done
+	JLE  fail
 	SUBQ $0x20, CX
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
@@ -1316,7 +1326,9 @@ generic:
 	JA       generic
 
 fail:
-	ADDQ $0x20, AX
+	MOVQ $0xffffffffffffffff, AX
+	MOVQ AX, ret+24(FP)
+	RET
 
 done:
 	SUBQ DX, AX

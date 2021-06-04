@@ -30,19 +30,19 @@ func TestIndexPair(t *testing.T) {
 				{
 					scenario: "empty input",
 					input:    nil,
-					index:    0,
+					index:    -1,
 				},
 
 				{
 					scenario: "input with only one item",
 					input:    makeInput(1),
-					index:    1,
+					index:    -1,
 				},
 
 				{
 					scenario: "input with two non-equal items",
 					input:    makeInput(1, 2),
-					index:    2,
+					index:    -1,
 				},
 
 				{
@@ -138,6 +138,10 @@ func TestIndexPair(t *testing.T) {
 					i := test.index * size
 					j := IndexPair(test.input, size)
 
+					if i < 0 {
+						i = -1
+					}
+
 					if i != j {
 						t.Errorf("expected=%d found=%d", i, j)
 					}
@@ -163,7 +167,7 @@ func BenchmarkIndexPair(b *testing.B) {
 
 			for i := 0; i < b.N; i++ {
 				n := IndexPair(input, size)
-				if n != len(input) {
+				if n != -1 {
 					b.Fatal("unexpected result:", n)
 				}
 			}
