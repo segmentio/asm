@@ -28,7 +28,7 @@ func TestSort32(t *testing.T) {
 
 func testSort(t *testing.T, size int) {
 	const (
-		iterations = 128
+		iterations = 10000
 		minCount   = 0
 		maxCount   = 1000
 	)
@@ -39,6 +39,12 @@ func testSort(t *testing.T, size int) {
 		count := randint(minCount, maxCount)
 		slice := buf[:count*size]
 		prng.Read(slice)
+
+		// Test with/without duplicates.
+		repeat := randint(0, count)
+		for j := repeat; repeat > 0 && j < len(slice) && j+repeat < len(slice); j += repeat {
+			copy(slice[j:j+repeat], slice[:repeat])
+		}
 
 		expect := make([]byte, len(slice))
 		copy(expect, slice)

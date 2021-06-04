@@ -13,8 +13,8 @@ func quicksort192(data []uint192, lo, hi int, swap func(int, int)) {
 			return
 		}
 		mid := lo + (hi-lo)/2
-		pivot := medianOfThree192(data, mid, lo, hi, swap)
-		p := hoarePartition192(data, lo, hi, pivot, swap)
+		medianOfThree192(data, mid, lo, hi, swap)
+		p := hoarePartition192(data, lo, hi, swap)
 		if p-lo < hi-p { // recurse on the smaller side
 			quicksort192(data, lo, p-1, swap)
 			lo = p + 1
@@ -34,10 +34,7 @@ func insertionsort192(data []uint192, lo, hi int, swap func(int, int)) {
 	}
 	for ; i <= hi; i++ {
 		item := data[i]
-		for j := i; j > 0 && j > lo; j-- {
-			if prev := data[j-1]; !less192(item, prev) {
-				break
-			}
+		for j := i; j > 0 && j > lo && less192(item, data[j-1]); j-- {
 			swap192(data, j, j-1, swap)
 		}
 	}
@@ -56,21 +53,17 @@ func medianOfThree192(data []uint192, a, b, c int, swap func(int, int)) int {
 	return b
 }
 
-func hoarePartition192(data []uint192, lo, hi, p int, swap func(int, int)) int {
+func hoarePartition192(data []uint192, lo, hi int, swap func(int, int)) int {
 	// Extra superfluous checks have been added to prevent the compiler
 	// from adding bounds checks in the inner loops.
 	i, j := lo+1, hi
 	pivot := data[lo]
 	for i >= 0 && hi < len(data) && j < len(data) {
-		for ; i <= hi; i++ {
-			if item := data[i]; !less192(item, pivot) {
-				break
-			}
+		for i <= hi && less192(data[i], pivot) {
+			i++
 		}
-		for ; j >= lo; j-- {
-			if item := data[j]; !less192(pivot, item) {
-				break
-			}
+		for j > lo && less192(pivot, data[j]) {
+			j--
 		}
 		if i >= j {
 			break
