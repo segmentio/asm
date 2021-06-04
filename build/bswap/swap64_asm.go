@@ -28,7 +28,7 @@ func main() {
 	JumpUnlessFeature("x86_loop", cpu.AVX2)
 
 	// Prepare the shuffle mask.
-	shuffleMaskData := Declare("shuffle_mask", []byte{
+	shuffleMaskData := ConstBytes("shuffle_mask", []byte{
 		7, 6, 5, 4, 3, 2, 1, 0,
 		15, 14, 13, 12, 11, 10, 9, 8,
 		7, 6, 5, 4, 3, 2, 1, 0,
