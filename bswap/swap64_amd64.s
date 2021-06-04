@@ -65,36 +65,8 @@ slow_loop:
 done:
 	RET
 
-DATA shuffle_mask<>+0(SB)/1, $0x07
-DATA shuffle_mask<>+1(SB)/1, $0x06
-DATA shuffle_mask<>+2(SB)/1, $0x05
-DATA shuffle_mask<>+3(SB)/1, $0x04
-DATA shuffle_mask<>+4(SB)/1, $0x03
-DATA shuffle_mask<>+5(SB)/1, $0x02
-DATA shuffle_mask<>+6(SB)/1, $0x01
-DATA shuffle_mask<>+7(SB)/1, $0x00
-DATA shuffle_mask<>+8(SB)/1, $0x0f
-DATA shuffle_mask<>+9(SB)/1, $0x0e
-DATA shuffle_mask<>+10(SB)/1, $0x0d
-DATA shuffle_mask<>+11(SB)/1, $0x0c
-DATA shuffle_mask<>+12(SB)/1, $0x0b
-DATA shuffle_mask<>+13(SB)/1, $0x0a
-DATA shuffle_mask<>+14(SB)/1, $0x09
-DATA shuffle_mask<>+15(SB)/1, $0x08
-DATA shuffle_mask<>+16(SB)/1, $0x07
-DATA shuffle_mask<>+17(SB)/1, $0x06
-DATA shuffle_mask<>+18(SB)/1, $0x05
-DATA shuffle_mask<>+19(SB)/1, $0x04
-DATA shuffle_mask<>+20(SB)/1, $0x03
-DATA shuffle_mask<>+21(SB)/1, $0x02
-DATA shuffle_mask<>+22(SB)/1, $0x01
-DATA shuffle_mask<>+23(SB)/1, $0x00
-DATA shuffle_mask<>+24(SB)/1, $0x0f
-DATA shuffle_mask<>+25(SB)/1, $0x0e
-DATA shuffle_mask<>+26(SB)/1, $0x0d
-DATA shuffle_mask<>+27(SB)/1, $0x0c
-DATA shuffle_mask<>+28(SB)/1, $0x0b
-DATA shuffle_mask<>+29(SB)/1, $0x0a
-DATA shuffle_mask<>+30(SB)/1, $0x09
-DATA shuffle_mask<>+31(SB)/1, $0x08
+DATA shuffle_mask<>+0(SB)/8, $0x0001020304050607
+DATA shuffle_mask<>+8(SB)/8, $0x08090a0b0c0d0e0f
+DATA shuffle_mask<>+16(SB)/8, $0x0001020304050607
+DATA shuffle_mask<>+24(SB)/8, $0x08090a0b0c0d0e0f
 GLOBL shuffle_mask<>(SB), RODATA|NOPTR, $32

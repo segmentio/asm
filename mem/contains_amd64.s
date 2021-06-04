@@ -57,7 +57,7 @@ tail:
 	CMPQ         CX, $0x40
 	JBE          handle33to64
 	BTL          $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCS          generic
+	JCC          generic
 	VZEROUPPER
 	VPBROADCASTQ X0, Y0
 	CMPQ         CX, $0x00000100
