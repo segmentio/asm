@@ -11,8 +11,8 @@ func quicksort64(data []uint64, lo, hi int, swap func(int, int)) {
 			return
 		}
 		mid := lo + (hi-lo)/2
-		pivot := medianOfThree64(data, mid, lo, hi, swap)
-		p := hoarePartition64(data, lo, hi, pivot, swap)
+		medianOfThree64(data, mid, lo, hi, swap)
+		p := hoarePartition64(data, lo, hi, swap)
 		if p-lo < hi-p { // recurse on the smaller side
 			quicksort64(data, lo, p-1, swap)
 			lo = p + 1
@@ -54,7 +54,7 @@ func medianOfThree64(data []uint64, a, b, c int, swap func(int, int)) int {
 	return b
 }
 
-func hoarePartition64(data []uint64, lo, hi, p int, swap func(int, int)) int {
+func hoarePartition64(data []uint64, lo, hi int, swap func(int, int)) int {
 	// Extra superfluous checks have been added to prevent the compiler
 	// from adding bounds checks in the inner loops.
 	i, j := lo+1, hi

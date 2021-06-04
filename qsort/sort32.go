@@ -14,8 +14,8 @@ func quicksort256(data []uint256, lo, hi int, swap func(int, int)) {
 			return
 		}
 		mid := lo + (hi-lo)/2
-		pivot := medianOfThree256(data, mid, lo, hi, swap)
-		p := hoarePartition256(data, lo, hi, pivot, swap)
+		medianOfThree256(data, mid, lo, hi, swap)
+		p := hoarePartition256(data, lo, hi, swap)
 		if p-lo < hi-p { // recurse on the smaller side
 			quicksort256(data, lo, p-1, swap)
 			lo = p + 1
@@ -57,7 +57,7 @@ func medianOfThree256(data []uint256, a, b, c int, swap func(int, int)) int {
 	return b
 }
 
-func hoarePartition256(data []uint256, lo, hi, p int, swap func(int, int)) int {
+func hoarePartition256(data []uint256, lo, hi int, swap func(int, int)) int {
 	// Extra superfluous checks have been added to prevent the compiler
 	// from adding bounds checks in the inner loops.
 	i, j := lo+1, hi
