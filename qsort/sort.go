@@ -4,12 +4,13 @@ import (
 	"sort"
 
 	"github.com/segmentio/asm/bswap"
+	"github.com/segmentio/asm/cpu"
 )
 
 // Sort sorts contiguous big-endian chunks of bytes of a fixed size.
 // Sorting specializations are available for sizes of 8, 16, 24 and 32 bytes.
 func Sort(data []byte, size int, swap func(int, int)) {
-	if size <= 0 || len(data) % size != 0 {
+	if size <= 0 || len(data)%size != 0 {
 		panic("input length is not a multiple of element size")
 	}
 	if len(data)/size <= 1 {
@@ -17,9 +18,18 @@ func Sort(data []byte, size int, swap func(int, int)) {
 	}
 
 	// No specialization available. Use the generic, slower sorting routine.
-	if size % 8 != 0 || size > 32 {
+	if size%8 != 0 || size > 32 {
 		sort.Sort(newGeneric(data, size, swap))
 		return
+	}
+
+	// If no indirect swapping is required, try to use the hybrid partitioning scheme from
+	// https://blog.reverberate.org/2020/05/29/hoares-rebuttal-bubble-sorts-comeback.html
+	if swap == nil {
+		if size == 32 && cpu.X86.Has(cpu.AVX2) {
+			hybridQuicksort(data, size)
+			return
+		}
 	}
 
 	// Byte swap each qword prior to sorting. Doing a single pass here, and
