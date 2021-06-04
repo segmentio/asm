@@ -59,40 +59,6 @@ next:
 done:
     RET
 
-TEXT ·medianOfThree32(SB),NOSPLIT,$0-48
-    MOVQ        data_base+0(FP), DX
-    MOVQ        a+24(FP), AX
-    MOVQ        b+32(FP), BX
-    MOVQ        c+40(FP), CX
-    SHLQ        $5, AX
-    SHLQ        $5, BX
-    SHLQ        $5, CX
-    ADDQ        DX, AX
-    ADDQ        DX, BX
-    ADDQ        DX, CX
-    VMOVDQU     (AX), Y0
-    VMOVDQU     (BX), Y1
-    VMOVDQU     (CX), Y2
-    LESS32      (Y1, Y0, R8) // B < A?
-    JNE         part2
-    VMOVDQU     Y1, (AX)
-    VMOVDQU     Y0, (BX)
-    VMOVDQA     Y1, Y3
-    VMOVDQA     Y0, Y1
-    VMOVDQA     Y3, Y0
-part2:
-    LESS32      (Y2, Y1, R8) // C < B?
-    JNE         done
-    VMOVDQU     Y2, (BX)
-    VMOVDQU     Y1, (CX)
-    LESS32      (Y2, Y0, R8) // B < A?
-    JNE         done
-    VMOVDQU     Y2, (AX)
-    VMOVDQU     Y0, (BX)
-done:
-    VZEROUPPER
-    RET
-
 TEXT ·distributeForward32(SB),NOSPLIT,$0-72
     MOVQ        data_base+0(FP), AX
     MOVQ        tmp_base+24(FP), R12

@@ -21,7 +21,7 @@ func hybridQuicksort32(data, tmp []uint256, lo, hi int) {
 			return
 		}
 		mid := lo + (hi-lo)/2
-		medianOfThree32(data, mid, lo, hi)
+		medianOfThree256(data, mid, lo, hi, nil)
 		p := hybridPartition32(data, tmp, lo, hi)
 		if p-lo < hi-p {
 			hybridQuicksort32(data, tmp, lo, p-1)
@@ -61,8 +61,6 @@ func hybridPartition32(data, tmp []uint256, lo, hi int) int {
 }
 
 func insertionsort32(data []uint256, lo, hi int) int
-
-func medianOfThree32(data []uint256, a, b, c int) int
 
 func distributeForward32(data, tmp []uint256, lo, hi, pivot int) int
 
