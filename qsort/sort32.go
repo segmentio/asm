@@ -35,10 +35,7 @@ func insertionsort256(data []uint256, lo, hi int, swap func(int, int)) {
 	}
 	for ; i <= hi; i++ {
 		item := data[i]
-		for j := i; j > 0 && j > lo; j-- {
-			if prev := data[j-1]; !less256(item, prev) {
-				break
-			}
+		for j := i; j > 0 && j > lo && less256(item, data[j-1]); j-- {
 			swap256(data, j, j-1, swap)
 		}
 	}
@@ -63,15 +60,11 @@ func hoarePartition256(data []uint256, lo, hi int, swap func(int, int)) int {
 	i, j := lo+1, hi
 	pivot := data[lo]
 	for i >= 0 && hi < len(data) && j < len(data) {
-		for ; i <= hi; i++ {
-			if item := data[i]; !less256(item, pivot) {
-				break
-			}
+		for i <= hi && less256(data[i], pivot) {
+			i++
 		}
-		for ; j > lo; j-- {
-			if item := data[j]; !less256(pivot, item) {
-				break
-			}
+		for j > lo && less256(pivot, data[j]) {
+			j--
 		}
 		if i >= j {
 			break
