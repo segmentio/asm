@@ -66,7 +66,7 @@ func hoarePartition128(data []uint128, lo, hi int, swap func(int, int)) int {
 				break
 			}
 		}
-		for ; j >= lo; j-- {
+		for ; j > lo; j-- {
 			if item := data[j]; !less128(pivot, item) {
 				break
 			}

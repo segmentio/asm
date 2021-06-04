@@ -65,7 +65,7 @@ func hoarePartition64(data []uint64, lo, hi int, swap func(int, int)) int {
 				break
 			}
 		}
-		for ; j >= lo; j-- {
+		for ; j > lo; j-- {
 			if item := data[j]; pivot >= item {
 				break
 			}

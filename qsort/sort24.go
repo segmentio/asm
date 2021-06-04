@@ -67,7 +67,7 @@ func hoarePartition192(data []uint192, lo, hi int, swap func(int, int)) int {
 				break
 			}
 		}
-		for ; j >= lo; j-- {
+		for ; j > lo; j-- {
 			if item := data[j]; !less192(pivot, item) {
 				break
 			}

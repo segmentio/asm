@@ -68,7 +68,7 @@ func hoarePartition256(data []uint256, lo, hi int, swap func(int, int)) int {
 				break
 			}
 		}
-		for ; j >= lo; j-- {
+		for ; j > lo; j-- {
 			if item := data[j]; !less256(pivot, item) {
 				break
 			}
