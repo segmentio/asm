@@ -1,4 +1,4 @@
-// build !amd64
+// +build !amd64
 
 package main
 
@@ -42,6 +42,13 @@ func insertionsort(size uint64, register func() VecVirtual) {
 	LEAQ(Mem{Base: data, Index: loIndex, Scale: 1}, lo)
 	LEAQ(Mem{Base: data, Index: hiIndex, Scale: 1}, hi)
 
+	eqMask := GP32()
+	lteMask := GP32()
+	if size < 32 {
+		XORL(eqMask, eqMask)
+		XORL(lteMask, lteMask)
+	}
+
 	i := GP64()
 	MOVQ(lo, i)
 
@@ -63,8 +70,6 @@ func insertionsort(size uint64, register func() VecVirtual) {
 	VPMINUB(item, prev, lte)
 	VPCMPEQB(item, prev, eq)
 	VPCMPEQB(item, lte, lte)
-	eqMask := GP32()
-	lteMask := GP32()
 	VPMOVMSKB(lte, lteMask)
 	VPMOVMSKB(eq, eqMask)
 	XORL(U32(1<<size-1), eqMask)
@@ -125,6 +130,13 @@ func distributeForward(size uint64, register func() VecVirtual) {
 	XORQ(offset, offset)
 	XORQ(isLess, isLess)
 
+	eqMask := GP32()
+	lteMask := GP32()
+	if size < 32 {
+		XORL(eqMask, eqMask)
+		XORL(lteMask, lteMask)
+	}
+
 	// We'll be keeping a negative offset. Negate the limit so we can
 	// compare the two in the loop.
 	NEGQ(limit)
@@ -141,8 +153,6 @@ func distributeForward(size uint64, register func() VecVirtual) {
 	VPMINUB(next, pivot, lte)
 	VPCMPEQB(next, pivot, eq)
 	VPCMPEQB(next, lte, lte)
-	eqMask := GP32()
-	lteMask := GP32()
 	VPMOVMSKB(lte, lteMask)
 	VPMOVMSKB(eq, eqMask)
 	XORL(U32(1<<size-1), eqMask)
@@ -219,6 +229,13 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 	XORQ(offset, offset)
 	XORQ(isLess, isLess)
 
+	eqMask := GP32()
+	lteMask := GP32()
+	if size < 32 {
+		XORL(eqMask, eqMask)
+		XORL(lteMask, lteMask)
+	}
+
 	CMPQ(hi, lo)
 	JBE(LabelRef("done"))
 
@@ -234,8 +251,6 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 	VPMINUB(next, pivot, lte)
 	VPCMPEQB(next, pivot, eq)
 	VPCMPEQB(next, lte, lte)
-	eqMask := GP32()
-	lteMask := GP32()
 	VPMOVMSKB(lte, lteMask)
 	VPMOVMSKB(eq, eqMask)
 	XORL(U32(1<<size-1), eqMask)

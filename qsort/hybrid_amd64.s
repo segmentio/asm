@@ -12,33 +12,33 @@ TEXT ·insertionsort32(SB), NOSPLIT, $0-24
 	SHLQ $0x05, DX
 	LEAQ (AX)(CX*1), CX
 	LEAQ (AX)(DX*1), AX
-	MOVQ CX, DX
+	MOVQ CX, SI
 
 outer:
-	ADDQ    $0x20, DX
-	CMPQ    DX, AX
+	ADDQ    $0x20, SI
+	CMPQ    SI, AX
 	JA      done
-	VMOVDQU (DX), Y0
-	MOVQ    DX, BX
+	VMOVDQU (SI), Y0
+	MOVQ    SI, DI
 
 inner:
-	VMOVDQU   -32(BX), Y1
+	VMOVDQU   -32(DI), Y1
 	VPMINUB   Y0, Y1, Y2
 	VPCMPEQB  Y0, Y1, Y3
 	VPCMPEQB  Y0, Y2, Y2
-	VPMOVMSKB Y2, DI
-	VPMOVMSKB Y3, SI
-	XORL      $0xffffffff, SI
+	VPMOVMSKB Y2, BX
+	VPMOVMSKB Y3, DX
+	XORL      $0xffffffff, DX
 	JZ        outer
-	ANDL      SI, DI
-	BSFL      SI, SI
-	BSFL      DI, DI
-	CMPL      SI, DI
+	ANDL      DX, BX
+	BSFL      DX, DX
+	BSFL      BX, BX
+	CMPL      DX, BX
 	JNE       outer
-	VMOVDQU   Y1, (BX)
-	VMOVDQU   Y0, -32(BX)
-	SUBQ      $0x20, BX
-	CMPQ      BX, CX
+	VMOVDQU   Y1, (DI)
+	VMOVDQU   Y0, -32(DI)
+	SUBQ      $0x20, DI
+	CMPQ      DI, CX
 	JA        inner
 	JMP       outer
 
@@ -168,33 +168,35 @@ TEXT ·insertionsort16(SB), NOSPLIT, $0-24
 	SHLQ $0x04, DX
 	LEAQ (AX)(CX*1), CX
 	LEAQ (AX)(DX*1), AX
-	MOVQ CX, DX
+	XORL DX, DX
+	XORL BX, BX
+	MOVQ CX, SI
 
 outer:
-	ADDQ    $0x10, DX
-	CMPQ    DX, AX
+	ADDQ    $0x10, SI
+	CMPQ    SI, AX
 	JA      done
-	VMOVDQU (DX), X0
-	MOVQ    DX, BX
+	VMOVDQU (SI), X0
+	MOVQ    SI, DI
 
 inner:
-	VMOVDQU   -16(BX), X1
+	VMOVDQU   -16(DI), X1
 	VPMINUB   X0, X1, X2
 	VPCMPEQB  X0, X1, X3
 	VPCMPEQB  X0, X2, X2
-	VPMOVMSKB X2, DI
-	VPMOVMSKB X3, SI
-	XORL      $0x0000ffff, SI
+	VPMOVMSKB X2, BX
+	VPMOVMSKB X3, DX
+	XORL      $0x0000ffff, DX
 	JZ        outer
-	ANDL      SI, DI
-	BSFL      SI, SI
-	BSFL      DI, DI
-	CMPL      SI, DI
+	ANDL      DX, BX
+	BSFL      DX, DX
+	BSFL      BX, BX
+	CMPL      DX, BX
 	JNE       outer
-	VMOVDQU   X1, (BX)
-	VMOVDQU   X0, -16(BX)
-	SUBQ      $0x10, BX
-	CMPQ      BX, CX
+	VMOVDQU   X1, (DI)
+	VMOVDQU   X0, -16(DI)
+	SUBQ      $0x10, DI
+	CMPQ      DI, CX
 	JA        inner
 	JMP       outer
 
@@ -220,6 +222,8 @@ TEXT ·distributeForward16(SB), NOSPLIT, $0-56
 	VMOVDQU (AX)(DI*1), X0
 	XORQ    DI, DI
 	XORQ    R8, R8
+	XORL    R9, R9
+	XORL    R10, R10
 	NEGQ    DX
 
 loop:
@@ -275,6 +279,8 @@ TEXT ·distributeBackward16(SB), NOSPLIT, $0-56
 	VMOVDQU (AX)(DI*1), X0
 	XORQ    DI, DI
 	XORQ    R8, R8
+	XORL    R9, R9
+	XORL    R10, R10
 	CMPQ    SI, BX
 	JBE     done
 
