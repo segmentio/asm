@@ -251,7 +251,7 @@ avx2_loop32:
 	ANDQ      $0x01, SI
 	SHLQ      $0x05, SI
 	VMOVDQU   (DI)(SI*1), Y2
-	VBLENDVPD Y2, Y1, Y0, Y1
+	VBLENDVPD Y2, Y0, Y1, Y1
 	VMOVDQU   Y1, (BX)(SI*1)
 	ADDQ      SI, BX
 	ADDQ      $0x00000020, DX
@@ -263,12 +263,12 @@ avx2_tail16:
 	VZEROUPPER
 	JMP tail
 
-DATA dedupe32_blend_mask<>+0(SB)/8, $0xffffffffffffffff
-DATA dedupe32_blend_mask<>+8(SB)/8, $0xffffffffffffffff
-DATA dedupe32_blend_mask<>+16(SB)/8, $0xffffffffffffffff
-DATA dedupe32_blend_mask<>+24(SB)/8, $0xffffffffffffffff
-DATA dedupe32_blend_mask<>+32(SB)/8, $0x0000000000000000
-DATA dedupe32_blend_mask<>+40(SB)/8, $0x0000000000000000
-DATA dedupe32_blend_mask<>+48(SB)/8, $0x0000000000000000
-DATA dedupe32_blend_mask<>+56(SB)/8, $0x0000000000000000
+DATA dedupe32_blend_mask<>+0(SB)/8, $0x0000000000000000
+DATA dedupe32_blend_mask<>+8(SB)/8, $0x0000000000000000
+DATA dedupe32_blend_mask<>+16(SB)/8, $0x0000000000000000
+DATA dedupe32_blend_mask<>+24(SB)/8, $0x0000000000000000
+DATA dedupe32_blend_mask<>+32(SB)/8, $0xffffffffffffffff
+DATA dedupe32_blend_mask<>+40(SB)/8, $0xffffffffffffffff
+DATA dedupe32_blend_mask<>+48(SB)/8, $0xffffffffffffffff
+DATA dedupe32_blend_mask<>+56(SB)/8, $0xffffffffffffffff
 GLOBL dedupe32_blend_mask<>(SB), RODATA|NOPTR, $64
