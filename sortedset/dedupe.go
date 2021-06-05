@@ -4,16 +4,17 @@ import (
 	"bytes"
 
 	"github.com/segmentio/asm/cpu"
+	"github.com/segmentio/asm/internal"
 )
 
 // Dedupe scans a slice containing contiguous chunks of a specific size,
 // and removes duplicates in place.
 func Dedupe(b []byte, size int) []byte {
-	if size <= 0 || len(b)%size != 0 {
-		panic("len(b) % size != 0")
-	}
 	if len(b) <= size {
 		return b
+	}
+	if size <= 0 || !internal.MultipleOf(size, len(b)) {
+		panic("len(b) % size != 0")
 	}
 
 	var pos int

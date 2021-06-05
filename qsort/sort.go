@@ -5,16 +5,17 @@ import (
 
 	"github.com/segmentio/asm/bswap"
 	"github.com/segmentio/asm/cpu"
+	"github.com/segmentio/asm/internal"
 )
 
 // Sort sorts contiguous big-endian chunks of bytes of a fixed size.
 // Sorting specializations are available for sizes of 8, 16, 24 and 32 bytes.
 func Sort(data []byte, size int, swap func(int, int)) {
-	if size <= 0 || len(data)%size != 0 {
-		panic("input length is not a multiple of element size")
-	}
-	if len(data)/size <= 1 {
+	if len(data) <= size {
 		return
+	}
+	if size <= 0 || !internal.MultipleOf(size, len(data)) {
+		panic("input length is not a multiple of element size")
 	}
 
 	// No specialization available. Use the generic, slower sorting routine.
