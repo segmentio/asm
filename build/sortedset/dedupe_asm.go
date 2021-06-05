@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"math/bits"
 
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
@@ -282,9 +281,18 @@ func generateDedupeAVX2(p, q, w GPVirtual, src, dst []VecVirtual, off []GPVirtua
 	for i := range src {
 		dedupe.vcopy(src[i], dst[i], off[i])
 	}
+
+	// Compute the cumulative offsets so we can use indexes relative to the
+	// write pointer, which allows the CPU to pipeline the writes to memory.
+	//
+	// There are still strong data dependencies between these instructions,
+	// but I'm not sure there is a great alternative. Moving the values to a
+	// vector register and using SIMD seems like a lost of heavy lifting for
+	// the limited number of registers we have.
 	for i := range off[1:] {
 		ADDQ(off[i], off[i+1])
 	}
+
 	for i := range dst {
 		if i == 0 {
 			VMOVDQU(dst[i], Mem{Base: w})
@@ -292,33 +300,11 @@ func generateDedupeAVX2(p, q, w GPVirtual, src, dst []VecVirtual, off []GPVirtua
 			VMOVDQU(dst[i], Mem{Base: w}.Idx(off[i-1], 1))
 		}
 	}
+
 	ADDQ(off[len(off)-1], w)
 }
 
 func move(mov func(Op, Op), tmp Register, src, dst GPVirtual) {
 	mov(Mem{Base: src}, tmp)
 	mov(tmp, Mem{Base: dst})
-}
-
-func shift(size int) int {
-	return bits.TrailingZeros(uint(size))
-}
-
-func divideAndConquerSum(regs []GPVirtual) GPVirtual {
-	switch len(regs) {
-	case 1:
-		return regs[0]
-
-	case 2:
-		r0, r1 := regs[0], regs[1]
-		ADDQ(r1, r0)
-		return r0
-
-	default:
-		i := len(regs) / 2
-		r0 := divideAndConquerSum(regs[:i])
-		r1 := divideAndConquerSum(regs[i:])
-		ADDQ(r1, r0)
-		return r0
-	}
 }
