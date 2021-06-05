@@ -282,16 +282,17 @@ func generateDedupeAVX2(p, q, w GPVirtual, src, dst []VecVirtual, off []GPVirtua
 	for i := range src {
 		dedupe.vcopy(src[i], dst[i], off[i])
 	}
-
-	// for i := range off {
-	// 	divideAndConquerSum(off[i:])
-	// }
-
-	for i := range dst {
-		//VMOVDQU(dst[i], Mem{Base: w}.Idx(off[i], 1))
-		VMOVDQU(dst[i], Mem{Base: w})
-		ADDQ(off[i], w)
+	for i := range off[1:] {
+		ADDQ(off[i], off[i+1])
 	}
+	for i := range dst {
+		if i == 0 {
+			VMOVDQU(dst[i], Mem{Base: w})
+		} else {
+			VMOVDQU(dst[i], Mem{Base: w}.Idx(off[i-1], 1))
+		}
+	}
+	ADDQ(off[len(off)-1], w)
 }
 
 func move(mov func(Op, Op), tmp Register, src, dst GPVirtual) {

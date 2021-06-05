@@ -87,6 +87,7 @@ func BenchmarkDedupe(b *testing.B) {
 				b.ResetTimer()
 
 				for i := 0; i < b.N; i++ {
+					//copy(buf, src)
 					_ = Dedupe(buf, src, size)
 				}
 			})

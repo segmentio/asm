@@ -356,21 +356,21 @@ avx2_loop256:
 	NOTQ      R14
 	ANDQ      $0x01, R14
 	SHLQ      $0x05, R14
+	ADDQ      DI, R8
+	ADDQ      R8, R9
+	ADDQ      R9, R10
+	ADDQ      R10, R11
+	ADDQ      R11, R12
+	ADDQ      R12, R13
+	ADDQ      R13, R14
 	VMOVDQU   Y1, (SI)
-	ADDQ      DI, SI
-	VMOVDQU   Y3, (SI)
-	ADDQ      R8, SI
-	VMOVDQU   Y5, (SI)
-	ADDQ      R9, SI
-	VMOVDQU   Y7, (SI)
-	ADDQ      R10, SI
-	VMOVDQU   Y9, (SI)
-	ADDQ      R11, SI
-	VMOVDQU   Y11, (SI)
-	ADDQ      R12, SI
-	VMOVDQU   Y13, (SI)
-	ADDQ      R13, SI
-	VMOVDQU   Y15, (SI)
+	VMOVDQU   Y3, (SI)(DI*1)
+	VMOVDQU   Y5, (SI)(R8*1)
+	VMOVDQU   Y7, (SI)(R9*1)
+	VMOVDQU   Y9, (SI)(R10*1)
+	VMOVDQU   Y11, (SI)(R11*1)
+	VMOVDQU   Y13, (SI)(R12*1)
+	VMOVDQU   Y15, (SI)(R13*1)
 	ADDQ      R14, SI
 	ADDQ      $0x00000100, BX
 	ADDQ      $0x00000100, DX
@@ -417,13 +417,13 @@ avx2_tail128:
 	NOTQ      R10
 	ANDQ      $0x01, R10
 	SHLQ      $0x05, R10
+	ADDQ      DI, R8
+	ADDQ      R8, R9
+	ADDQ      R9, R10
 	VMOVDQU   Y1, (SI)
-	ADDQ      DI, SI
-	VMOVDQU   Y3, (SI)
-	ADDQ      R8, SI
-	VMOVDQU   Y5, (SI)
-	ADDQ      R9, SI
-	VMOVDQU   Y7, (SI)
+	VMOVDQU   Y3, (SI)(DI*1)
+	VMOVDQU   Y5, (SI)(R8*1)
+	VMOVDQU   Y7, (SI)(R9*1)
 	ADDQ      R10, SI
 	ADDQ      $0x80, BX
 	ADDQ      $0x80, DX
@@ -450,9 +450,9 @@ avx2_tail64:
 	NOTQ      R8
 	ANDQ      $0x01, R8
 	SHLQ      $0x05, R8
+	ADDQ      DI, R8
 	VMOVDQU   Y1, (SI)
-	ADDQ      DI, SI
-	VMOVDQU   Y3, (SI)
+	VMOVDQU   Y3, (SI)(DI*1)
 	ADDQ      R8, SI
 	ADDQ      $0x40, BX
 	ADDQ      $0x40, DX

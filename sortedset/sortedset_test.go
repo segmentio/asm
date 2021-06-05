@@ -12,8 +12,9 @@ func assertArraysEqual(t *testing.T, expected, actual []byte, size int) {
 	t.Helper()
 
 	if !bytes.Equal(expected, actual) {
-		// TODO: diff
-		t.Logf("\nexpected:\n%s\nfound:\n%s", hex.Dump(expected), hex.Dump(actual))
+		t.Logf("\nexpected (%d):\n%s\nfound (%d):\n%s",
+			len(expected), hex.Dump(expected),
+			len(actual), hex.Dump(actual))
 		t.Fatal("arrays are not equal")
 	}
 }
