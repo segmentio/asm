@@ -2,14 +2,14 @@
 
 package sortedset
 
-func dedupe1(b []byte) int
+func dedupe1(dst []byte, src []byte) int
 
-func dedupe2(b []byte) int
+func dedupe2(dst []byte, src []byte) int
 
-func dedupe4(b []byte) int
+func dedupe4(dst []byte, src []byte) int
 
-func dedupe8(b []byte) int
+func dedupe8(dst []byte, src []byte) int
 
-func dedupe16(b []byte) int
+func dedupe16(dst []byte, src []byte) int
 
-func dedupe32(b []byte) int
+func dedupe32(dst []byte, src []byte) int

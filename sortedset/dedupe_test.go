@@ -46,7 +46,7 @@ func TestDedupe(t *testing.T) {
 			},
 		} {
 			t.Run(fmt.Sprintf("size %d, %s", size, test.name), func(t *testing.T) {
-				actual := Dedupe(test.b, size)
+				actual := Dedupe(nil, test.b, size)
 				assertArraysEqual(t, test.expect, actual, size)
 			})
 		}
@@ -64,7 +64,7 @@ func TestDedupe(t *testing.T) {
 				count := prng.Intn(maxCount)
 				for _, p := range repeatChances {
 					array, uniques := randomSortedArray(prng, size, count, p)
-					result := Dedupe(array, size)
+					result := Dedupe(nil, array, size)
 					assertArraysEqual(t, uniques, result, size)
 				}
 			}
@@ -80,15 +80,14 @@ func BenchmarkDedupe(b *testing.B) {
 
 				prng := rand.New(rand.NewSource(0))
 
-				array, _ := randomSortedArray(prng, size, bytes/size, p)
-				buf := make([]byte, len(array))
+				src, _ := randomSortedArray(prng, size, bytes/size, p)
+				buf := make([]byte, len(src))
 
 				b.SetBytes(bytes)
 				b.ResetTimer()
 
 				for i := 0; i < b.N; i++ {
-					//copy(buf, array)
-					Dedupe(buf, size)
+					_ = Dedupe(buf, src, size)
 				}
 			})
 		}

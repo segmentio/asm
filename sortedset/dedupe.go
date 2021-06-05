@@ -4,47 +4,62 @@ import (
 	"bytes"
 )
 
-// Dedupe scans a slice containing contiguous chunks of size n,
-// and removes duplicates in place.
-func Dedupe(b []byte, n int) []byte {
-	if len(b)%n != 0 {
+// Dedupe writes to dst the deduplicated sequence of items of the given size
+// read from src, returning the byte slice containing the result.
+//
+// If dst is too small, a new slice is allocated and returned instead.
+//
+// The source and destination slices may be the same to perform in-place
+// deduplication of the elements.
+//
+// The function panics if len(src) is not a multiple of the element size.
+func Dedupe(dst, src []byte, size int) []byte {
+	if len(src)%size != 0 {
 		panic("input length is not a multiple of the item size")
 	}
-	return b[:dedupe(b, n)]
+	return dedupe(dst, src, size)
 }
 
-func dedupe(b []byte, n int) int {
-	switch n {
+func dedupe(dst, src []byte, size int) []byte {
+	if len(dst) < len(src) {
+		dst = make([]byte, len(src))
+	}
+	var n int
+	switch size {
 	case 1:
-		return dedupe1(b)
+		n = dedupe1(dst, src)
 	case 2:
-		return dedupe2(b)
+		n = dedupe2(dst, src)
 	case 4:
-		return dedupe4(b)
+		n = dedupe4(dst, src)
 	case 8:
-		return dedupe8(b)
+		n = dedupe8(dst, src)
 	case 16:
-		return dedupe16(b)
+		n = dedupe16(dst, src)
 	case 32:
-		return dedupe32(b)
+		n = dedupe32(dst, src)
 	default:
-		return dedupeGeneric(b, n)
+		n = dedupeGeneric(dst, src, size)
 	}
+	return dst[:n]
 }
 
-func dedupeGeneric(b []byte, size int) int {
-	if len(b) <= size {
-		return len(b)
+func dedupeGeneric(dst, src []byte, size int) int {
+	if len(src) <= size {
+		return 0
 	}
-	pos := size
-	prev := b[:size]
-	for i := size; i < len(b); i += size {
-		item := b[i : i+size]
-		if !bytes.Equal(prev, item) {
-			copy(b[pos:], item)
-			pos += size
-			prev = item
+
+	i := size
+	j := size
+	copy(dst, src[:size])
+
+	for i < len(src) {
+		if !bytes.Equal(src[i-size:i], src[i:i+size]) {
+			copy(dst[j:], src[i:i+size])
+			j += size
 		}
+		i += size
 	}
-	return pos
+
+	return j
 }

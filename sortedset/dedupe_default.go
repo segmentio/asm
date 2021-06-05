@@ -2,26 +2,26 @@
 
 package sortedset
 
-func dedupe1(b []byte) int {
-	return dedupeGeneric(b, 1)
+func dedupe1(dst, src []byte) int {
+	return dedupeGeneric(dst, src, 1)
 }
 
-func dedupe2(b []byte) int {
-	return dedupeGeneric(b, 2)
+func dedupe2(dst, src []byte) int {
+	return dedupeGeneric(dst, src, 2)
 }
 
-func dedupe4(b []byte) int {
-	return dedupeGeneric(b, 4)
+func dedupe4(dst, src []byte) int {
+	return dedupeGeneric(dst, src, 4)
 }
 
-func dedupe8(b []byte) int {
-	return dedupeGeneric(b, 8)
+func dedupe8(dst, src []byte) int {
+	return dedupeGeneric(dst, src, 8)
 }
 
-func dedupe16(b []byte) int {
-	return dedupeGeneric(b, 16)
+func dedupe16(dst, src []byte) int {
+	return dedupeGeneric(dst, src, 16)
 }
 
-func dedupe32(b []byte) int {
-	return dedupeGeneric(b, 32)
+func dedupe32(dst, src []byte) int {
+	return dedupeGeneric(dst, src, 32)
 }
