@@ -13,7 +13,7 @@ func Dedupe(b []byte, size int) []byte {
 	if len(b) <= size {
 		return b
 	}
-	if size <= 0 || internal.MultipleOf(size, len(b)) {
+	if size <= 0 || !internal.MultipleOf(size, len(b)) {
 		panic("len(b) % size != 0")
 	}
 
