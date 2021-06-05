@@ -30,6 +30,7 @@ type dedupe interface {
 
 type dedupeAVX2 interface {
 	dedupe
+	vlanes() int
 	vinit(p, w GPVirtual)
 	vcopy(src, dst VecVirtual, off GPVirtual)
 }
@@ -79,6 +80,38 @@ func (dedupe16) copy(p, q, w GPVirtual) {
 	CMOVQNE(next, w)
 }
 
+/*
+func (dedupe16) vinit(p, w GPVirtual) { move(VMOVDQU, XMM(), p, w) }
+
+func (dedupe16) vcopy(src, dst VecVirtual, off GPVirtual) {
+	VPCMPEQQ(dst, src, src)
+	VMOVMSKPD(src, off.As32())
+	// None were equal:
+	// * 0b0000
+	// * 0b0001
+	// * 0b0010
+	// * 0b0100
+	// * 0b0101
+	// * 0b0110
+	// * ...
+	//
+	// One was equal:
+	// * 0b0011 => no shuffle, off=16
+	// * 0b1100 => shuffle hi, off=16
+	//
+	// Both were equal:
+	// * 0b1111 => no shuffle, off=0
+	//
+	// ---
+	// offset = popcnt(not(mask)) * 8
+	//
+	// ---
+	// * 0b1100
+	// * 0b0011
+	// * 0b0000
+}
+*/
+
 type dedupe32 struct{}
 
 func (dedupe32) size() int { return 32 }
@@ -112,6 +145,8 @@ func (dedupe32) copy(p, q, w GPVirtual) {
 	CMPL(mask0, U32(0xFFFF))
 	CMOVQNE(next, w)
 }
+
+func (dedupe32) vlanes() int { return 8 }
 
 func (dedupe32) vinit(p, w GPVirtual) { move(VMOVDQU, YMM(), p, w) }
 
@@ -199,8 +234,8 @@ func generateDedupe(dedupe dedupe) {
 	RET()
 
 	if avx, ok := dedupe.(dedupeAVX2); ok {
-		const avxChunk = 256
-		const avxLanes = avxChunk / 32
+		avxLanes := avx.vlanes()
+		avxChunk := 32 * avxLanes
 		Label("avx2")
 
 		off := make([]GPVirtual, avxLanes)
