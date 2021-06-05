@@ -164,4 +164,21 @@ func BenchmarkIntersect(b *testing.B) {
 			})
 		}
 	}
+
+	b.Run("no overlap", func(b *testing.B) {
+		prng := rand.New(rand.NewSource(0))
+		array, _ := randomSortedArray(prng, 16, 128, 0.0)
+		dst := make([]byte, 16*64)
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			Intersect(dst, array[:64*16], array[64*16:], 16)
+		}
+	})
+
+	b.Run("empty", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			Intersect(nil, nil, nil, 16)
+		}
+	})
 }
