@@ -210,24 +210,32 @@ short:
 	RET
 
 // func dedupe32(dst []byte, src []byte) int
-// Requires: CMOV, SSE2, SSE4.1
+// Requires: AVX, AVX2, CMOV, SSE2, SSE4.1
 TEXT ·dedupe32(SB), NOSPLIT, $0-56
-	MOVQ  src_len+32(FP), AX
-	CMPQ  AX, $0x00
-	JE    short
-	MOVQ  dst_base+0(FP), CX
-	MOVQ  src_base+24(FP), DX
-	MOVQ  DX, BX
-	MOVQ  CX, SI
-	ADDQ  $0x20, DX
-	SUBQ  $0x20, AX
+	MOVQ src_len+32(FP), AX
+	CMPQ AX, $0x00
+	JE   short
+	MOVQ dst_base+0(FP), CX
+	MOVQ src_base+24(FP), DX
+	MOVQ DX, BX
+	MOVQ CX, SI
+	ADDQ $0x20, DX
+	SUBQ $0x20, AX
+	CMPQ AX, $0x20
+	JL   init
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS  avx2
+
+init:
 	MOVOU (BX), X0
 	MOVOU 16(BX), X1
 	MOVOU X0, (SI)
 	MOVOU X1, 16(SI)
 	ADDQ  $0x20, SI
-	CMPQ  AX, $0x00
-	JE    done
+
+tail:
+	CMPQ AX, $0x00
+	JE   done
 
 generic:
 	MOVQ     SI, DI
@@ -259,3 +267,215 @@ done:
 short:
 	MOVQ AX, ret+48(FP)
 	RET
+
+avx2:
+	XORQ    DI, DI
+	XORQ    R8, R8
+	XORQ    R9, R9
+	XORQ    R10, R10
+	XORQ    R11, R11
+	XORQ    R12, R12
+	XORQ    R13, R13
+	XORQ    R14, R14
+	VMOVDQU (BX), Y0
+	VMOVDQU Y0, (SI)
+	ADDQ    $0x20, SI
+	CMPQ    AX, $0x00000100
+	JL      avx2_tail128
+
+avx2_loop256:
+	VMOVDQU   (BX), Y0
+	VMOVDQU   32(BX), Y2
+	VMOVDQU   64(BX), Y4
+	VMOVDQU   96(BX), Y6
+	VMOVDQU   128(BX), Y8
+	VMOVDQU   160(BX), Y10
+	VMOVDQU   192(BX), Y12
+	VMOVDQU   224(BX), Y14
+	VMOVDQU   (DX), Y1
+	VMOVDQU   32(DX), Y3
+	VMOVDQU   64(DX), Y5
+	VMOVDQU   96(DX), Y7
+	VMOVDQU   128(DX), Y9
+	VMOVDQU   160(DX), Y11
+	VMOVDQU   192(DX), Y13
+	VMOVDQU   224(DX), Y15
+	VPCMPEQQ  Y1, Y0, Y0
+	VMOVMSKPD Y0, DI
+	INCQ      DI
+	SHRQ      $0x04, DI
+	NOTQ      DI
+	ANDQ      $0x01, DI
+	SHLQ      $0x05, DI
+	VPCMPEQQ  Y3, Y2, Y2
+	VMOVMSKPD Y2, R8
+	INCQ      R8
+	SHRQ      $0x04, R8
+	NOTQ      R8
+	ANDQ      $0x01, R8
+	SHLQ      $0x05, R8
+	VPCMPEQQ  Y5, Y4, Y4
+	VMOVMSKPD Y4, R9
+	INCQ      R9
+	SHRQ      $0x04, R9
+	NOTQ      R9
+	ANDQ      $0x01, R9
+	SHLQ      $0x05, R9
+	VPCMPEQQ  Y7, Y6, Y6
+	VMOVMSKPD Y6, R10
+	INCQ      R10
+	SHRQ      $0x04, R10
+	NOTQ      R10
+	ANDQ      $0x01, R10
+	SHLQ      $0x05, R10
+	VPCMPEQQ  Y9, Y8, Y8
+	VMOVMSKPD Y8, R11
+	INCQ      R11
+	SHRQ      $0x04, R11
+	NOTQ      R11
+	ANDQ      $0x01, R11
+	SHLQ      $0x05, R11
+	VPCMPEQQ  Y11, Y10, Y10
+	VMOVMSKPD Y10, R12
+	INCQ      R12
+	SHRQ      $0x04, R12
+	NOTQ      R12
+	ANDQ      $0x01, R12
+	SHLQ      $0x05, R12
+	VPCMPEQQ  Y13, Y12, Y12
+	VMOVMSKPD Y12, R13
+	INCQ      R13
+	SHRQ      $0x04, R13
+	NOTQ      R13
+	ANDQ      $0x01, R13
+	SHLQ      $0x05, R13
+	VPCMPEQQ  Y15, Y14, Y14
+	VMOVMSKPD Y14, R14
+	INCQ      R14
+	SHRQ      $0x04, R14
+	NOTQ      R14
+	ANDQ      $0x01, R14
+	SHLQ      $0x05, R14
+	VMOVDQU   Y1, (SI)
+	ADDQ      DI, SI
+	VMOVDQU   Y3, (SI)
+	ADDQ      R8, SI
+	VMOVDQU   Y5, (SI)
+	ADDQ      R9, SI
+	VMOVDQU   Y7, (SI)
+	ADDQ      R10, SI
+	VMOVDQU   Y9, (SI)
+	ADDQ      R11, SI
+	VMOVDQU   Y11, (SI)
+	ADDQ      R12, SI
+	VMOVDQU   Y13, (SI)
+	ADDQ      R13, SI
+	VMOVDQU   Y15, (SI)
+	ADDQ      R14, SI
+	ADDQ      $0x00000100, BX
+	ADDQ      $0x00000100, DX
+	SUBQ      $0x00000100, AX
+	CMPQ      AX, $0x00000100
+	JGE       avx2_loop256
+
+avx2_tail128:
+	CMPQ      AX, $0x80
+	JL        avx2_tail64
+	VMOVDQU   (BX), Y0
+	VMOVDQU   32(BX), Y2
+	VMOVDQU   64(BX), Y4
+	VMOVDQU   96(BX), Y6
+	VMOVDQU   (DX), Y1
+	VMOVDQU   32(DX), Y3
+	VMOVDQU   64(DX), Y5
+	VMOVDQU   96(DX), Y7
+	VPCMPEQQ  Y1, Y0, Y0
+	VMOVMSKPD Y0, DI
+	INCQ      DI
+	SHRQ      $0x04, DI
+	NOTQ      DI
+	ANDQ      $0x01, DI
+	SHLQ      $0x05, DI
+	VPCMPEQQ  Y3, Y2, Y2
+	VMOVMSKPD Y2, R8
+	INCQ      R8
+	SHRQ      $0x04, R8
+	NOTQ      R8
+	ANDQ      $0x01, R8
+	SHLQ      $0x05, R8
+	VPCMPEQQ  Y5, Y4, Y4
+	VMOVMSKPD Y4, R9
+	INCQ      R9
+	SHRQ      $0x04, R9
+	NOTQ      R9
+	ANDQ      $0x01, R9
+	SHLQ      $0x05, R9
+	VPCMPEQQ  Y7, Y6, Y6
+	VMOVMSKPD Y6, R10
+	INCQ      R10
+	SHRQ      $0x04, R10
+	NOTQ      R10
+	ANDQ      $0x01, R10
+	SHLQ      $0x05, R10
+	VMOVDQU   Y1, (SI)
+	ADDQ      DI, SI
+	VMOVDQU   Y3, (SI)
+	ADDQ      R8, SI
+	VMOVDQU   Y5, (SI)
+	ADDQ      R9, SI
+	VMOVDQU   Y7, (SI)
+	ADDQ      R10, SI
+	ADDQ      $0x80, BX
+	ADDQ      $0x80, DX
+	SUBQ      $0x80, AX
+
+avx2_tail64:
+	CMPQ      AX, $0x40
+	JL        avx2_tail32
+	VMOVDQU   (BX), Y0
+	VMOVDQU   32(BX), Y2
+	VMOVDQU   (DX), Y1
+	VMOVDQU   32(DX), Y3
+	VPCMPEQQ  Y1, Y0, Y0
+	VMOVMSKPD Y0, DI
+	INCQ      DI
+	SHRQ      $0x04, DI
+	NOTQ      DI
+	ANDQ      $0x01, DI
+	SHLQ      $0x05, DI
+	VPCMPEQQ  Y3, Y2, Y2
+	VMOVMSKPD Y2, R8
+	INCQ      R8
+	SHRQ      $0x04, R8
+	NOTQ      R8
+	ANDQ      $0x01, R8
+	SHLQ      $0x05, R8
+	VMOVDQU   Y1, (SI)
+	ADDQ      DI, SI
+	VMOVDQU   Y3, (SI)
+	ADDQ      R8, SI
+	ADDQ      $0x40, BX
+	ADDQ      $0x40, DX
+	SUBQ      $0x40, AX
+
+avx2_tail32:
+	CMPQ      AX, $0x20
+	JL        avx2_tail16
+	VMOVDQU   (BX), Y0
+	VMOVDQU   (DX), Y1
+	VPCMPEQQ  Y1, Y0, Y0
+	VMOVMSKPD Y0, DI
+	INCQ      DI
+	SHRQ      $0x04, DI
+	NOTQ      DI
+	ANDQ      $0x01, DI
+	SHLQ      $0x05, DI
+	VMOVDQU   Y1, (SI)
+	ADDQ      DI, SI
+	ADDQ      $0x20, BX
+	ADDQ      $0x20, DX
+	SUBQ      $0x20, AX
+
+avx2_tail16:
+	VZEROUPPER
+	JMP tail
