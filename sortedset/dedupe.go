@@ -44,7 +44,7 @@ func Dedupe(dst, src []byte, size int) []byte {
 }
 
 func dedupeGeneric(dst, src []byte, size int) int {
-	if len(src) <= size {
+	if len(src) == 0 {
 		return 0
 	}
 
