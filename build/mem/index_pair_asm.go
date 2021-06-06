@@ -234,10 +234,9 @@ func generateIndexPair(code indexPair) {
 }
 
 func generateIndexPairTest(mov func(Op, Op), cmp func(Op, Op), reg func() GPVirtual, a, b Mem) {
-	r0, r1 := reg(), reg()
-	mov(a, r0)
-	mov(b, r1)
-	cmp(r0, r1)
+	r := reg()
+	mov(a, r)
+	cmp(r, b)
 }
 
 func generateIndexPairAVX2(p Register, regA, regB []VecVirtual, masks []GPVirtual, code indexPairAVX2) {

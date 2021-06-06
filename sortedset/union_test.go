@@ -108,7 +108,7 @@ func TestUnion(t *testing.T) {
 				for _, p := range overlapChances {
 					setA, setB := randomSortedSetPair(prng, size, count, p)
 					actual := Union(buf[:0], setA, setB, size)
-					expected := Dedupe(combineArrays(setA, setB, size), size)
+					expected := Dedupe(nil, combineArrays(setA, setB, size), size)
 					assertArraysEqual(t, expected, actual, size)
 				}
 			}

@@ -20,8 +20,7 @@ generic:
 	MOVQ    DX, BX
 	INCQ    BX
 	MOVB    (AX), SI
-	MOVB    1(AX), DI
-	CMPB    SI, DI
+	CMPB    SI, 1(AX)
 	CMOVQEQ BX, DX
 	ADDQ    $0x01, AX
 	SUBQ    $0x01, CX
@@ -192,8 +191,7 @@ generic:
 	MOVQ    DX, BX
 	INCQ    BX
 	MOVW    (AX), SI
-	MOVW    2(AX), DI
-	CMPW    SI, DI
+	CMPW    SI, 2(AX)
 	CMOVQEQ BX, DX
 	ADDQ    $0x02, AX
 	SUBQ    $0x02, CX
@@ -365,8 +363,7 @@ generic:
 	MOVQ    DX, BX
 	INCQ    BX
 	MOVL    (AX), SI
-	MOVL    4(AX), DI
-	CMPL    SI, DI
+	CMPL    SI, 4(AX)
 	CMOVQEQ BX, DX
 	ADDQ    $0x04, AX
 	SUBQ    $0x04, CX
@@ -538,8 +535,7 @@ generic:
 	MOVQ    DX, BX
 	INCQ    BX
 	MOVQ    (AX), SI
-	MOVQ    8(AX), DI
-	CMPQ    SI, DI
+	CMPQ    SI, 8(AX)
 	CMOVQEQ BX, DX
 	ADDQ    $0x08, AX
 	SUBQ    $0x08, CX

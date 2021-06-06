@@ -20,8 +20,7 @@ tail:
 
 generic:
 	MOVB (AX), BL
-	MOVB 1(AX), SI
-	CMPB BL, SI
+	CMPB BL, 1(AX)
 	JE   done
 	ADDQ $0x01, AX
 	SUBQ $0x01, CX
@@ -274,8 +273,7 @@ tail:
 
 generic:
 	MOVW (AX), BX
-	MOVW 2(AX), SI
-	CMPW BX, SI
+	CMPW BX, 2(AX)
 	JE   done
 	ADDQ $0x02, AX
 	SUBQ $0x02, CX
@@ -528,8 +526,7 @@ tail:
 
 generic:
 	MOVL (AX), BX
-	MOVL 4(AX), SI
-	CMPL BX, SI
+	CMPL BX, 4(AX)
 	JE   done
 	ADDQ $0x04, AX
 	SUBQ $0x04, CX
@@ -782,8 +779,7 @@ tail:
 
 generic:
 	MOVQ (AX), BX
-	MOVQ 8(AX), SI
-	CMPQ BX, SI
+	CMPQ BX, 8(AX)
 	JE   done
 	ADDQ $0x08, AX
 	SUBQ $0x08, CX
