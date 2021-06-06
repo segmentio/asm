@@ -2,6 +2,8 @@ package sortedset
 
 import (
 	"bytes"
+
+	"github.com/segmentio/asm/internal"
 )
 
 // Dedupe writes to dst the deduplicated sequence of items of the given size
@@ -10,11 +12,12 @@ import (
 // If dst is too small, a new slice is allocated and returned instead.
 //
 // The source and destination slices may be the same to perform in-place
-// deduplication of the elements.
+// deduplication of the elements. The behavior is undefined for any other
+// conditions where the source and destination slices overlap.
 //
 // The function panics if len(src) is not a multiple of the element size.
 func Dedupe(dst, src []byte, size int) []byte {
-	if len(src)%size != 0 {
+	if !internal.MultipleOf(size, len(src)) {
 		panic("input length is not a multiple of the item size")
 	}
 	return dedupe(dst, src, size)

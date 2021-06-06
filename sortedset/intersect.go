@@ -4,10 +4,14 @@ import (
 	"bytes"
 
 	"github.com/segmentio/asm/cpu"
+	"github.com/segmentio/asm/internal"
 )
 
 func Intersect(dst, a, b []byte, size int) []byte {
-	if size <= 0 || len(a)%size != 0 || len(b)%size != 0 {
+	if len(a) == 0 || len(b) == 0 {
+		return dst[:0]
+	}
+	if size <= 0 || !internal.PairMultipleOf(size, len(a), len(b)) {
 		panic("input lengths must be a multiple of size")
 	}
 	if cap(dst) < len(a) && cap(dst) < len(b) {
@@ -15,7 +19,7 @@ func Intersect(dst, a, b []byte, size int) []byte {
 	}
 
 	// Fast paths for non-overlapping sets.
-	if len(a) == 0 || len(b) == 0 || bytes.Compare(a[len(a)-size:], b[:size]) < 0 || bytes.Compare(b[len(b)-size:], a[:size]) < 0 {
+	if bytes.Compare(a[len(a)-size:], b[:size]) < 0 || bytes.Compare(b[len(b)-size:], a[:size]) < 0 {
 		return dst[:0]
 	}
 
