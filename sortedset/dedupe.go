@@ -20,10 +20,6 @@ func Dedupe(dst, src []byte, size int) []byte {
 	if !internal.MultipleOf(size, len(src)) {
 		panic("input length is not a multiple of the item size")
 	}
-	return dedupe(dst, src, size)
-}
-
-func dedupe(dst, src []byte, size int) []byte {
 	if len(dst) < len(src) {
 		dst = make([]byte, len(src))
 	}
