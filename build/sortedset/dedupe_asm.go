@@ -245,17 +245,13 @@ func generateDedupe(dedupe dedupe) {
 		avxChunk := avx.vsize() * avxLanes
 		Label("avx2")
 
-		off := make([]GPVirtual, avxLanes)
-		for i := range off {
-			off[i] = GP64()
-			XORQ(off[i], off[i])
-		}
-
 		src := make([]VecVirtual, avxLanes)
 		dst := make([]VecVirtual, avxLanes)
+		off := make([]GPVirtual, avxLanes)
 		for i := range src {
 			src[i] = avx.vec()
 			dst[i] = avx.vec()
+			off[i] = GP64()
 		}
 
 		avx.vinit(p, w)

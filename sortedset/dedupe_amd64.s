@@ -218,14 +218,6 @@ short:
 	RET
 
 avx2:
-	XORQ    DI, DI
-	XORQ    R8, R8
-	XORQ    R9, R9
-	XORQ    R10, R10
-	XORQ    R11, R11
-	XORQ    R12, R12
-	XORQ    R13, R13
-	XORQ    R14, R14
 	VMOVDQU (BX), X0
 	VMOVDQU X0, (SI)
 	XORQ    R15, R15
@@ -461,14 +453,6 @@ short:
 	RET
 
 avx2:
-	XORQ    DI, DI
-	XORQ    R8, R8
-	XORQ    R9, R9
-	XORQ    R10, R10
-	XORQ    R11, R11
-	XORQ    R12, R12
-	XORQ    R13, R13
-	XORQ    R14, R14
 	VMOVDQU (BX), Y0
 	VMOVDQU Y0, (SI)
 	XORQ    R15, R15
