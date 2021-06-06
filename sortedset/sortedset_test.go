@@ -2,17 +2,19 @@ package sortedset
 
 import (
 	"bytes"
+	"encoding/hex"
 	"math/rand"
-	"reflect"
 	"sort"
 	"testing"
 )
 
 func assertArraysEqual(t *testing.T, expected, actual []byte, size int) {
-	if (len(expected) == 0 && len(actual) != 0) ||
-		(len(expected) != 0 && !reflect.DeepEqual(actual, expected)) {
+	t.Helper()
 
-		// TODO: diff
+	if !bytes.Equal(expected, actual) {
+		t.Logf("\nexpected (%d):\n%s\nfound (%d):\n%s",
+			len(expected), hex.Dump(expected),
+			len(actual), hex.Dump(actual))
 		t.Fatal("arrays are not equal")
 	}
 }
