@@ -4,10 +4,11 @@ import (
 	"bytes"
 
 	"github.com/segmentio/asm/cpu"
+	"github.com/segmentio/asm/internal"
 )
 
 func Union(dst, a, b []byte, size int) []byte {
-	if size <= 0 || len(a)%size != 0 || len(b)%size != 0 {
+	if size <= 0 || !internal.PairMultipleOf(size, len(a), len(b)) {
 		panic("input lengths must be a multiple of size")
 	}
 	if cap(dst) < len(a)+len(b) {
