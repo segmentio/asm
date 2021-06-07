@@ -457,17 +457,16 @@ func generateDedupeAVX2(p, w GPVirtual, src, dst []VecVirtual, off []GPVirtual, 
 
 	for i := range src {
 		dedupe.vcopy(src[i], reg[i], dst[i], off[i])
-	}
-
-	// Compute the cumulative offsets so we can use indexes relative to the
-	// write pointer, which allows the CPU to pipeline the writes to memory.
-	//
-	// There are still strong data dependencies between these instructions,
-	// but I'm not sure there is a great alternative. Moving the values to a
-	// vector register and using SIMD seems like a lost of heavy lifting for
-	// the limited number of registers we have.
-	for i := range off[1:] {
-		ADDQ(off[i], off[i+1])
+		if i > 0 {
+			// Compute the cumulative offsets so we can use indexes relative to the
+			// write pointer, which allows the CPU to pipeline the writes to memory.
+			//
+			// There are still strong data dependencies between these instructions,
+			// but I'm not sure there is a great alternative. Moving the values to a
+			// vector register and using SIMD seems like a lost of heavy lifting for
+			// the limited number of registers we have.
+			ADDQ(off[i-1], off[i])
+		}
 	}
 
 	for i := range dst {
