@@ -215,7 +215,9 @@ func (d *dedupe16) vinit(p, w GPVirtual) {
 }
 
 func (d *dedupe16) vcopy(src0, src1, dst VecVirtual, off GPVirtual) {
-	VMOVDQA(src1, dst)
+	if src1 != dst {
+		VMOVDQA(src1, dst)
+	}
 	VPCMPEQQ(src1, src0, src0)
 	// This gives a bitmask with these possible values:
 	// * 0b00
@@ -282,7 +284,9 @@ func (d *dedupe32) vinit(p, w GPVirtual) {
 }
 
 func (d *dedupe32) vcopy(src0, src1, dst VecVirtual, off GPVirtual) {
-	VMOVDQA(src1, dst)
+	if src1 != dst {
+		VMOVDQA(src1, dst)
+	}
 	VPCMPEQQ(src1, src0, src0)
 	// This gives a bitmask with these possible values:
 	// * 0b0000
@@ -434,21 +438,25 @@ func generateDedupeAVX2(p, w GPVirtual, src, dst []VecVirtual, off []GPVirtual, 
 		moves[i*step] = src[i]
 	}
 
-	tmp := make([]VecVirtual, len(src))
+	reg := make([]VecVirtual, len(src))
 
 	for i := range dst {
 		// Elide moves from memory if possible by reusing registers that
 		// already contain the required data chunk.
-		if reg := moves[i*step+size]; reg != nil {
-			tmp[i] = reg
+		//
+		// Care must be given in the implementations of AVX2 specializations
+		// not to write to the second source, as it may unexpectedly mutate
+		// the src0 or dst registers.
+		if prev := moves[i*step+size]; prev != nil {
+			reg[i] = prev
 		} else {
-			tmp[i] = dst[i]
+			reg[i] = dst[i]
 			VMOVDQU(Mem{Base: p}.Offset(i*step+size), dst[i])
 		}
 	}
 
 	for i := range src {
-		dedupe.vcopy(src[i], tmp[i], dst[i], off[i])
+		dedupe.vcopy(src[i], reg[i], dst[i], off[i])
 	}
 
 	// Compute the cumulative offsets so we can use indexes relative to the
