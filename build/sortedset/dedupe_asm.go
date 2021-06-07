@@ -9,6 +9,7 @@ import (
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
+	. "github.com/segmentio/asm/build/internal/asm"
 	. "github.com/segmentio/asm/build/internal/x86"
 	"github.com/segmentio/asm/cpu"
 )
@@ -56,11 +57,44 @@ func (*dedupe4) size() int              { return 4 }
 func (*dedupe4) init(p, w GPVirtual)    { move(MOVL, GP32(), p, w) }
 func (*dedupe4) copy(p, q, w GPVirtual) { generateDedupeX86(MOVL, CMPL, GP32, p, q, w, 4) }
 
-type dedupe8 struct{}
+type dedupe8 struct {
+	shuf GPVirtual
+	incr GPVirtual
+}
 
 func (*dedupe8) size() int              { return 8 }
 func (*dedupe8) init(p, w GPVirtual)    { move(MOVQ, GP64(), p, w) }
 func (*dedupe8) copy(p, q, w GPVirtual) { generateDedupeX86(MOVQ, CMPQ, GP64, p, q, w, 8) }
+
+func (*dedupe8) vec() VecVirtual { return XMM() }
+func (*dedupe8) vsize() int      { return 16 }
+func (*dedupe8) vlanes() int     { return 8 }
+func (d *dedupe8) vinit(p, w GPVirtual) {
+	move(MOVQ, GP64(), p, w)
+	d.shuf = GP64()
+	d.incr = GP64()
+	LEAQ(
+		ConstShuffleMask64("dedupe8_shuffle_mask",
+			// * (0b00 x 8)[128:0] => [0, 1]; copy all 128 bits
+			// * (0b01 x 8)[128:0] => [1, 0]; copy the upper 64 bits (lower 64 bits are discarded)
+			// * (0b10 x 8)[128:0] => [0, 0]; copy the lower 64 bits (upper 64 bits are discarded)
+			// * (0b11 x 8)[128:0] => [0, 0]; all 128 bits are discarded
+			0, 1, 0, 0, 0,
+		),
+		d.shuf,
+	)
+	LEAQ(
+		ConstArray64("dedupe8_incr_array", 16, 8, 8, 0),
+		d.incr,
+	)
+}
+
+func (d *dedupe8) vcopy(src, dst VecVirtual, off GPVirtual) {
+	VPCMPEQQ(dst, src, src)
+	VMOVMSKPD(src, off.As32())
+	VPSHUFB(Mem{Base: d.shuf}.Idx(off, 8), dst, dst)
+	MOVQ(Mem{Base: d.incr}.Idx(off, 8), off)
+}
 
 type dedupe16 struct {
 	nop GPVirtual
@@ -209,8 +243,8 @@ func generateDedupe(dedupe dedupe) {
 	ADDQ(Imm(uint64(size)), q)
 	SUBQ(Imm(uint64(size)), n)
 
-	if _, ok := dedupe.(dedupeAVX2); ok {
-		CMPQ(n, Imm(32))
+	if avx, ok := dedupe.(dedupeAVX2); ok {
+		CMPQ(n, Imm(uint64(avx.vsize())))
 		JL(LabelRef("init"))
 		JumpIfFeature("avx2", cpu.AVX2)
 	}
@@ -267,7 +301,7 @@ func generateDedupe(dedupe dedupe) {
 		}
 
 		CMPQ(n, U32(avxChunk))
-		if tailChunk >= avx.size() {
+		if tailChunk >= avx.vsize() {
 			JL(LabelRef(fmt.Sprintf("avx2_tail%d", tailChunk)))
 		} else {
 			JL(LabelRef("avx2_tail"))

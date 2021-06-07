@@ -26,6 +26,28 @@ func ConstBytes(name string, data []byte) operand.Mem {
 	return m
 }
 
+func ConstArray64(name string, elems ...uint64) operand.Mem {
+	data := make([]byte, 8*len(elems))
+
+	for i, elem := range elems {
+		binary.LittleEndian.PutUint64(data[i*8:], elem)
+	}
+
+	return ConstBytes(name, data)
+}
+
+func ConstShuffleMask64(name string, indices ...uint64) operand.Mem {
+	data := make([]byte, 8*len(indices))
+
+	for i, index := range indices {
+		for j := 0; j < 8; j++ {
+			data[i*8+j] = byte(index*8 + uint64(j))
+		}
+	}
+
+	return ConstBytes(name, data)
+}
+
 func constBytes8(offset int, data []byte) {
 	for i := 0; i < len(data); i += 8 {
 		DATA(offset+i, operand.U64(binary.LittleEndian.Uint64(data[i:i+8])))
