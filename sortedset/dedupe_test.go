@@ -6,12 +6,12 @@ import (
 	"testing"
 )
 
-var dedupeSpecializationSizes = []int{8, 16, 32}
+var dedupeSpecializationSizes = []int{4, 8, 16, 32}
 
 var repeatChances = []float64{0, 0.1, 0.5, 1.0}
 
 func TestDedupe(t *testing.T) {
-	for _, size := range []int{1, 2, 4, 8, 16, 32} {
+	for _, size := range []int{1, 2, 3, 4, 8, 10, 16, 32} {
 
 		makeArray := func(items ...byte) []byte {
 			array := make([]byte, len(items)*size)
