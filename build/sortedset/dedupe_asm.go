@@ -36,7 +36,7 @@ type dedupeAVX2 interface {
 	vsize() int
 	vlanes() int
 	vinit(p, w GPVirtual)
-	vcopy(src, dst VecVirtual, off GPVirtual)
+	vcopy(src0, src1, dst VecVirtual, off GPVirtual)
 }
 
 type dedupe1 struct{}
@@ -110,9 +110,9 @@ func (d *dedupe4) vinit(p, w GPVirtual) {
 	)
 }
 
-func (d *dedupe4) vcopy(src, dst VecVirtual, off GPVirtual) {
-	VPCMPEQD(dst, src, src)
-	VMOVMSKPS(src, off.As32())
+func (d *dedupe4) vcopy(src0, src1, dst VecVirtual, off GPVirtual) {
+	VPCMPEQD(src1, src0, src0)
+	VMOVMSKPS(src0, off.As32())
 	// 16 possible states:
 	// * 0b0000
 	// * 0b0001
@@ -123,7 +123,7 @@ func (d *dedupe4) vcopy(src, dst VecVirtual, off GPVirtual) {
 	// We multiply the mask by 4 (left shift 2) to use the value as index into
 	// the shuffle mask table (128 bits) and offset array (32 bits).
 	SHLQ(Imm(2), off)
-	VPSHUFB(Mem{Base: d.shuf}.Idx(off, 4), dst, dst)
+	VPSHUFB(Mem{Base: d.shuf}.Idx(off, 4), src1, dst)
 	MOVL(Mem{Base: d.incr}.Idx(off, 1), off.As32())
 }
 
@@ -169,10 +169,10 @@ func (d *dedupe8) vinit(p, w GPVirtual) {
 	)
 }
 
-func (d *dedupe8) vcopy(src, dst VecVirtual, off GPVirtual) {
-	VPCMPEQQ(dst, src, src)
-	VMOVMSKPD(src, off.As32())
-	VPSHUFB(Mem{Base: d.shuf}.Idx(off, 8), dst, dst)
+func (d *dedupe8) vcopy(src0, src1, dst VecVirtual, off GPVirtual) {
+	VPCMPEQQ(src1, src0, src0)
+	VMOVMSKPD(src0, off.As32())
+	VPSHUFB(Mem{Base: d.shuf}.Idx(off, 8), src1, dst)
 	MOVQ(Mem{Base: d.incr}.Idx(off, 8), off)
 }
 
@@ -214,8 +214,9 @@ func (d *dedupe16) vinit(p, w GPVirtual) {
 	MOVQ(U64(16), d.inc)
 }
 
-func (d *dedupe16) vcopy(src, dst VecVirtual, off GPVirtual) {
-	VPCMPEQQ(dst, src, src)
+func (d *dedupe16) vcopy(src0, src1, dst VecVirtual, off GPVirtual) {
+	VMOVDQA(src1, dst)
+	VPCMPEQQ(src1, src0, src0)
 	// This gives a bitmask with these possible values:
 	// * 0b00
 	// * 0b01
@@ -223,7 +224,7 @@ func (d *dedupe16) vcopy(src, dst VecVirtual, off GPVirtual) {
 	// * 0b11
 	// We only care about the last case, which indicates that both 64 bits lanes
 	// of the XMM register were equal.
-	VMOVMSKPD(src, off.As32())
+	VMOVMSKPD(src0, off.As32())
 	CMPQ(off, Imm(3))
 	CMOVQEQ(d.nop, off)
 	CMOVQNE(d.inc, off)
@@ -280,8 +281,9 @@ func (d *dedupe32) vinit(p, w GPVirtual) {
 	MOVQ(U64(32), d.inc)
 }
 
-func (d *dedupe32) vcopy(src, dst VecVirtual, off GPVirtual) {
-	VPCMPEQQ(dst, src, src)
+func (d *dedupe32) vcopy(src0, src1, dst VecVirtual, off GPVirtual) {
+	VMOVDQA(src1, dst)
+	VPCMPEQQ(src1, src0, src0)
 	// This gives a bitmask with these possible values:
 	// * 0b0000
 	// * 0b0001
@@ -293,7 +295,7 @@ func (d *dedupe32) vcopy(src, dst VecVirtual, off GPVirtual) {
 	//
 	// We want to divide by 15, which will either produce a result of 0 or 1.
 	// Rather than dividing, we add 1 and shift right by 4.
-	VMOVMSKPD(src, off.As32())
+	VMOVMSKPD(src0, off.As32())
 	CMPQ(off, Imm(15))
 	CMOVQEQ(d.nop, off)
 	CMOVQNE(d.inc, off)
@@ -425,15 +427,28 @@ func generateDedupeX86(mov func(Op, Op), cmp func(Op, Op), reg func() GPVirtual,
 func generateDedupeAVX2(p, w GPVirtual, src, dst []VecVirtual, off []GPVirtual, dedupe dedupeAVX2) {
 	size := dedupe.size()
 	step := dedupe.vsize()
+	moves := make(map[int]VecVirtual)
 
 	for i := range src {
 		VMOVDQU(Mem{Base: p}.Offset(i*step), src[i])
+		moves[i*step] = src[i]
 	}
+
+	tmp := make([]VecVirtual, len(src))
+
 	for i := range dst {
-		VMOVDQU(Mem{Base: p}.Offset(i*step+size), dst[i])
+		// Elide moves from memory if possible by reusing registers that
+		// already contain the required data chunk.
+		if reg := moves[i*step+size]; reg != nil {
+			tmp[i] = reg
+		} else {
+			tmp[i] = dst[i]
+			VMOVDQU(Mem{Base: p}.Offset(i*step+size), dst[i])
+		}
 	}
+
 	for i := range src {
-		dedupe.vcopy(src[i], dst[i], off[i])
+		dedupe.vcopy(src[i], tmp[i], dst[i], off[i])
 	}
 
 	// Compute the cumulative offsets so we can use indexes relative to the
