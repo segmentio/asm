@@ -85,8 +85,8 @@ short:
 	RET
 
 // func dedupe4(dst []byte, src []byte) int
-// Requires: CMOV
-TEXT ·dedupe4(SB), NOSPLIT, $0-56
+// Requires: AVX, CMOV
+TEXT ·dedupe4(SB), NOSPLIT, $8-56
 	MOVQ src_len+32(FP), AX
 	CMPQ AX, $0x00
 	JE   short
@@ -96,9 +96,17 @@ TEXT ·dedupe4(SB), NOSPLIT, $0-56
 	MOVQ CX, SI
 	ADDQ $0x04, DX
 	SUBQ $0x04, AX
+	CMPQ AX, $0x10
+	JL   init
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCS  avx2
+
+init:
 	MOVL (BX), DI
 	MOVL DI, (SI)
 	ADDQ $0x04, SI
+
+tail:
 	CMPQ AX, $0x00
 	JE   done
 
@@ -124,6 +132,226 @@ done:
 short:
 	MOVQ AX, ret+48(FP)
 	RET
+
+avx2:
+	MOVL (BX), DI
+	MOVL DI, (SI)
+	LEAQ dedupe4_shuffle_mask<>+0(SB), R15
+	LEAQ dedupe4_offset_array<>+0(SB), BP
+	ADDQ $0x04, SI
+	CMPQ AX, $0x00000080
+	JL   avx2_tail64
+
+avx2_loop128:
+	VMOVDQU   (BX), X0
+	VMOVDQU   16(BX), X2
+	VMOVDQU   32(BX), X4
+	VMOVDQU   48(BX), X6
+	VMOVDQU   64(BX), X8
+	VMOVDQU   80(BX), X10
+	VMOVDQU   96(BX), X12
+	VMOVDQU   112(BX), X14
+	VMOVDQU   (DX), X1
+	VMOVDQU   16(DX), X3
+	VMOVDQU   32(DX), X5
+	VMOVDQU   48(DX), X7
+	VMOVDQU   64(DX), X9
+	VMOVDQU   80(DX), X11
+	VMOVDQU   96(DX), X13
+	VMOVDQU   112(DX), X15
+	VPCMPEQD  X1, X0, X0
+	VMOVMSKPS X0, DI
+	SHLQ      $0x02, DI
+	VPSHUFB   (R15)(DI*4), X1, X1
+	MOVL      (BP)(DI*1), DI
+	VPCMPEQD  X3, X2, X2
+	VMOVMSKPS X2, R8
+	SHLQ      $0x02, R8
+	VPSHUFB   (R15)(R8*4), X3, X3
+	MOVL      (BP)(R8*1), R8
+	VPCMPEQD  X5, X4, X4
+	VMOVMSKPS X4, R9
+	SHLQ      $0x02, R9
+	VPSHUFB   (R15)(R9*4), X5, X5
+	MOVL      (BP)(R9*1), R9
+	VPCMPEQD  X7, X6, X6
+	VMOVMSKPS X6, R10
+	SHLQ      $0x02, R10
+	VPSHUFB   (R15)(R10*4), X7, X7
+	MOVL      (BP)(R10*1), R10
+	VPCMPEQD  X9, X8, X8
+	VMOVMSKPS X8, R11
+	SHLQ      $0x02, R11
+	VPSHUFB   (R15)(R11*4), X9, X9
+	MOVL      (BP)(R11*1), R11
+	VPCMPEQD  X11, X10, X10
+	VMOVMSKPS X10, R12
+	SHLQ      $0x02, R12
+	VPSHUFB   (R15)(R12*4), X11, X11
+	MOVL      (BP)(R12*1), R12
+	VPCMPEQD  X13, X12, X12
+	VMOVMSKPS X12, R13
+	SHLQ      $0x02, R13
+	VPSHUFB   (R15)(R13*4), X13, X13
+	MOVL      (BP)(R13*1), R13
+	VPCMPEQD  X15, X14, X14
+	VMOVMSKPS X14, R14
+	SHLQ      $0x02, R14
+	VPSHUFB   (R15)(R14*4), X15, X15
+	MOVL      (BP)(R14*1), R14
+	ADDQ      DI, R8
+	ADDQ      R8, R9
+	ADDQ      R9, R10
+	ADDQ      R10, R11
+	ADDQ      R11, R12
+	ADDQ      R12, R13
+	ADDQ      R13, R14
+	VMOVDQU   X1, (SI)
+	VMOVDQU   X3, (SI)(DI*1)
+	VMOVDQU   X5, (SI)(R8*1)
+	VMOVDQU   X7, (SI)(R9*1)
+	VMOVDQU   X9, (SI)(R10*1)
+	VMOVDQU   X11, (SI)(R11*1)
+	VMOVDQU   X13, (SI)(R12*1)
+	VMOVDQU   X15, (SI)(R13*1)
+	ADDQ      R14, SI
+	ADDQ      $0x00000080, BX
+	ADDQ      $0x00000080, DX
+	SUBQ      $0x00000080, AX
+	CMPQ      AX, $0x00000080
+	JGE       avx2_loop128
+
+avx2_tail64:
+	CMPQ      AX, $0x40
+	JL        avx2_tail32
+	VMOVDQU   (BX), X0
+	VMOVDQU   16(BX), X2
+	VMOVDQU   32(BX), X4
+	VMOVDQU   48(BX), X6
+	VMOVDQU   (DX), X1
+	VMOVDQU   16(DX), X3
+	VMOVDQU   32(DX), X5
+	VMOVDQU   48(DX), X7
+	VPCMPEQD  X1, X0, X0
+	VMOVMSKPS X0, DI
+	SHLQ      $0x02, DI
+	VPSHUFB   (R15)(DI*4), X1, X1
+	MOVL      (BP)(DI*1), DI
+	VPCMPEQD  X3, X2, X2
+	VMOVMSKPS X2, R8
+	SHLQ      $0x02, R8
+	VPSHUFB   (R15)(R8*4), X3, X3
+	MOVL      (BP)(R8*1), R8
+	VPCMPEQD  X5, X4, X4
+	VMOVMSKPS X4, R9
+	SHLQ      $0x02, R9
+	VPSHUFB   (R15)(R9*4), X5, X5
+	MOVL      (BP)(R9*1), R9
+	VPCMPEQD  X7, X6, X6
+	VMOVMSKPS X6, R10
+	SHLQ      $0x02, R10
+	VPSHUFB   (R15)(R10*4), X7, X7
+	MOVL      (BP)(R10*1), R10
+	ADDQ      DI, R8
+	ADDQ      R8, R9
+	ADDQ      R9, R10
+	VMOVDQU   X1, (SI)
+	VMOVDQU   X3, (SI)(DI*1)
+	VMOVDQU   X5, (SI)(R8*1)
+	VMOVDQU   X7, (SI)(R9*1)
+	ADDQ      R10, SI
+	ADDQ      $0x40, BX
+	ADDQ      $0x40, DX
+	SUBQ      $0x40, AX
+
+avx2_tail32:
+	CMPQ      AX, $0x20
+	JL        avx2_tail16
+	VMOVDQU   (BX), X0
+	VMOVDQU   16(BX), X2
+	VMOVDQU   (DX), X1
+	VMOVDQU   16(DX), X3
+	VPCMPEQD  X1, X0, X0
+	VMOVMSKPS X0, DI
+	SHLQ      $0x02, DI
+	VPSHUFB   (R15)(DI*4), X1, X1
+	MOVL      (BP)(DI*1), DI
+	VPCMPEQD  X3, X2, X2
+	VMOVMSKPS X2, R8
+	SHLQ      $0x02, R8
+	VPSHUFB   (R15)(R8*4), X3, X3
+	MOVL      (BP)(R8*1), R8
+	ADDQ      DI, R8
+	VMOVDQU   X1, (SI)
+	VMOVDQU   X3, (SI)(DI*1)
+	ADDQ      R8, SI
+	ADDQ      $0x20, BX
+	ADDQ      $0x20, DX
+	SUBQ      $0x20, AX
+
+avx2_tail16:
+	CMPQ      AX, $0x10
+	JL        avx2_tail
+	VMOVDQU   (BX), X0
+	VMOVDQU   (DX), X1
+	VPCMPEQD  X1, X0, X0
+	VMOVMSKPS X0, DI
+	SHLQ      $0x02, DI
+	VPSHUFB   (R15)(DI*4), X1, X1
+	MOVL      (BP)(DI*1), DI
+	VMOVDQU   X1, (SI)
+	ADDQ      DI, SI
+	ADDQ      $0x10, BX
+	ADDQ      $0x10, DX
+	SUBQ      $0x10, AX
+
+avx2_tail:
+	VZEROUPPER
+	JMP tail
+
+DATA dedupe4_shuffle_mask<>+0(SB)/8, $0x0706050403020100
+DATA dedupe4_shuffle_mask<>+8(SB)/8, $0x0f0e0d0c0b0a0908
+DATA dedupe4_shuffle_mask<>+16(SB)/8, $0x0b0a090807060504
+DATA dedupe4_shuffle_mask<>+24(SB)/8, $0x030201000f0e0d0c
+DATA dedupe4_shuffle_mask<>+32(SB)/8, $0x0b0a090803020100
+DATA dedupe4_shuffle_mask<>+40(SB)/8, $0x070605040f0e0d0c
+DATA dedupe4_shuffle_mask<>+48(SB)/8, $0x0f0e0d0c0b0a0908
+DATA dedupe4_shuffle_mask<>+56(SB)/8, $0x0706050403020100
+DATA dedupe4_shuffle_mask<>+64(SB)/8, $0x0706050403020100
+DATA dedupe4_shuffle_mask<>+72(SB)/8, $0x0b0a09080f0e0d0c
+DATA dedupe4_shuffle_mask<>+80(SB)/8, $0x0f0e0d0c07060504
+DATA dedupe4_shuffle_mask<>+88(SB)/8, $0x0b0a090803020100
+DATA dedupe4_shuffle_mask<>+96(SB)/8, $0x0f0e0d0c03020100
+DATA dedupe4_shuffle_mask<>+104(SB)/8, $0x0b0a090807060504
+DATA dedupe4_shuffle_mask<>+112(SB)/8, $0x030201000f0e0d0c
+DATA dedupe4_shuffle_mask<>+120(SB)/8, $0x0b0a090807060504
+DATA dedupe4_shuffle_mask<>+128(SB)/8, $0x0706050403020100
+DATA dedupe4_shuffle_mask<>+136(SB)/8, $0x0f0e0d0c0b0a0908
+DATA dedupe4_shuffle_mask<>+144(SB)/8, $0x0b0a090807060504
+DATA dedupe4_shuffle_mask<>+152(SB)/8, $0x0f0e0d0c03020100
+DATA dedupe4_shuffle_mask<>+160(SB)/8, $0x0f0e0d0c03020100
+DATA dedupe4_shuffle_mask<>+168(SB)/8, $0x0b0a090807060504
+DATA dedupe4_shuffle_mask<>+176(SB)/8, $0x030201000b0a0908
+DATA dedupe4_shuffle_mask<>+184(SB)/8, $0x0f0e0d0c07060504
+DATA dedupe4_shuffle_mask<>+192(SB)/8, $0x0706050403020100
+DATA dedupe4_shuffle_mask<>+200(SB)/8, $0x0f0e0d0c0b0a0908
+DATA dedupe4_shuffle_mask<>+208(SB)/8, $0x0302010007060504
+DATA dedupe4_shuffle_mask<>+216(SB)/8, $0x0f0e0d0c0b0a0908
+DATA dedupe4_shuffle_mask<>+224(SB)/8, $0x0706050403020100
+DATA dedupe4_shuffle_mask<>+232(SB)/8, $0x0f0e0d0c0b0a0908
+DATA dedupe4_shuffle_mask<>+240(SB)/8, $0x0706050403020100
+DATA dedupe4_shuffle_mask<>+248(SB)/8, $0x0f0e0d0c0b0a0908
+GLOBL dedupe4_shuffle_mask<>(SB), RODATA|NOPTR, $256
+
+DATA dedupe4_offset_array<>+0(SB)/8, $0x0000000c00000010
+DATA dedupe4_offset_array<>+8(SB)/8, $0x000000080000000c
+DATA dedupe4_offset_array<>+16(SB)/8, $0x000000080000000c
+DATA dedupe4_offset_array<>+24(SB)/8, $0x0000000400000008
+DATA dedupe4_offset_array<>+32(SB)/8, $0x000000080000000c
+DATA dedupe4_offset_array<>+40(SB)/8, $0x0000000400000008
+DATA dedupe4_offset_array<>+48(SB)/8, $0x0000000400000008
+DATA dedupe4_offset_array<>+56(SB)/8, $0x0000000000000004
+GLOBL dedupe4_offset_array<>(SB), RODATA|NOPTR, $64
 
 // func dedupe8(dst []byte, src []byte) int
 // Requires: AVX, CMOV
@@ -178,7 +406,7 @@ avx2:
 	MOVQ (BX), DI
 	MOVQ DI, (SI)
 	LEAQ dedupe8_shuffle_mask<>+0(SB), R15
-	LEAQ dedupe8_incr_array<>+0(SB), BP
+	LEAQ dedupe8_offset_array<>+0(SB), BP
 	ADDQ $0x08, SI
 	CMPQ AX, $0x00000080
 	JL   avx2_tail64
@@ -342,11 +570,11 @@ DATA dedupe8_shuffle_mask<>+24(SB)/8, $0x0706050403020100
 DATA dedupe8_shuffle_mask<>+32(SB)/8, $0x0706050403020100
 GLOBL dedupe8_shuffle_mask<>(SB), RODATA|NOPTR, $40
 
-DATA dedupe8_incr_array<>+0(SB)/8, $0x0000000000000010
-DATA dedupe8_incr_array<>+8(SB)/8, $0x0000000000000008
-DATA dedupe8_incr_array<>+16(SB)/8, $0x0000000000000008
-DATA dedupe8_incr_array<>+24(SB)/8, $0x0000000000000000
-GLOBL dedupe8_incr_array<>(SB), RODATA|NOPTR, $32
+DATA dedupe8_offset_array<>+0(SB)/8, $0x0000000000000010
+DATA dedupe8_offset_array<>+8(SB)/8, $0x0000000000000008
+DATA dedupe8_offset_array<>+16(SB)/8, $0x0000000000000008
+DATA dedupe8_offset_array<>+24(SB)/8, $0x0000000000000000
+GLOBL dedupe8_offset_array<>(SB), RODATA|NOPTR, $32
 
 // func dedupe16(dst []byte, src []byte) int
 // Requires: AVX, CMOV, SSE2, SSE4.1

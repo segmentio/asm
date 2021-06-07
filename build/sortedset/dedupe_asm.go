@@ -51,11 +51,81 @@ func (*dedupe2) size() int              { return 2 }
 func (*dedupe2) init(p, w GPVirtual)    { move(MOVW, GP16(), p, w) }
 func (*dedupe2) copy(p, q, w GPVirtual) { generateDedupeX86(MOVW, CMPW, GP16, p, q, w, 2) }
 
-type dedupe4 struct{}
+type dedupe4 struct {
+	shuf GPVirtual
+	incr GPVirtual
+}
 
 func (*dedupe4) size() int              { return 4 }
 func (*dedupe4) init(p, w GPVirtual)    { move(MOVL, GP32(), p, w) }
 func (*dedupe4) copy(p, q, w GPVirtual) { generateDedupeX86(MOVL, CMPL, GP32, p, q, w, 4) }
+
+func (d *dedupe4) vec() VecVirtual { return XMM() }
+func (d *dedupe4) vsize() int      { return 16 }
+func (d *dedupe4) vlanes() int     { return 8 }
+func (d *dedupe4) vinit(p, w GPVirtual) {
+	move(MOVL, GP32(), p, w)
+
+	d.shuf = GP64()
+	LEAQ(
+		ConstShuffleMask32("dedupe4_shuffle_mask",
+			0, 1, 2, 3, // 0b0000
+			1, 2, 3, 0, // 0b0001
+			0, 2, 3, 1, // 0b0010
+			2, 3, 0, 1, // 0b0011
+
+			0, 1, 3, 2, // 0b0100
+			1, 3, 0, 2, // 0b0101
+			0, 3, 1, 2, // 0b0110
+			3, 0, 1, 2, // 0b0111
+
+			0, 1, 2, 3, // 0b1000
+			1, 2, 0, 3, // 0b1001
+			0, 3, 1, 2, // 0b1010
+			2, 0, 1, 3, // 0b1011
+
+			0, 1, 2, 3, // 0b1100
+			1, 0, 2, 3, // 0b1101
+			0, 1, 2, 3, // 0b1110
+			0, 1, 2, 3, // 0b1111
+		),
+		d.shuf,
+	)
+
+	d.incr = GP64()
+	LEAQ(
+		// A table indexing the number of bytes to advance the write pointer by,
+		// depending on how many 4 bytes items were equal.
+		ConstArray32("dedupe4_offset_array",
+			// 0b0000, 0b0001, 0b0010, 0b0011
+			16, 12, 12, 8,
+			// 0b0100, 0b0101, 0b0110, 0b0111
+			12, 8, 8, 4,
+			// 0b1000, 0b1001, 0b1010, 0b1011
+			12, 8, 8, 4,
+			// 0b1100, 0b1101, 0b1110, 0b1111
+			8, 4, 4, 0,
+		),
+		d.incr,
+	)
+}
+
+func (d *dedupe4) vcopy(src, dst VecVirtual, off GPVirtual) {
+	VPCMPEQD(dst, src, src)
+	VMOVMSKPS(src, off.As32())
+	// 16 possible states:
+	// * 0b0000
+	// * 0b0001
+	// * 0b0010
+	// * 0b0011
+	// * ...
+	// * 0b1111
+	// We multiply the mask by 4 (left shift 2) to use the value as index into
+	// the shuffle mask table (128 bits) and offset array (32 bits).
+	SHLQ(Imm(2), off)
+	VPSHUFB(Mem{Base: d.shuf}.Idx(off, 4), dst, dst)
+	MOVL(Mem{Base: d.incr}.Idx(off, 1), off.As32())
+}
 
 type dedupe8 struct {
 	shuf GPVirtual
@@ -75,6 +145,16 @@ func (d *dedupe8) vinit(p, w GPVirtual) {
 	d.incr = GP64()
 	LEAQ(
 		ConstShuffleMask64("dedupe8_shuffle_mask",
+			// We use the interesting property that the first and second masks
+			// overlap on their respective upper and lower 64 bits to use a
+			// shuffle mask of 64 bits elements.
+			//
+			// This technique saves a shift instruction in the vcopy
+			// implementation which would otherwise be required to convert the
+			// bit mask values (0, 1, 2, 3) to indices into an array of 128 bits
+			// elements (since only 1, 2, 4, and 8 scales are supported).
+			//
+			// This is the layout:
 			// * (0b00 x 8)[128:0] => [0, 1]; copy all 128 bits
 			// * (0b01 x 8)[128:0] => [1, 0]; copy the upper 64 bits (lower 64 bits are discarded)
 			// * (0b10 x 8)[128:0] => [0, 0]; copy the lower 64 bits (upper 64 bits are discarded)
@@ -84,7 +164,7 @@ func (d *dedupe8) vinit(p, w GPVirtual) {
 		d.shuf,
 	)
 	LEAQ(
-		ConstArray64("dedupe8_incr_array", 16, 8, 8, 0),
+		ConstArray64("dedupe8_offset_array", 16, 8, 8, 0),
 		d.incr,
 	)
 }
