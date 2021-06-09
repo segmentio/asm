@@ -4,73 +4,69 @@ package qsort
 // a quadratic (but cache-friendly) method such as insertionsort.
 const smallCutoff = 256
 
-func quicksort64(data []uint64, lo, hi int, swap func(int, int)) {
-	for lo < hi {
-		if hi-lo < smallCutoff/8 {
-			insertionsort64(data, lo, hi, swap)
+func quicksort64(data []uint64, swap func(int, int)) {
+	for len(data) > 1 {
+		if len(data) < smallCutoff/8 {
+			insertionsort64(data, swap)
 			return
 		}
-		mid := lo + (hi-lo)/2
-		medianOfThree64(data, mid, lo, hi, swap)
-		p := hoarePartition64(data, lo, hi, swap)
-		if p-lo < hi-p { // recurse on the smaller side
-			quicksort64(data, lo, p-1, swap)
-			lo = p + 1
+		medianOfThree64(data, swap)
+		p := hoarePartition64(data, swap)
+		if p < len(data)-p { // recurse on the smaller side
+			quicksort64(data[:p], swap)
+			data = data[p+1:]
 		} else {
-			quicksort64(data, p+1, hi, swap)
-			hi = p - 1
+			quicksort64(data[p+1:], swap)
+			data = data[:p]
 		}
 	}
 }
 
-func insertionsort64(data []uint64, lo, hi int, swap func(int, int)) {
-	// Extra superfluous checks have been added to prevent the compiler
-	// from adding bounds checks in the inner loop.
-	i := lo + 1
-	if i < 0 || hi >= len(data) {
-		return
-	}
-	for ; i <= hi; i++ {
+func insertionsort64(data []uint64, swap func(int, int)) {
+	for i := 1; i < len(data); i++ {
 		item := data[i]
-		for j := i; j > 0 && j > lo && item < data[j-1]; j-- {
+		for j := i; j > 0 && item < data[j-1]; j-- {
 			swap64(data, j, j-1, swap)
 		}
 	}
 }
 
-func medianOfThree64(data []uint64, a, b, c int, swap func(int, int)) int {
-	if data[b] < data[a] {
-		swap64(data, a, b, swap)
-	}
-	if data[c] < data[b] {
-		swap64(data, b, c, swap)
-		if data[b] < data[a] {
-			swap64(data, a, b, swap)
+func medianOfThree64(data []uint64, swap func(int, int)) {
+	if len(data) > 0 {
+		end := len(data) - 1
+		mid := len(data) / 2
+		if data[0] < data[mid] {
+			swap64(data, mid, 0, swap)
+		}
+		if data[end] < data[0] {
+			swap64(data, 0, end, swap)
+			if data[0] < data[mid] {
+				swap64(data, mid, 0, swap)
+			}
 		}
 	}
-	return b
 }
 
-func hoarePartition64(data []uint64, lo, hi int, swap func(int, int)) int {
-	// Extra superfluous checks have been added to prevent the compiler
-	// from adding bounds checks in the inner loops.
-	i, j := lo+1, hi
-	pivot := data[lo]
-	for i >= 0 && hi < len(data) && j < len(data) {
-		for i <= hi && data[i] < pivot {
+func hoarePartition64(data []uint64, swap func(int, int)) int {
+	i, j := 1, len(data)-1
+	if len(data) > 0 {
+		pivot := data[0]
+		for j < len(data) {
+			for i < len(data) && data[i] < pivot {
+				i++
+			}
+			for j > 0 && pivot < data[j] {
+				j--
+			}
+			if i >= j {
+				break
+			}
+			swap64(data, i, j, swap)
 			i++
-		}
-		for j > lo && pivot < data[j] {
 			j--
 		}
-		if i >= j {
-			break
-		}
-		swap64(data, i, j, swap)
-		i++
-		j--
+		swap64(data, 0, j, swap)
 	}
-	swap64(data, lo, j, swap)
 	return j
 }
 
