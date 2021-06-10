@@ -26,27 +26,11 @@ func castBytes(b []byte, size int) *sliceHeader {
 	}
 }
 
-func unsafeU64ToBytes(u []uint64) []byte {
-	return *(*[]byte)(unsafe.Pointer(&sliceHeader{
-		Data: *(*unsafe.Pointer)(unsafe.Pointer(&u)),
-		Len:  len(u) * 8,
-		Cap:  len(u) * 8,
-	}))
-}
-
 func unsafeU128ToBytes(u []uint128) []byte {
 	return *(*[]byte)(unsafe.Pointer(&sliceHeader{
 		Data: *(*unsafe.Pointer)(unsafe.Pointer(&u)),
 		Len:  len(u) * 16,
 		Cap:  len(u) * 16,
-	}))
-}
-
-func unsafeU192ToBytes(u []uint192) []byte {
-	return *(*[]byte)(unsafe.Pointer(&sliceHeader{
-		Data: *(*unsafe.Pointer)(unsafe.Pointer(&u)),
-		Len:  len(u) * 24,
-		Cap:  len(u) * 24,
 	}))
 }
 
@@ -56,6 +40,14 @@ func unsafeU256ToBytes(u []uint256) []byte {
 		Len:  len(u) * 32,
 		Cap:  len(u) * 32,
 	}))
+}
+
+func unsafeU128Addr(slice []uint128) *byte {
+	return (*byte)(unsafe.Pointer(&slice[0]))
+}
+
+func unsafeU256Addr(slice []uint256) *byte {
+	return (*byte)(unsafe.Pointer(&slice[0]))
 }
 
 type sliceHeader struct {

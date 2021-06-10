@@ -2,9 +2,9 @@
 
 #include "textflag.h"
 
-// func insertionsort16(data []byte)
+// func insertionsort128NoSwap(data []byte)
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·insertionsort16(SB), NOSPLIT, $0-24
+TEXT ·insertionsort128NoSwap(SB), NOSPLIT, $0-24
 	MOVQ         data_base+0(FP), AX
 	MOVQ         data_len+8(FP), CX
 	ADDQ         AX, CX
@@ -45,9 +45,9 @@ inner:
 done:
 	RET
 
-// func distributeForward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+// func distributeForward128(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeForward16(SB), NOSPLIT, $0-56
+TEXT ·distributeForward128(SB), NOSPLIT, $0-56
 	MOVQ         data+0(FP), AX
 	MOVQ         scratch+8(FP), CX
 	MOVQ         limit+16(FP), DX
@@ -104,9 +104,9 @@ done:
 	MOVQ BX, ret+48(FP)
 	RET
 
-// func distributeBackward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+// func distributeBackward128(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeBackward16(SB), NOSPLIT, $0-56
+TEXT ·distributeBackward128(SB), NOSPLIT, $0-56
 	MOVQ         data+0(FP), AX
 	MOVQ         scratch+8(FP), CX
 	MOVQ         limit+16(FP), DX
@@ -161,9 +161,9 @@ done:
 	MOVQ SI, ret+48(FP)
 	RET
 
-// func insertionsort32(data []byte)
+// func insertionsort256NoSwap(data []byte)
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·insertionsort32(SB), NOSPLIT, $0-24
+TEXT ·insertionsort256NoSwap(SB), NOSPLIT, $0-24
 	MOVQ         data_base+0(FP), AX
 	MOVQ         data_len+8(FP), CX
 	ADDQ         AX, CX
@@ -205,9 +205,9 @@ done:
 	VZEROUPPER
 	RET
 
-// func distributeForward32(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+// func distributeForward256(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeForward32(SB), NOSPLIT, $0-56
+TEXT ·distributeForward256(SB), NOSPLIT, $0-56
 	MOVQ         data+0(FP), AX
 	MOVQ         scratch+8(FP), CX
 	MOVQ         limit+16(FP), DX
@@ -265,9 +265,9 @@ done:
 	VZEROUPPER
 	RET
 
-// func distributeBackward32(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+// func distributeBackward256(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeBackward32(SB), NOSPLIT, $0-56
+TEXT ·distributeBackward256(SB), NOSPLIT, $0-56
 	MOVQ         data+0(FP), AX
 	MOVQ         scratch+8(FP), CX
 	MOVQ         limit+16(FP), DX

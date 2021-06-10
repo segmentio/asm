@@ -64,7 +64,7 @@ func less(size uint64, register func() VecVirtual, a, b, msb Op) {
 }
 
 func insertionsort(size uint64, register func() VecVirtual) {
-	TEXT(fmt.Sprintf("insertionsort%d", size), NOSPLIT, "func(data []byte)")
+	TEXT(fmt.Sprintf("insertionsort%dNoSwap", size*8), NOSPLIT, "func(data []byte)")
 
 	data := Load(Param("data").Base(), GP64())
 	end := Load(Param("data").Len(), GP64())
@@ -109,7 +109,7 @@ func insertionsort(size uint64, register func() VecVirtual) {
 }
 
 func distributeForward(size uint64, register func() VecVirtual) {
-	TEXT(fmt.Sprintf("distributeForward%d", size), NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
+	TEXT(fmt.Sprintf("distributeForward%d", size*8), NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
 
 	shift := shiftForSize(size)
 
@@ -195,7 +195,7 @@ func distributeForward(size uint64, register func() VecVirtual) {
 }
 
 func distributeBackward(size uint64, register func() VecVirtual) {
-	TEXT(fmt.Sprintf("distributeBackward%d", size), NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
+	TEXT(fmt.Sprintf("distributeBackward%d", size*8), NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
 
 	shift := shiftForSize(size)
 

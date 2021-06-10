@@ -2,26 +2,26 @@
 
 package qsort
 
-func insertionsort16(data *byte, lo, hi int) {
+func insertionsort128NoSwap(data []byte) {
 	panic("not implemented")
 }
 
-func distributeForward16(data, scratch *byte, limit, lo, hi, pivot int) int {
+func distributeForward128(data, scratch *byte, limit, lo, hi, pivot int) int {
 	panic("not implemented")
 }
 
-func distributeBackward16(data, scratch *byte, limit, lo, hi, pivot int) int {
+func distributeBackward128(data, scratch *byte, limit, lo, hi, pivot int) int {
 	panic("not implemented")
 }
 
-func insertionsort32(data *byte, lo, hi int) {
+func insertionsort256NoSwap(data []byte) {
 	panic("not implemented")
 }
 
-func distributeForward32(data, scratch *byte, limit, lo, hi, pivot int) int {
+func distributeForward256(data, scratch *byte, limit, lo, hi, pivot int) int {
 	panic("not implemented")
 }
 
-func distributeBackward32(data, scratch *byte, limit, lo, hi, pivot int) int {
+func distributeBackward256(data, scratch *byte, limit, lo, hi, pivot int) int {
 	panic("not implemented")
 }

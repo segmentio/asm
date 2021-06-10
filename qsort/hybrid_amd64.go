@@ -2,14 +2,14 @@
 
 package qsort
 
-func insertionsort16(data []byte)
+func insertionsort128NoSwap(data []byte)
 
-func distributeForward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+func distributeForward128(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 
-func distributeBackward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+func distributeBackward128(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 
-func insertionsort32(data []byte)
+func insertionsort256NoSwap(data []byte)
 
-func distributeForward32(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+func distributeForward256(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 
-func distributeBackward32(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+func distributeBackward256(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
