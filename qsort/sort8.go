@@ -7,7 +7,7 @@ const smallCutoff = 256
 func quicksort64(data []uint64, swap func(int, int)) {
 	for len(data) > 1 {
 		if len(data) < smallCutoff/8 {
-			insertionsort64(data, swap)
+			smallsort64(data, swap)
 			return
 		}
 		medianOfThree64(data, swap)
@@ -22,11 +22,95 @@ func quicksort64(data []uint64, swap func(int, int)) {
 	}
 }
 
+func smallsort64(data []uint64, swap func(int, int)) {
+	if swap != nil {
+		insertionsort64(data, swap)
+	} else {
+		bubblesort64NoSwap2(data)
+	}
+}
+
+func bubblesort64NoSwap1(data []uint64) {
+	for i := len(data); i > 1; i-- {
+		max := data[0]
+
+		for j := 1; j < i; j++ {
+			y := data[j]
+			x := uint64(0)
+
+			if max <= y {
+				x = max
+			} else {
+				x = y
+			}
+
+			if max <= y {
+				max = y
+			}
+
+			data[j-1] = x
+		}
+
+		data[i-1] = max
+	}
+}
+
+func bubblesort64NoSwap2(data []uint64) {
+	for i := len(data); i > 1; i -= 2 {
+		x := data[0]
+		y := data[1]
+
+		if y < x {
+			x, y = y, x
+		}
+
+		for j := 2; j < i; j++ {
+			z := data[j]
+			w := uint64(0)
+			v := uint64(0)
+
+			if y <= z {
+				w = y
+			} else {
+				w = z
+			}
+
+			if y <= z {
+				y = z
+			}
+
+			if x <= z {
+				v = x
+			} else {
+				v = z
+			}
+
+			if x <= z {
+				x = w
+			}
+
+			data[j-2] = v
+		}
+
+		data[i-2] = x
+		data[i-1] = y
+	}
+}
+
 func insertionsort64(data []uint64, swap func(int, int)) {
 	for i := 1; i < len(data); i++ {
 		item := data[i]
 		for j := i; j > 0 && item < data[j-1]; j-- {
 			swap64(data, j, j-1, swap)
+		}
+	}
+}
+
+func insertionsort64NoSwap(data []uint64) {
+	for i := 1; i < len(data); i++ {
+		item := data[i]
+		for j := i; j > 0 && item < data[j-1]; j-- {
+			data[j], data[j-1] = data[j-1], data[j]
 		}
 	}
 }
