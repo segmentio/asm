@@ -10,20 +10,20 @@ type uint256 struct {
 type smallsort256 func(data []uint256, base int, swap func(int, int))
 type partition256 func(data []uint256, base int, swap func(int, int)) int
 
-func quicksort256(data []uint256, base int, smallsort smallsort256, partition partition256, swap func(int, int)) {
+func quicksort256(data []uint256, base, cutoff int, smallsort smallsort256, partition partition256, swap func(int, int)) {
 	for len(data) > 1 {
-		if len(data) <= smallCutoff/24 {
+		if len(data) <= cutoff/32 {
 			smallsort(data, base, swap)
 			return
 		}
 		medianOfThree256(data, base, swap)
 		p := partition(data, base, swap)
 		if p < len(data)-p { // recurse on the smaller side
-			quicksort256(data[:p], base, smallsort, partition, swap)
+			quicksort256(data[:p], base, cutoff, smallsort, partition, swap)
 			data = data[p+1:]
 			base = base + p + 1
 		} else {
-			quicksort256(data[p+1:], base+p+1, smallsort, partition, swap)
+			quicksort256(data[p+1:], base+p+1, cutoff, smallsort, partition, swap)
 			data = data[:p]
 		}
 	}

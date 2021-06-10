@@ -8,20 +8,20 @@ type uint128 struct {
 type smallsort128 func(data []uint128, base int, swap func(int, int))
 type partition128 func(data []uint128, base int, swap func(int, int)) int
 
-func quicksort128(data []uint128, base int, smallsort smallsort128, partition partition128, swap func(int, int)) {
+func quicksort128(data []uint128, base, cutoff int, smallsort smallsort128, partition partition128, swap func(int, int)) {
 	for len(data) > 1 {
-		if len(data) <= smallCutoff/16 {
+		if len(data) <= cutoff/16 {
 			smallsort(data, base, swap)
 			return
 		}
 		medianOfThree128(data, base, swap)
 		p := partition(data, base, swap)
 		if p < len(data)-p { // recurse on the smaller side
-			quicksort128(data[:p], base, smallsort, partition, swap)
+			quicksort128(data[:p], base, cutoff, smallsort, partition, swap)
 			data = data[p+1:]
 			base = base + p + 1
 		} else {
-			quicksort128(data[p+1:], base+p+1, smallsort, partition, swap)
+			quicksort128(data[p+1:], base+p+1, cutoff, smallsort, partition, swap)
 			data = data[:p]
 		}
 	}

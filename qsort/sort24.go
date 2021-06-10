@@ -9,20 +9,20 @@ type uint192 struct {
 type smallsort192 func(data []uint192, base int, swap func(int, int))
 type partition192 func(data []uint192, base int, swap func(int, int)) int
 
-func quicksort192(data []uint192, base int, smallsort smallsort192, partition partition192, swap func(int, int)) {
+func quicksort192(data []uint192, base, cutoff int, smallsort smallsort192, partition partition192, swap func(int, int)) {
 	for len(data) > 1 {
-		if len(data) <= smallCutoff/24 {
+		if len(data) <= cutoff/24 {
 			smallsort(data, base, swap)
 			return
 		}
 		medianOfThree192(data, base, swap)
 		p := partition(data, base, swap)
 		if p < len(data)-p { // recurse on the smaller side
-			quicksort192(data[:p], base, smallsort, partition, swap)
+			quicksort192(data[:p], base, cutoff, smallsort, partition, swap)
 			data = data[p+1:]
 			base = base + p + 1
 		} else {
-			quicksort192(data[p+1:], base+p+1, smallsort, partition, swap)
+			quicksort192(data[p+1:], base+p+1, cutoff, smallsort, partition, swap)
 			data = data[:p]
 		}
 	}
