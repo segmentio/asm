@@ -29,7 +29,7 @@ func smallsort192(data []uint192, base int, swap func(int, int)) {
 	if swap != nil {
 		insertionsort192(data, base, swap)
 	} else {
-		bubblesort192NoSwap1(data)
+		bubblesort192NoSwap2(data)
 	}
 }
 
@@ -157,5 +157,5 @@ func less192(a, b uint192) bool {
 }
 
 func lessOrEqual192(a, b uint192) bool {
-	return less192(b, a)
+	return !less192(b, a)
 }

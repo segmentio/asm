@@ -158,5 +158,5 @@ func less256(a, b uint256) bool {
 }
 
 func lessOrEqual256(a, b uint256) bool {
-	return less256(b, a)
+	return !less256(b, a)
 }

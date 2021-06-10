@@ -156,5 +156,5 @@ func less128(a, b uint128) bool {
 }
 
 func lessOrEqual128(a, b uint128) bool {
-	return less128(b, a)
+	return !less128(b, a)
 }
