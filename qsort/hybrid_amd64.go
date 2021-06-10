@@ -2,13 +2,13 @@
 
 package qsort
 
-func insertionsort16(data *byte, lo int, hi int)
+func insertionsort16(data []byte)
 
 func distributeForward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 
 func distributeBackward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 
-func insertionsort32(data *byte, lo int, hi int)
+func insertionsort32(data []byte)
 
 func distributeForward32(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 

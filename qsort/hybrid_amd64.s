@@ -2,25 +2,23 @@
 
 #include "textflag.h"
 
-// func insertionsort16(data *byte, lo int, hi int)
+// func insertionsort16(data []byte)
 // Requires: AVX, AVX2, SSE4.1
 TEXT ·insertionsort16(SB), NOSPLIT, $0-24
-	MOVQ         data+0(FP), AX
-	MOVQ         lo+8(FP), CX
-	MOVQ         hi+16(FP), DX
-	SHLQ         $0x04, CX
-	SHLQ         $0x04, DX
-	LEAQ         (AX)(CX*1), CX
-	LEAQ         (AX)(DX*1), AX
+	MOVQ         data_base+0(FP), AX
+	MOVQ         data_len+8(FP), CX
+	ADDQ         AX, CX
+	TESTQ        AX, CX
+	JE           done
 	MOVQ         $0x8000000000000000, DX
 	PINSRQ       $0x00, DX, X0
 	VPBROADCASTQ X0, X0
-	MOVQ         CX, DX
+	MOVQ         AX, DX
 
 outer:
 	ADDQ    $0x10, DX
-	CMPQ    DX, AX
-	JA      done
+	CMPQ    DX, CX
+	JAE     done
 	VMOVDQU (DX), X1
 	MOVQ    DX, SI
 
@@ -40,7 +38,7 @@ inner:
 	VMOVDQU   X2, (SI)
 	VMOVDQU   X1, -16(SI)
 	SUBQ      $0x10, SI
-	CMPQ      SI, CX
+	CMPQ      SI, AX
 	JA        inner
 	JMP       outer
 
@@ -163,25 +161,23 @@ done:
 	MOVQ SI, ret+48(FP)
 	RET
 
-// func insertionsort32(data *byte, lo int, hi int)
+// func insertionsort32(data []byte)
 // Requires: AVX, AVX2, SSE4.1
 TEXT ·insertionsort32(SB), NOSPLIT, $0-24
-	MOVQ         data+0(FP), AX
-	MOVQ         lo+8(FP), CX
-	MOVQ         hi+16(FP), DX
-	SHLQ         $0x05, CX
-	SHLQ         $0x05, DX
-	LEAQ         (AX)(CX*1), CX
-	LEAQ         (AX)(DX*1), AX
+	MOVQ         data_base+0(FP), AX
+	MOVQ         data_len+8(FP), CX
+	ADDQ         AX, CX
+	TESTQ        AX, CX
+	JE           done
 	MOVQ         $0x8000000000000000, DX
 	PINSRQ       $0x00, DX, X0
 	VPBROADCASTQ X0, Y0
-	MOVQ         CX, DX
+	MOVQ         AX, DX
 
 outer:
 	ADDQ    $0x20, DX
-	CMPQ    DX, AX
-	JA      done
+	CMPQ    DX, CX
+	JAE     done
 	VMOVDQU (DX), Y1
 	MOVQ    DX, SI
 
@@ -201,7 +197,7 @@ inner:
 	VMOVDQU   Y2, (SI)
 	VMOVDQU   Y1, -32(SI)
 	SUBQ      $0x20, SI
-	CMPQ      SI, CX
+	CMPQ      SI, AX
 	JA        inner
 	JMP       outer
 

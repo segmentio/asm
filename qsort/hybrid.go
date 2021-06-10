@@ -10,9 +10,9 @@ func hybridQuicksort(data []byte, size int) {
 
 	switch size {
 	case 16:
-		hybridQuicksort16(unsafeBytesTo128(data), unsafeBytesTo128(tmp[:]))
+		hybridQuicksort16(unsafeBytesToU128(data), unsafeBytesToU128(tmp[:]))
 	case 32:
-		hybridQuicksort32(unsafeBytesTo256(data), unsafeBytesTo256(tmp[:]))
+		hybridQuicksort32(unsafeBytesToU256(data), unsafeBytesToU256(tmp[:]))
 	default:
 		panic("unreachable")
 	}
@@ -29,7 +29,7 @@ func ptr32(slice []uint256) *byte {
 func hybridQuicksort16(data, tmp []uint128) {
 	for len(data) > 1 {
 		if len(data) < smallCutoff/16*2 {
-			insertionsort16(ptr16(data), 0, len(data)-1)
+			insertionsort16(unsafeU128ToBytes(data))
 			return
 		}
 		medianOfThree128(data, 0, nil)
@@ -48,7 +48,7 @@ func hybridQuicksort16(data, tmp []uint128) {
 func hybridQuicksort32(data, tmp []uint256) {
 	for len(data) > 1 {
 		if len(data) < smallCutoff/32*2 {
-			insertionsort32(ptr32(data), 0, len(data)-1)
+			insertionsort32(unsafeU256ToBytes(data))
 			return
 		}
 		medianOfThree256(data, 0, nil)

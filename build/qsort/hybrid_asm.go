@@ -64,30 +64,24 @@ func less(size uint64, register func() VecVirtual, a, b, msb Op) {
 }
 
 func insertionsort(size uint64, register func() VecVirtual) {
-	TEXT(fmt.Sprintf("insertionsort%d", size), NOSPLIT, "func(data *byte, lo, hi int)")
+	TEXT(fmt.Sprintf("insertionsort%d", size), NOSPLIT, "func(data []byte)")
 
-	shift := shiftForSize(size)
-
-	data := Load(Param("data"), GP64())
-	loIndex := Load(Param("lo"), GP64())
-	hiIndex := Load(Param("hi"), GP64())
-	SHLQ(Imm(shift), loIndex)
-	SHLQ(Imm(shift), hiIndex)
-	lo := GP64()
-	hi := GP64()
-	LEAQ(Mem{Base: data, Index: loIndex, Scale: 1}, lo)
-	LEAQ(Mem{Base: data, Index: hiIndex, Scale: 1}, hi)
+	data := Load(Param("data").Base(), GP64())
+	end := Load(Param("data").Len(), GP64())
+	ADDQ(data, end)
+	TESTQ(data, end)
+	JE(LabelRef("done"))
 
 	msb := register()
 	VecBroadcast(U64(1 << 63), msb)
 
 	i := GP64()
-	MOVQ(lo, i)
+	MOVQ(data, i)
 
 	Label("outer")
 	ADDQ(Imm(size), i)
-	CMPQ(i, hi)
-	JA(LabelRef("done"))
+	CMPQ(i, end)
+	JAE(LabelRef("done"))
 	item := register()
 	VMOVDQU(Mem{Base: i}, item)
 	j := GP64()
@@ -103,7 +97,7 @@ func insertionsort(size uint64, register func() VecVirtual) {
 	VMOVDQU(prev, Mem{Base: j})
 	VMOVDQU(item, Mem{Base: j, Disp: -int(size)})
 	SUBQ(Imm(size), j)
-	CMPQ(j, lo)
+	CMPQ(j, data)
 	JA(LabelRef("inner"))
 	JMP(LabelRef("outer"))
 
