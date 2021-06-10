@@ -48,13 +48,13 @@ func Sort(data []byte, size int, swap func(int, int)) {
 		} else {
 			smallsort = insertionsort64
 		}
-		quicksort64(unsafeBytesToU64(data), 0, smallCutoff, smallsort, hoarePartition64, swap)
+		quicksort64(unsafeBytesTo64(data), 0, smallCutoff, smallsort, hoarePartition64, swap)
 	case 16:
-		quicksort128(unsafeBytesToU128(data), 0, smallCutoff, insertionsort128, hoarePartition128, swap)
+		quicksort128(unsafeBytesTo128(data), 0, smallCutoff, insertionsort128, hoarePartition128, swap)
 	case 24:
-		quicksort192(unsafeBytesToU192(data), 0, smallCutoff, insertionsort192, hoarePartition192, swap)
+		quicksort192(unsafeBytesTo192(data), 0, smallCutoff, insertionsort192, hoarePartition192, swap)
 	case 32:
-		quicksort256(unsafeBytesToU256(data), 0, smallCutoff, insertionsort256, hoarePartition256, swap)
+		quicksort256(unsafeBytesTo256(data), 0, smallCutoff, insertionsort256, hoarePartition256, swap)
 	}
 }
 
@@ -71,11 +71,11 @@ func hybridQuicksort(data []byte, size int) {
 
 	switch size {
 	case 8:
-		quicksort64(unsafeBytesToU64(data), 0, smallCutoff, bubblesort64NoSwap2, hybridPartition64Using(scratch[:]), nil)
+		quicksort64(unsafeBytesTo64(data), 0, smallCutoff, bubblesort64NoSwap2, hybridPartition64Using(scratch[:]), nil)
 	case 16:
-		quicksort128(unsafeBytesToU128(data), 0, cutoff, insertionsort128NoSwap, hybridPartition128Using(scratch[:]), nil)
+		quicksort128(unsafeBytesTo128(data), 0, cutoff, insertionsort128NoSwap, hybridPartition128Using(scratch[:]), nil)
 	case 32:
-		quicksort256(unsafeBytesToU256(data), 0, cutoff, insertionsort256NoSwap, hybridPartition256Using(scratch[:]), nil)
+		quicksort256(unsafeBytesTo256(data), 0, cutoff, insertionsort256NoSwap, hybridPartition256Using(scratch[:]), nil)
 	}
 }
 

@@ -108,7 +108,7 @@ func hybridPartition128(data, scratch []uint128) int {
 
 func hybridPartition128Using(scratch []byte) partition128 {
 	return func(data []uint128, base int, swap func(int, int)) int {
-		return hybridPartition128(data, unsafeBytesToU128(scratch[:]))
+		return hybridPartition128(data, unsafeBytesTo128(scratch[:]))
 	}
 }
 

@@ -173,6 +173,6 @@ func hybridPartition64(data, scratch []uint64) int {
 
 func hybridPartition64Using(scratch []byte) partition64 {
 	return func(data []uint64, base int, swap func(int, int)) int {
-		return hybridPartition64(data, unsafeBytesToU64(scratch[:]))
+		return hybridPartition64(data, unsafeBytesTo64(scratch[:]))
 	}
 }

@@ -108,7 +108,7 @@ func hybridPartition256(data, scratch []uint256) int {
 
 func hybridPartition256Using(scratch []byte) partition256 {
 	return func(data []uint256, base int, swap func(int, int)) int {
-		return hybridPartition256(data, unsafeBytesToU256(scratch[:]))
+		return hybridPartition256(data, unsafeBytesTo256(scratch[:]))
 	}
 }
 
