@@ -61,11 +61,11 @@ func hybridQuicksort(data []byte, size int) {
 
 	// For reasons unknown, using the smallsort sooner (with larger chunks)
 	// yields better results in some cases.
-	cutoff := smallCutoff * 2
+	const cutoff = smallCutoff * 2
 
 	switch size {
 	case 8:
-		quicksort64(unsafeBytesTo64(data), 0, smallCutoff, bubblesort64NoSwap2, hybridPartition64Using(scratch[:]), nil)
+		quicksort64(unsafeBytesTo64(data), 0, smallCutoff/2, bubblesort64NoSwap2, hybridPartition64Using(scratch[:]), nil)
 	case 16:
 		quicksort128(unsafeBytesTo128(data), 0, cutoff, insertionsort128NoSwap, hybridPartition128Using(scratch[:]), nil)
 	case 32:
