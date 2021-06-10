@@ -9,6 +9,7 @@ import (
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
+	. "github.com/segmentio/asm/build/internal/x86"
 )
 
 func main() {
@@ -29,28 +30,39 @@ func shiftForSize(size uint64) uint64 {
 	return uint64(math.Log2(float64(size)))
 }
 
-// less compares two vector registers. If they're equal, the handleEqual()
-// function is called after ZF is set (ZF=1 when equal). After less()
-// returns, CF is set if a<b.
-func less(size uint64, register func() VecVirtual, a, b, ones Op, handleEqual func ()) {
+// less compares two vector registers containing packed unsigned qwords.
+// The ZF/CF flags are set in the same way as a CMP(a,b) instruction:
+// - ZF=(a==B)
+// - CF=(a<b)
+func less(size uint64, register func() VecVirtual, a, b, msb Op) {
 	ne := register()
+	VPCMPEQQ(a, b, ne)
+
+	// SSE4.2 and AVX2 have a CMPGTQ to compare packed qwords, but
+	// unfortunately it's a signed comparison. We know that u64 has
+	// range [0,2^64-1] and signed (two's complement) i64 has range
+	// [-2^63,2^63-1]. We can add (or subtract) 2^63 to each packed
+	// unsigned qword and reinterpret each as a signed qword. Doing so
+	// allows us to utilize a signed comparison, and yields the same
+	// result as if we were doing an unsigned comparison with the input.
+	// As usual, AVX-512 fixes the problem with its VPCMPUQ.
 	lt := register()
-	VPCMPEQB(a, b, ne)
-	VPXOR(ne, ones, ne)
-	VPMINUB(a, b, lt)
-	VPCMPEQB(a, lt, lt)
-	VPAND(lt, ne, lt)
+	aSigned := register()
+	bSigned := register()
+	VPADDQ(a, msb, aSigned)
+	VPADDQ(b, msb, bSigned)
+	VPCMPGTQ(aSigned, bSigned, lt)
+
 	neMask := GP32()
 	ltMask := GP32()
-	VPMOVMSKB(ne, neMask)
-	VPMOVMSKB(lt, ltMask)
-	if handleEqual != nil {
-		TESTL(neMask, neMask)
-		handleEqual()
-	}
+	VMOVMSKPD(ne, neMask)
+	VMOVMSKPD(lt, ltMask)
+
+	NOTL(neMask)
 	unequalByteIndex := GP32()
 	BSFL(neMask, unequalByteIndex)
-	BTSL(unequalByteIndex, ltMask)
+	TESTL(neMask, neMask)          // set ZF
+	BTSL(unequalByteIndex, ltMask) // set CF
 }
 
 func medianOfThree(size uint64, register func() VecVirtual) {
@@ -77,12 +89,12 @@ func medianOfThree(size uint64, register func() VecVirtual) {
 	VMOVDQU(Mem{Base: bPtr}, b)
 	VMOVDQU(Mem{Base: cPtr}, c)
 
-	ones := register()
-	VPCMPEQB(ones, ones, ones)
+	msb := register()
+	VecBroadcast(U64(1 << 63), msb)
 
 	// Swap a/b if b<a.
-	less(size, register, b, a, ones, nil)
-	JCC(LabelRef("part2"))
+	less(size, register, b, a, msb)
+	JAE(LabelRef("part2"))
 	VMOVDQU(b, Mem{Base: aPtr})
 	VMOVDQU(a, Mem{Base: bPtr})
 	VMOVDQA(b, tmp)
@@ -91,14 +103,14 @@ func medianOfThree(size uint64, register func() VecVirtual) {
 
 	// Swap b/c if c<b.
 	Label("part2")
-	less(size, register, c, b, ones, nil)
-	JCC(LabelRef("done"))
+	less(size, register, c, b, msb)
+	JAE(LabelRef("done"))
 	VMOVDQU(c, Mem{Base: bPtr})
 	VMOVDQU(b, Mem{Base: cPtr})
 
 	// Check a/c are in order.
-	less(size, register, c, a, ones, nil)
-	JCC(LabelRef("done"))
+	less(size, register, c, a, msb)
+	JAE(LabelRef("done"))
 	VMOVDQU(c, Mem{Base: aPtr})
 	VMOVDQU(a, Mem{Base: bPtr})
 
@@ -124,8 +136,8 @@ func insertionsort(size uint64, register func() VecVirtual) {
 	LEAQ(Mem{Base: data, Index: loIndex, Scale: 1}, lo)
 	LEAQ(Mem{Base: data, Index: hiIndex, Scale: 1}, hi)
 
-	ones := register()
-	VPCMPEQB(ones, ones, ones)
+	msb := register()
+	VecBroadcast(U64(1 << 63), msb)
 
 	i := GP64()
 	MOVQ(lo, i)
@@ -143,10 +155,8 @@ func insertionsort(size uint64, register func() VecVirtual) {
 	prev := register()
 	VMOVDQU(Mem{Base: j, Disp: -int(size)}, prev)
 
-	less(size, register, item, prev, ones, func () {
-		JZ(LabelRef("outer"))
-	})
-	JCC(LabelRef("outer"))
+	less(size, register, item, prev, msb)
+	JAE(LabelRef("outer"))
 
 	VMOVDQU(prev, Mem{Base: j})
 	VMOVDQU(item, Mem{Base: j, Disp: -int(size)})
@@ -189,8 +199,8 @@ func distributeForward(size uint64, register func() VecVirtual) {
 	LEAQ(Mem{Base: data, Index: hiIndex, Scale: 1}, hi)
 	LEAQ(Mem{Base: scratch, Index: limit, Scale: 1, Disp: -int(size)}, tail)
 
-	ones := register()
-	VPCMPEQB(ones, ones, ones)
+	msb := register()
+	VecBroadcast(U64(1 << 63), msb)
 
 	// Load the pivot item.
 	pivot := register()
@@ -213,9 +223,8 @@ func distributeForward(size uint64, register func() VecVirtual) {
 
 	// Compare the item with the pivot.
 	hasUnequalByte := GP8()
-	less(size, register, next, pivot, ones, func () {
-		SETNE(hasUnequalByte)
-	})
+	less(size, register, next, pivot, msb)
+	SETNE(hasUnequalByte)
 	SETCS(isLess.As8())
 	ANDB(hasUnequalByte, isLess.As8())
 	XORB(Imm(1), isLess.As8())
@@ -274,8 +283,8 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 	LEAQ(Mem{Base: data, Index: loIndex, Scale: 1}, lo)
 	LEAQ(Mem{Base: data, Index: hiIndex, Scale: 1}, hi)
 
-	ones := register()
-	VPCMPEQB(ones, ones, ones)
+	msb := register()
+	VecBroadcast(U64(1 << 63), msb)
 
 	// Load the pivot item.
 	pivot := register()
@@ -297,9 +306,8 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 
 	// Compare the item with the pivot.
 	hasUnequalByte := GP8()
-	less(size, register, next, pivot, ones, func () {
-		SETNE(hasUnequalByte)
-	})
+	less(size, register, next, pivot, msb)
+	SETNE(hasUnequalByte)
 	SETCS(isLess.As8())
 	ANDB(hasUnequalByte, isLess.As8())
 

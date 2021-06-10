@@ -24,13 +24,6 @@ func Sort(data []byte, size int, swap func(int, int)) {
 		return
 	}
 
-	// If no indirect swapping is required, try to use the hybrid partitioning scheme from
-	// https://blog.reverberate.org/2020/05/29/hoares-rebuttal-bubble-sorts-comeback.html
-	if swap == nil && (size == 16 || size == 32) && cpu.X86.Has(cpu.AVX2) {
-		hybridQuicksort(data, size)
-		return
-	}
-
 	// Byte swap each qword prior to sorting. Doing a single pass here, and
 	// again after the sort, is faster than byte swapping during each
 	// comparison. The sorting routines have been written to assume that high
@@ -38,6 +31,14 @@ func Sort(data []byte, size int, swap func(int, int)) {
 	// Swap64() routine rather than needing separate byte swapping routines
 	// for 8, 16, 24, or 32 bytes.
 	bswap.Swap64(data)
+	defer bswap.Swap64(data)
+
+	// If no indirect swapping is required, try to use the hybrid partitioning scheme from
+	// https://blog.reverberate.org/2020/05/29/hoares-rebuttal-bubble-sorts-comeback.html
+	if swap == nil && (size == 16 || size == 32) && cpu.X86.Has(cpu.AVX2) {
+		hybridQuicksort(data, size)
+		return
+	}
 
 	switch size {
 	case 8:
@@ -49,6 +50,4 @@ func Sort(data []byte, size int, swap func(int, int)) {
 	case 32:
 		quicksort256(unsafeBytesTo256(data), swap)
 	}
-
-	bswap.Swap64(data)
 }

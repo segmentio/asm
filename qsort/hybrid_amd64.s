@@ -3,61 +3,66 @@
 #include "textflag.h"
 
 // func medianOfThree16(data *byte, a int, b int, c int)
-// Requires: AVX
+// Requires: AVX, AVX2, SSE4.1
 TEXT ·medianOfThree16(SB), NOSPLIT, $0-32
-	MOVQ      data+0(FP), AX
-	MOVQ      a+8(FP), CX
-	MOVQ      b+16(FP), DX
-	MOVQ      c+24(FP), BX
-	SHLQ      $0x04, CX
-	SHLQ      $0x04, DX
-	SHLQ      $0x04, BX
-	ADDQ      AX, CX
-	ADDQ      AX, DX
-	ADDQ      AX, BX
-	VMOVDQU   (CX), X0
-	VMOVDQU   (DX), X1
-	VMOVDQU   (BX), X2
-	VPCMPEQB  X4, X4, X4
-	VPCMPEQB  X1, X0, X3
-	VPXOR     X3, X4, X3
-	VPMINUB   X1, X0, X5
-	VPCMPEQB  X1, X5, X5
-	VPAND     X5, X3, X5
-	VPMOVMSKB X3, AX
-	VPMOVMSKB X5, R9
-	BSFL      AX, SI
-	BTSL      SI, R9
-	JCC       part2
-	VMOVDQU   X1, (CX)
-	VMOVDQU   X0, (DX)
-	VMOVDQA   X1, X3
-	VMOVDQA   X0, X1
-	VMOVDQA   X3, X0
+	MOVQ         data+0(FP), AX
+	MOVQ         a+8(FP), CX
+	MOVQ         b+16(FP), DX
+	MOVQ         c+24(FP), BX
+	SHLQ         $0x04, CX
+	SHLQ         $0x04, DX
+	SHLQ         $0x04, BX
+	ADDQ         AX, CX
+	ADDQ         AX, DX
+	ADDQ         AX, BX
+	VMOVDQU      (CX), X0
+	VMOVDQU      (DX), X1
+	VMOVDQU      (BX), X2
+	MOVQ         $0x8000000000000000, AX
+	PINSRQ       $0x00, AX, X4
+	VPBROADCASTQ X4, X4
+	VPCMPEQQ     X1, X0, X3
+	VPADDQ       X1, X4, X5
+	VPADDQ       X0, X4, X6
+	VPCMPGTQ     X5, X6, X5
+	VMOVMSKPD    X3, AX
+	VMOVMSKPD    X5, R9
+	NOTL         AX
+	BSFL         AX, SI
+	TESTL        AX, AX
+	BTSL         SI, R9
+	JAE          part2
+	VMOVDQU      X1, (CX)
+	VMOVDQU      X0, (DX)
+	VMOVDQA      X1, X3
+	VMOVDQA      X0, X1
+	VMOVDQA      X3, X0
 
 part2:
-	VPCMPEQB  X2, X1, X3
-	VPXOR     X3, X4, X3
-	VPMINUB   X2, X1, X5
-	VPCMPEQB  X2, X5, X5
-	VPAND     X5, X3, X5
-	VPMOVMSKB X3, AX
-	VPMOVMSKB X5, SI
+	VPCMPEQQ  X2, X1, X3
+	VPADDQ    X2, X4, X5
+	VPADDQ    X1, X4, X6
+	VPCMPGTQ  X5, X6, X5
+	VMOVMSKPD X3, AX
+	VMOVMSKPD X5, SI
+	NOTL      AX
 	BSFL      AX, DI
+	TESTL     AX, AX
 	BTSL      DI, SI
-	JCC       done
+	JAE       done
 	VMOVDQU   X2, (DX)
 	VMOVDQU   X1, (BX)
-	VPCMPEQB  X2, X0, X1
-	VPXOR     X1, X4, X1
-	VPMINUB   X2, X0, X3
-	VPCMPEQB  X2, X3, X3
-	VPAND     X3, X1, X3
-	VPMOVMSKB X1, AX
-	VPMOVMSKB X3, BX
+	VPCMPEQQ  X2, X0, X1
+	VPADDQ    X2, X4, X3
+	VPADDQ    X0, X4, X4
+	VPCMPGTQ  X3, X4, X3
+	VMOVMSKPD X1, AX
+	VMOVMSKPD X3, BX
+	NOTL      AX
 	BSFL      AX, R8
+	TESTL     AX, AX
 	BTSL      R8, BX
-	JCC       done
+	JAE       done
 	VMOVDQU   X2, (CX)
 	VMOVDQU   X0, (DX)
 
@@ -65,17 +70,19 @@ done:
 	RET
 
 // func insertionsort16(data *byte, lo int, hi int)
-// Requires: AVX
+// Requires: AVX, AVX2, SSE4.1
 TEXT ·insertionsort16(SB), NOSPLIT, $0-24
-	MOVQ     data+0(FP), AX
-	MOVQ     lo+8(FP), CX
-	MOVQ     hi+16(FP), DX
-	SHLQ     $0x04, CX
-	SHLQ     $0x04, DX
-	LEAQ     (AX)(CX*1), CX
-	LEAQ     (AX)(DX*1), AX
-	VPCMPEQB X0, X0, X0
-	MOVQ     CX, DX
+	MOVQ         data+0(FP), AX
+	MOVQ         lo+8(FP), CX
+	MOVQ         hi+16(FP), DX
+	SHLQ         $0x04, CX
+	SHLQ         $0x04, DX
+	LEAQ         (AX)(CX*1), CX
+	LEAQ         (AX)(DX*1), AX
+	MOVQ         $0x8000000000000000, DX
+	PINSRQ       $0x00, DX, X0
+	VPBROADCASTQ X0, X0
+	MOVQ         CX, DX
 
 outer:
 	ADDQ    $0x10, DX
@@ -86,18 +93,17 @@ outer:
 
 inner:
 	VMOVDQU   -16(SI), X2
-	VPCMPEQB  X1, X2, X3
-	VPXOR     X3, X0, X3
-	VPMINUB   X1, X2, X4
-	VPCMPEQB  X1, X4, X4
-	VPAND     X4, X3, X4
-	VPMOVMSKB X3, DI
-	VPMOVMSKB X4, R8
-	TESTL     DI, DI
-	JZ        outer
+	VPCMPEQQ  X1, X2, X3
+	VPADDQ    X1, X0, X4
+	VPADDQ    X2, X0, X5
+	VPCMPGTQ  X4, X5, X4
+	VMOVMSKPD X3, DI
+	VMOVMSKPD X4, R8
+	NOTL      DI
 	BSFL      DI, BX
+	TESTL     DI, DI
 	BTSL      BX, R8
-	JCC       outer
+	JAE       outer
 	VMOVDQU   X2, (SI)
 	VMOVDQU   X1, -16(SI)
 	SUBQ      $0x10, SI
@@ -109,40 +115,42 @@ done:
 	RET
 
 // func distributeForward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
-// Requires: AVX, CMOV
+// Requires: AVX, AVX2, CMOV, SSE4.1
 TEXT ·distributeForward16(SB), NOSPLIT, $0-56
-	MOVQ     data+0(FP), AX
-	MOVQ     scratch+8(FP), CX
-	MOVQ     limit+16(FP), DX
-	MOVQ     lo+24(FP), BX
-	MOVQ     hi+32(FP), SI
-	MOVQ     pivot+40(FP), DI
-	SHLQ     $0x04, DX
-	SHLQ     $0x04, BX
-	SHLQ     $0x04, SI
-	SHLQ     $0x04, DI
-	LEAQ     (AX)(BX*1), BX
-	LEAQ     (AX)(SI*1), SI
-	LEAQ     -16(CX)(DX*1), CX
-	VPCMPEQB X0, X0, X0
-	VMOVDQU  (AX)(DI*1), X1
-	XORQ     DI, DI
-	XORQ     R9, R9
-	NEGQ     DX
+	MOVQ         data+0(FP), AX
+	MOVQ         scratch+8(FP), CX
+	MOVQ         limit+16(FP), DX
+	MOVQ         lo+24(FP), BX
+	MOVQ         hi+32(FP), SI
+	MOVQ         pivot+40(FP), DI
+	SHLQ         $0x04, DX
+	SHLQ         $0x04, BX
+	SHLQ         $0x04, SI
+	SHLQ         $0x04, DI
+	LEAQ         (AX)(BX*1), BX
+	LEAQ         (AX)(SI*1), SI
+	LEAQ         -16(CX)(DX*1), CX
+	MOVQ         $0x8000000000000000, R9
+	PINSRQ       $0x00, R9, X0
+	VPBROADCASTQ X0, X0
+	VMOVDQU      (AX)(DI*1), X1
+	XORQ         DI, DI
+	XORQ         R9, R9
+	NEGQ         DX
 
 loop:
 	VMOVDQU   (BX), X2
-	VPCMPEQB  X2, X1, X3
-	VPXOR     X3, X0, X3
-	VPMINUB   X2, X1, X4
-	VPCMPEQB  X2, X4, X4
-	VPAND     X4, X3, X4
-	VPMOVMSKB X3, R11
-	VPMOVMSKB X4, R12
-	TESTL     R11, R11
+	VPCMPEQQ  X2, X1, X3
+	VPADDQ    X2, X0, X4
+	VPADDQ    X1, X0, X5
+	VPCMPGTQ  X4, X5, X4
+	VMOVMSKPD X3, R10
+	VMOVMSKPD X4, R11
+	NOTL      R10
+	BSFL      R10, R8
+	TESTL     R10, R10
+	BTSL      R8, R11
 	SETNE     R10
-	BSFL      R11, R8
-	BTSL      R8, R12
 	SETCS     R9
 	ANDB      R10, R9
 	XORB      $0x01, R9
@@ -166,40 +174,42 @@ done:
 	RET
 
 // func distributeBackward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
-// Requires: AVX, CMOV
+// Requires: AVX, AVX2, CMOV, SSE4.1
 TEXT ·distributeBackward16(SB), NOSPLIT, $0-56
-	MOVQ     data+0(FP), AX
-	MOVQ     scratch+8(FP), CX
-	MOVQ     limit+16(FP), DX
-	MOVQ     lo+24(FP), BX
-	MOVQ     hi+32(FP), SI
-	MOVQ     pivot+40(FP), DI
-	SHLQ     $0x04, DX
-	SHLQ     $0x04, BX
-	SHLQ     $0x04, SI
-	SHLQ     $0x04, DI
-	LEAQ     (AX)(BX*1), BX
-	LEAQ     (AX)(SI*1), SI
-	VPCMPEQB X0, X0, X0
-	VMOVDQU  (AX)(DI*1), X1
-	XORQ     DI, DI
-	XORQ     R9, R9
-	CMPQ     SI, BX
-	JBE      done
+	MOVQ         data+0(FP), AX
+	MOVQ         scratch+8(FP), CX
+	MOVQ         limit+16(FP), DX
+	MOVQ         lo+24(FP), BX
+	MOVQ         hi+32(FP), SI
+	MOVQ         pivot+40(FP), DI
+	SHLQ         $0x04, DX
+	SHLQ         $0x04, BX
+	SHLQ         $0x04, SI
+	SHLQ         $0x04, DI
+	LEAQ         (AX)(BX*1), BX
+	LEAQ         (AX)(SI*1), SI
+	MOVQ         $0x8000000000000000, R9
+	PINSRQ       $0x00, R9, X0
+	VPBROADCASTQ X0, X0
+	VMOVDQU      (AX)(DI*1), X1
+	XORQ         DI, DI
+	XORQ         R9, R9
+	CMPQ         SI, BX
+	JBE          done
 
 loop:
 	VMOVDQU   (SI), X2
-	VPCMPEQB  X2, X1, X3
-	VPXOR     X3, X0, X3
-	VPMINUB   X2, X1, X4
-	VPCMPEQB  X2, X4, X4
-	VPAND     X4, X3, X4
-	VPMOVMSKB X3, R11
-	VPMOVMSKB X4, R12
-	TESTL     R11, R11
+	VPCMPEQQ  X2, X1, X3
+	VPADDQ    X2, X0, X4
+	VPADDQ    X1, X0, X5
+	VPCMPGTQ  X4, X5, X4
+	VMOVMSKPD X3, R10
+	VMOVMSKPD X4, R11
+	NOTL      R10
+	BSFL      R10, R8
+	TESTL     R10, R10
+	BTSL      R8, R11
 	SETNE     R10
-	BSFL      R11, R8
-	BTSL      R8, R12
 	SETCS     R9
 	ANDB      R10, R9
 	MOVQ      CX, R10
@@ -221,61 +231,66 @@ done:
 	RET
 
 // func medianOfThree32(data *byte, a int, b int, c int)
-// Requires: AVX, AVX2
+// Requires: AVX, AVX2, SSE4.1
 TEXT ·medianOfThree32(SB), NOSPLIT, $0-32
-	MOVQ      data+0(FP), AX
-	MOVQ      a+8(FP), CX
-	MOVQ      b+16(FP), DX
-	MOVQ      c+24(FP), BX
-	SHLQ      $0x05, CX
-	SHLQ      $0x05, DX
-	SHLQ      $0x05, BX
-	ADDQ      AX, CX
-	ADDQ      AX, DX
-	ADDQ      AX, BX
-	VMOVDQU   (CX), Y0
-	VMOVDQU   (DX), Y1
-	VMOVDQU   (BX), Y2
-	VPCMPEQB  Y4, Y4, Y4
-	VPCMPEQB  Y1, Y0, Y3
-	VPXOR     Y3, Y4, Y3
-	VPMINUB   Y1, Y0, Y5
-	VPCMPEQB  Y1, Y5, Y5
-	VPAND     Y5, Y3, Y5
-	VPMOVMSKB Y3, AX
-	VPMOVMSKB Y5, R9
-	BSFL      AX, SI
-	BTSL      SI, R9
-	JCC       part2
-	VMOVDQU   Y1, (CX)
-	VMOVDQU   Y0, (DX)
-	VMOVDQA   Y1, Y3
-	VMOVDQA   Y0, Y1
-	VMOVDQA   Y3, Y0
+	MOVQ         data+0(FP), AX
+	MOVQ         a+8(FP), CX
+	MOVQ         b+16(FP), DX
+	MOVQ         c+24(FP), BX
+	SHLQ         $0x05, CX
+	SHLQ         $0x05, DX
+	SHLQ         $0x05, BX
+	ADDQ         AX, CX
+	ADDQ         AX, DX
+	ADDQ         AX, BX
+	VMOVDQU      (CX), Y0
+	VMOVDQU      (DX), Y1
+	VMOVDQU      (BX), Y2
+	MOVQ         $0x8000000000000000, AX
+	PINSRQ       $0x00, AX, X4
+	VPBROADCASTQ X4, Y4
+	VPCMPEQQ     Y1, Y0, Y3
+	VPADDQ       Y1, Y4, Y5
+	VPADDQ       Y0, Y4, Y6
+	VPCMPGTQ     Y5, Y6, Y5
+	VMOVMSKPD    Y3, AX
+	VMOVMSKPD    Y5, R9
+	NOTL         AX
+	BSFL         AX, SI
+	TESTL        AX, AX
+	BTSL         SI, R9
+	JAE          part2
+	VMOVDQU      Y1, (CX)
+	VMOVDQU      Y0, (DX)
+	VMOVDQA      Y1, Y3
+	VMOVDQA      Y0, Y1
+	VMOVDQA      Y3, Y0
 
 part2:
-	VPCMPEQB  Y2, Y1, Y3
-	VPXOR     Y3, Y4, Y3
-	VPMINUB   Y2, Y1, Y5
-	VPCMPEQB  Y2, Y5, Y5
-	VPAND     Y5, Y3, Y5
-	VPMOVMSKB Y3, AX
-	VPMOVMSKB Y5, SI
+	VPCMPEQQ  Y2, Y1, Y3
+	VPADDQ    Y2, Y4, Y5
+	VPADDQ    Y1, Y4, Y6
+	VPCMPGTQ  Y5, Y6, Y5
+	VMOVMSKPD Y3, AX
+	VMOVMSKPD Y5, SI
+	NOTL      AX
 	BSFL      AX, DI
+	TESTL     AX, AX
 	BTSL      DI, SI
-	JCC       done
+	JAE       done
 	VMOVDQU   Y2, (DX)
 	VMOVDQU   Y1, (BX)
-	VPCMPEQB  Y2, Y0, Y1
-	VPXOR     Y1, Y4, Y1
-	VPMINUB   Y2, Y0, Y3
-	VPCMPEQB  Y2, Y3, Y3
-	VPAND     Y3, Y1, Y3
-	VPMOVMSKB Y1, AX
-	VPMOVMSKB Y3, BX
+	VPCMPEQQ  Y2, Y0, Y1
+	VPADDQ    Y2, Y4, Y3
+	VPADDQ    Y0, Y4, Y4
+	VPCMPGTQ  Y3, Y4, Y3
+	VMOVMSKPD Y1, AX
+	VMOVMSKPD Y3, BX
+	NOTL      AX
 	BSFL      AX, R8
+	TESTL     AX, AX
 	BTSL      R8, BX
-	JCC       done
+	JAE       done
 	VMOVDQU   Y2, (CX)
 	VMOVDQU   Y0, (DX)
 
@@ -284,17 +299,19 @@ done:
 	RET
 
 // func insertionsort32(data *byte, lo int, hi int)
-// Requires: AVX, AVX2
+// Requires: AVX, AVX2, SSE4.1
 TEXT ·insertionsort32(SB), NOSPLIT, $0-24
-	MOVQ     data+0(FP), AX
-	MOVQ     lo+8(FP), CX
-	MOVQ     hi+16(FP), DX
-	SHLQ     $0x05, CX
-	SHLQ     $0x05, DX
-	LEAQ     (AX)(CX*1), CX
-	LEAQ     (AX)(DX*1), AX
-	VPCMPEQB Y0, Y0, Y0
-	MOVQ     CX, DX
+	MOVQ         data+0(FP), AX
+	MOVQ         lo+8(FP), CX
+	MOVQ         hi+16(FP), DX
+	SHLQ         $0x05, CX
+	SHLQ         $0x05, DX
+	LEAQ         (AX)(CX*1), CX
+	LEAQ         (AX)(DX*1), AX
+	MOVQ         $0x8000000000000000, DX
+	PINSRQ       $0x00, DX, X0
+	VPBROADCASTQ X0, Y0
+	MOVQ         CX, DX
 
 outer:
 	ADDQ    $0x20, DX
@@ -305,18 +322,17 @@ outer:
 
 inner:
 	VMOVDQU   -32(SI), Y2
-	VPCMPEQB  Y1, Y2, Y3
-	VPXOR     Y3, Y0, Y3
-	VPMINUB   Y1, Y2, Y4
-	VPCMPEQB  Y1, Y4, Y4
-	VPAND     Y4, Y3, Y4
-	VPMOVMSKB Y3, DI
-	VPMOVMSKB Y4, R8
-	TESTL     DI, DI
-	JZ        outer
+	VPCMPEQQ  Y1, Y2, Y3
+	VPADDQ    Y1, Y0, Y4
+	VPADDQ    Y2, Y0, Y5
+	VPCMPGTQ  Y4, Y5, Y4
+	VMOVMSKPD Y3, DI
+	VMOVMSKPD Y4, R8
+	NOTL      DI
 	BSFL      DI, BX
+	TESTL     DI, DI
 	BTSL      BX, R8
-	JCC       outer
+	JAE       outer
 	VMOVDQU   Y2, (SI)
 	VMOVDQU   Y1, -32(SI)
 	SUBQ      $0x20, SI
@@ -329,40 +345,42 @@ done:
 	RET
 
 // func distributeForward32(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
-// Requires: AVX, AVX2, CMOV
+// Requires: AVX, AVX2, CMOV, SSE4.1
 TEXT ·distributeForward32(SB), NOSPLIT, $0-56
-	MOVQ     data+0(FP), AX
-	MOVQ     scratch+8(FP), CX
-	MOVQ     limit+16(FP), DX
-	MOVQ     lo+24(FP), BX
-	MOVQ     hi+32(FP), SI
-	MOVQ     pivot+40(FP), DI
-	SHLQ     $0x05, DX
-	SHLQ     $0x05, BX
-	SHLQ     $0x05, SI
-	SHLQ     $0x05, DI
-	LEAQ     (AX)(BX*1), BX
-	LEAQ     (AX)(SI*1), SI
-	LEAQ     -32(CX)(DX*1), CX
-	VPCMPEQB Y0, Y0, Y0
-	VMOVDQU  (AX)(DI*1), Y1
-	XORQ     DI, DI
-	XORQ     R9, R9
-	NEGQ     DX
+	MOVQ         data+0(FP), AX
+	MOVQ         scratch+8(FP), CX
+	MOVQ         limit+16(FP), DX
+	MOVQ         lo+24(FP), BX
+	MOVQ         hi+32(FP), SI
+	MOVQ         pivot+40(FP), DI
+	SHLQ         $0x05, DX
+	SHLQ         $0x05, BX
+	SHLQ         $0x05, SI
+	SHLQ         $0x05, DI
+	LEAQ         (AX)(BX*1), BX
+	LEAQ         (AX)(SI*1), SI
+	LEAQ         -32(CX)(DX*1), CX
+	MOVQ         $0x8000000000000000, R9
+	PINSRQ       $0x00, R9, X0
+	VPBROADCASTQ X0, Y0
+	VMOVDQU      (AX)(DI*1), Y1
+	XORQ         DI, DI
+	XORQ         R9, R9
+	NEGQ         DX
 
 loop:
 	VMOVDQU   (BX), Y2
-	VPCMPEQB  Y2, Y1, Y3
-	VPXOR     Y3, Y0, Y3
-	VPMINUB   Y2, Y1, Y4
-	VPCMPEQB  Y2, Y4, Y4
-	VPAND     Y4, Y3, Y4
-	VPMOVMSKB Y3, R11
-	VPMOVMSKB Y4, R12
-	TESTL     R11, R11
+	VPCMPEQQ  Y2, Y1, Y3
+	VPADDQ    Y2, Y0, Y4
+	VPADDQ    Y1, Y0, Y5
+	VPCMPGTQ  Y4, Y5, Y4
+	VMOVMSKPD Y3, R10
+	VMOVMSKPD Y4, R11
+	NOTL      R10
+	BSFL      R10, R8
+	TESTL     R10, R10
+	BTSL      R8, R11
 	SETNE     R10
-	BSFL      R11, R8
-	BTSL      R8, R12
 	SETCS     R9
 	ANDB      R10, R9
 	XORB      $0x01, R9
@@ -387,40 +405,42 @@ done:
 	RET
 
 // func distributeBackward32(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
-// Requires: AVX, AVX2, CMOV
+// Requires: AVX, AVX2, CMOV, SSE4.1
 TEXT ·distributeBackward32(SB), NOSPLIT, $0-56
-	MOVQ     data+0(FP), AX
-	MOVQ     scratch+8(FP), CX
-	MOVQ     limit+16(FP), DX
-	MOVQ     lo+24(FP), BX
-	MOVQ     hi+32(FP), SI
-	MOVQ     pivot+40(FP), DI
-	SHLQ     $0x05, DX
-	SHLQ     $0x05, BX
-	SHLQ     $0x05, SI
-	SHLQ     $0x05, DI
-	LEAQ     (AX)(BX*1), BX
-	LEAQ     (AX)(SI*1), SI
-	VPCMPEQB Y0, Y0, Y0
-	VMOVDQU  (AX)(DI*1), Y1
-	XORQ     DI, DI
-	XORQ     R9, R9
-	CMPQ     SI, BX
-	JBE      done
+	MOVQ         data+0(FP), AX
+	MOVQ         scratch+8(FP), CX
+	MOVQ         limit+16(FP), DX
+	MOVQ         lo+24(FP), BX
+	MOVQ         hi+32(FP), SI
+	MOVQ         pivot+40(FP), DI
+	SHLQ         $0x05, DX
+	SHLQ         $0x05, BX
+	SHLQ         $0x05, SI
+	SHLQ         $0x05, DI
+	LEAQ         (AX)(BX*1), BX
+	LEAQ         (AX)(SI*1), SI
+	MOVQ         $0x8000000000000000, R9
+	PINSRQ       $0x00, R9, X0
+	VPBROADCASTQ X0, Y0
+	VMOVDQU      (AX)(DI*1), Y1
+	XORQ         DI, DI
+	XORQ         R9, R9
+	CMPQ         SI, BX
+	JBE          done
 
 loop:
 	VMOVDQU   (SI), Y2
-	VPCMPEQB  Y2, Y1, Y3
-	VPXOR     Y3, Y0, Y3
-	VPMINUB   Y2, Y1, Y4
-	VPCMPEQB  Y2, Y4, Y4
-	VPAND     Y4, Y3, Y4
-	VPMOVMSKB Y3, R11
-	VPMOVMSKB Y4, R12
-	TESTL     R11, R11
+	VPCMPEQQ  Y2, Y1, Y3
+	VPADDQ    Y2, Y0, Y4
+	VPADDQ    Y1, Y0, Y5
+	VPCMPGTQ  Y4, Y5, Y4
+	VMOVMSKPD Y3, R10
+	VMOVMSKPD Y4, R11
+	NOTL      R10
+	BSFL      R10, R8
+	TESTL     R10, R10
+	BTSL      R8, R11
 	SETNE     R10
-	BSFL      R11, R8
-	BTSL      R8, R12
 	SETCS     R9
 	ANDB      R10, R9
 	MOVQ      CX, R10
