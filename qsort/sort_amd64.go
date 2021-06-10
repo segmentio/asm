@@ -2,18 +2,18 @@
 
 package qsort
 
-func distributeForward64(data *byte, scratch *byte, limit int, lo int, hi int) int
+func distributeForward64(data []uint64, scratch []uint64, limit int, lo int, hi int) int
 
-func distributeBackward64(data *byte, scratch *byte, limit int, lo int, hi int) int
+func distributeBackward64(data []uint64, scratch []uint64, limit int, lo int, hi int) int
 
-func insertionsort128NoSwapAsm(data []byte)
+func insertionsort128NoSwap(data [][2]uint64, base int, swap func(int, int))
 
-func distributeForward128(data *byte, scratch *byte, limit int, lo int, hi int) int
+func distributeForward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
 
-func distributeBackward128(data *byte, scratch *byte, limit int, lo int, hi int) int
+func distributeBackward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
 
-func insertionsort256NoSwapAsm(data []byte)
+func insertionsort256NoSwap(data [][4]uint64, base int, swap func(int, int))
 
-func distributeForward256(data *byte, scratch *byte, limit int, lo int, hi int) int
+func distributeForward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int
 
-func distributeBackward256(data *byte, scratch *byte, limit int, lo int, hi int) int
+func distributeBackward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int

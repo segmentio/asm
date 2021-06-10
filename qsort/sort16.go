@@ -1,9 +1,6 @@
 package qsort
 
-type uint128 struct {
-	hi uint64
-	lo uint64
-}
+type uint128 = [2]uint64
 
 type smallsort128 func(data []uint128, base int, swap func(int, int))
 type partition128 func(data []uint128, base int, swap func(int, int)) int
@@ -35,12 +32,6 @@ func insertionsort128(data []uint128, base int, swap func(int, int)) {
 			callswap(base, swap, j, j-1)
 		}
 	}
-}
-
-func insertionsort128NoSwap(data []uint128, base int, swap func(int, int)) {
-	// FIXME: how can we define the function below as func(data []uint128, base int, swap func(int, int))
-	//  to avoid the indirection? It fails because uint128 isn't available at Avo build time
-	insertionsort128NoSwapAsm(unsafeU128ToBytes(data))
 }
 
 func medianOfThree128(data []uint128, base int, swap func(int, int)) {
@@ -91,7 +82,7 @@ func hybridPartition128(data, scratch []uint128) int {
 	hi := len(data) - 1
 	limit := len(scratch)
 
-	p := distributeForward128(unsafeU128Addr(data), unsafeU128Addr(scratch), limit, lo, hi)
+	p := distributeForward128(data, scratch, limit, lo, hi)
 	if hi-p <= limit {
 		copy(data[p+1:], scratch[limit-hi+p:])
 		data[pivot], data[p] = data[p], data[pivot]
@@ -99,12 +90,12 @@ func hybridPartition128(data, scratch []uint128) int {
 	}
 	lo = p + limit
 	for {
-		hi = distributeBackward128(unsafeU128Addr(data), unsafeU128Addr(data[lo+1-limit:]), limit, lo, hi) - limit
+		hi = distributeBackward128(data, data[lo+1-limit:], limit, lo, hi) - limit
 		if hi < lo {
 			p = hi
 			break
 		}
-		lo = distributeForward128(unsafeU128Addr(data), unsafeU128Addr(data[hi+1:]), limit, lo, hi) + limit
+		lo = distributeForward128(data, data[hi+1:], limit, lo, hi) + limit
 		if hi < lo {
 			p = lo - limit
 			break
@@ -122,5 +113,6 @@ func hybridPartition128Using(scratch []byte) partition128 {
 }
 
 func less128(a, b uint128) bool {
-	return a.hi < b.hi || (a.hi == b.hi && a.lo <= b.lo)
+	return a[0] < b[0] ||
+		(a[0] == b[0] && a[1] <= b[1])
 }

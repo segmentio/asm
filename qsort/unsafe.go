@@ -42,18 +42,6 @@ func castSlice(ptr unsafe.Pointer, length int) []byte {
 	}))
 }
 
-func unsafeU64Addr(slice []uint64) *byte {
-	return (*byte)(unsafe.Pointer(&slice[0]))
-}
-
-func unsafeU128Addr(slice []uint128) *byte {
-	return (*byte)(unsafe.Pointer(&slice[0]))
-}
-
-func unsafeU256Addr(slice []uint256) *byte {
-	return (*byte)(unsafe.Pointer(&slice[0]))
-}
-
 type sliceHeader struct {
 	Data unsafe.Pointer
 	Len  int

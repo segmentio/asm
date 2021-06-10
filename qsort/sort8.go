@@ -147,7 +147,7 @@ func hybridPartition64(data, scratch []uint64) int {
 	hi := len(data) - 1
 	limit := len(scratch)
 
-	p := distributeForward64(unsafeU64Addr(data), unsafeU64Addr(scratch), limit, lo, hi)
+	p := distributeForward64(data, scratch, limit, lo, hi)
 	if hi-p <= limit {
 		copy(data[p+1:], scratch[limit-hi+p:])
 		data[pivot], data[p] = data[p], data[pivot]
@@ -155,12 +155,12 @@ func hybridPartition64(data, scratch []uint64) int {
 	}
 	lo = p + limit
 	for {
-		hi = distributeBackward64(unsafeU64Addr(data), unsafeU64Addr(data[lo+1-limit:]), limit, lo, hi) - limit
+		hi = distributeBackward64(data, data[lo+1-limit:], limit, lo, hi) - limit
 		if hi < lo {
 			p = hi
 			break
 		}
-		lo = distributeForward64(unsafeU64Addr(data), unsafeU64Addr(data[hi+1:]), limit, lo, hi) + limit
+		lo = distributeForward64(data, data[hi+1:], limit, lo, hi) + limit
 		if hi < lo {
 			p = lo - limit
 			break

@@ -121,13 +121,14 @@ func (s *SortableVector) Compare(a, b Register) {
 	BTSL(unequalByteIndex, ltMask) // set CF
 }
 
-
 func insertionsort(s Sortable) {
 	size := s.Size()
-	TEXT(fmt.Sprintf("insertionsort%dNoSwapAsm", size*8), NOSPLIT, "func(data []byte)")
+	TEXT(fmt.Sprintf("insertionsort%dNoSwap", size*8), NOSPLIT, fmt.Sprintf("func(data []%s, base int, swap func(int, int))", typeFor(size)))
 
 	data := Load(Param("data").Base(), GP64())
 	end := Load(Param("data").Len(), GP64())
+	shift := log2(size)
+	SHLQ(Imm(shift), end)
 	ADDQ(data, end)
 	TESTQ(data, end)
 	JE(LabelRef("done"))
@@ -168,11 +169,11 @@ func insertionsort(s Sortable) {
 
 func distributeForward(s Sortable) {
 	size := s.Size()
-	TEXT(fmt.Sprintf("distributeForward%d", size*8), NOSPLIT, "func(data, scratch *byte, limit, lo, hi int) int")
+	TEXT(fmt.Sprintf("distributeForward%d", size*8), NOSPLIT, fmt.Sprintf("func(data, scratch []%s, limit, lo, hi int) int", typeFor(size)))
 
 	// Load inputs.
-	data := Load(Param("data"), GP64())
-	scratch := Load(Param("scratch"), GP64())
+	data := Load(Param("data").Base(), GP64())
+	scratch := Load(Param("scratch").Base(), GP64())
 	limit := Load(Param("limit"), GP64())
 	loIndex := Load(Param("lo"), GP64())
 	hiIndex := Load(Param("hi"), GP64())
@@ -248,11 +249,11 @@ func distributeForward(s Sortable) {
 
 func distributeBackward(s Sortable) {
 	size := s.Size()
-	TEXT(fmt.Sprintf("distributeBackward%d", size*8), NOSPLIT, "func(data, scratch *byte, limit, lo, hi int) int")
+	TEXT(fmt.Sprintf("distributeBackward%d", size*8), NOSPLIT, fmt.Sprintf("func(data, scratch []%s, limit, lo, hi int) int", typeFor(size)))
 
 	// Load inputs.
-	data := Load(Param("data"), GP64())
-	scratch := Load(Param("scratch"), GP64())
+	data := Load(Param("data").Base(), GP64())
+	scratch := Load(Param("scratch").Base(), GP64())
 	limit := Load(Param("limit"), GP64())
 	loIndex := Load(Param("lo"), GP64())
 	hiIndex := Load(Param("hi"), GP64())
@@ -323,4 +324,11 @@ func distributeBackward(s Sortable) {
 
 func log2(size uint64) uint64 {
 	return uint64(math.Log2(float64(size)))
+}
+
+func typeFor(size uint64) string {
+	if size <= 8 {
+		return fmt.Sprintf("uint%d", size*8)
+	}
+	return fmt.Sprintf("[%d]uint64", size/8)
 }

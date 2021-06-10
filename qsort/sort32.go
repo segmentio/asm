@@ -1,11 +1,6 @@
 package qsort
 
-type uint256 struct {
-	a uint64 // hi
-	b uint64
-	c uint64
-	d uint64 // lo
-}
+type uint256 = [4]uint64
 
 type smallsort256 func(data []uint256, base int, swap func(int, int))
 type partition256 func(data []uint256, base int, swap func(int, int)) int
@@ -37,12 +32,6 @@ func insertionsort256(data []uint256, base int, swap func(int, int)) {
 			callswap(base, swap, j, j-1)
 		}
 	}
-}
-
-func insertionsort256NoSwap(data []uint256, base int, swap func(int, int)) {
-	// FIXME: how can we define the function below as func(data []uint256, base int, swap func(int, int))
-	//  to avoid the indirection? It fails because uint256 isn't available at Avo build time
-	insertionsort256NoSwapAsm(unsafeU256ToBytes(data))
 }
 
 func medianOfThree256(data []uint256, base int, swap func(int, int)) {
@@ -93,7 +82,7 @@ func hybridPartition256(data, scratch []uint256) int {
 	hi := len(data) - 1
 	limit := len(scratch)
 
-	p := distributeForward256(unsafeU256Addr(data), unsafeU256Addr(scratch), limit, lo, hi)
+	p := distributeForward256(data, scratch, limit, lo, hi)
 	if hi-p <= limit {
 		copy(data[p+1:], scratch[limit-hi+p:])
 		data[pivot], data[p] = data[p], data[pivot]
@@ -101,12 +90,12 @@ func hybridPartition256(data, scratch []uint256) int {
 	}
 	lo = p + limit
 	for {
-		hi = distributeBackward256(unsafeU256Addr(data), unsafeU256Addr(data[lo+1-limit:]), limit, lo, hi) - limit
+		hi = distributeBackward256(data, data[lo+1-limit:], limit, lo, hi) - limit
 		if hi < lo {
 			p = hi
 			break
 		}
-		lo = distributeForward256(unsafeU256Addr(data), unsafeU256Addr(data[hi+1:]), limit, lo, hi) + limit
+		lo = distributeForward256(data, data[hi+1:], limit, lo, hi) + limit
 		if hi < lo {
 			p = lo - limit
 			break
@@ -124,5 +113,8 @@ func hybridPartition256Using(scratch []byte) partition256 {
 }
 
 func less256(a, b uint256) bool {
-	return a.a < b.a || (a.a == b.a && a.b < b.b) || (a.a == b.a && a.b == b.b && a.c < b.c) || (a.a == b.a && a.b == b.b && a.c == b.c && a.d <= b.d)
+	return a[0] < b[0] ||
+		(a[0] == b[0] && a[1] < b[1]) ||
+		(a[0] == b[0] && a[1] == b[1] && a[2] < b[2]) ||
+		(a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] <= b[3])
 }

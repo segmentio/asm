@@ -2,14 +2,14 @@
 
 #include "textflag.h"
 
-// func distributeForward64(data *byte, scratch *byte, limit int, lo int, hi int) int
+// func distributeForward64(data []uint64, scratch []uint64, limit int, lo int, hi int) int
 // Requires: CMOV
-TEXT ·distributeForward64(SB), NOSPLIT, $0-48
-	MOVQ data+0(FP), AX
-	MOVQ scratch+8(FP), CX
-	MOVQ limit+16(FP), DX
-	MOVQ lo+24(FP), BX
-	MOVQ hi+32(FP), SI
+TEXT ·distributeForward64(SB), NOSPLIT, $0-80
+	MOVQ data_base+0(FP), AX
+	MOVQ scratch_base+24(FP), CX
+	MOVQ limit+48(FP), DX
+	MOVQ lo+56(FP), BX
+	MOVQ hi+64(FP), SI
 	SHLQ $0x03, DX
 	SHLQ $0x03, BX
 	SHLQ $0x03, SI
@@ -42,17 +42,17 @@ done:
 	ADDQ R8, BX
 	SHRQ $0x03, BX
 	DECQ BX
-	MOVQ BX, ret+40(FP)
+	MOVQ BX, ret+72(FP)
 	RET
 
-// func distributeBackward64(data *byte, scratch *byte, limit int, lo int, hi int) int
+// func distributeBackward64(data []uint64, scratch []uint64, limit int, lo int, hi int) int
 // Requires: CMOV
-TEXT ·distributeBackward64(SB), NOSPLIT, $0-48
-	MOVQ data+0(FP), AX
-	MOVQ scratch+8(FP), CX
-	MOVQ limit+16(FP), DX
-	MOVQ lo+24(FP), BX
-	MOVQ hi+32(FP), SI
+TEXT ·distributeBackward64(SB), NOSPLIT, $0-80
+	MOVQ data_base+0(FP), AX
+	MOVQ scratch_base+24(FP), CX
+	MOVQ limit+48(FP), DX
+	MOVQ lo+56(FP), BX
+	MOVQ hi+64(FP), SI
 	SHLQ $0x03, DX
 	SHLQ $0x03, BX
 	SHLQ $0x03, SI
@@ -83,14 +83,15 @@ done:
 	SUBQ AX, SI
 	ADDQ R8, SI
 	SHRQ $0x03, SI
-	MOVQ SI, ret+40(FP)
+	MOVQ SI, ret+72(FP)
 	RET
 
-// func insertionsort128NoSwapAsm(data []byte)
+// func insertionsort128NoSwap(data [][2]uint64, base int, swap func(int, int))
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·insertionsort128NoSwapAsm(SB), NOSPLIT, $0-24
+TEXT ·insertionsort128NoSwap(SB), NOSPLIT, $0-40
 	MOVQ         data_base+0(FP), AX
 	MOVQ         data_len+8(FP), CX
+	SHLQ         $0x04, CX
 	ADDQ         AX, CX
 	TESTQ        AX, CX
 	JE           done
@@ -128,14 +129,14 @@ inner:
 done:
 	RET
 
-// func distributeForward128(data *byte, scratch *byte, limit int, lo int, hi int) int
+// func distributeForward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeForward128(SB), NOSPLIT, $0-48
-	MOVQ         data+0(FP), AX
-	MOVQ         scratch+8(FP), CX
-	MOVQ         limit+16(FP), DX
-	MOVQ         lo+24(FP), BX
-	MOVQ         hi+32(FP), SI
+TEXT ·distributeForward128(SB), NOSPLIT, $0-80
+	MOVQ         data_base+0(FP), AX
+	MOVQ         scratch_base+24(FP), CX
+	MOVQ         limit+48(FP), DX
+	MOVQ         lo+56(FP), BX
+	MOVQ         hi+64(FP), SI
 	SHLQ         $0x04, DX
 	SHLQ         $0x04, BX
 	SHLQ         $0x04, SI
@@ -179,17 +180,17 @@ done:
 	ADDQ R8, BX
 	SHRQ $0x04, BX
 	DECQ BX
-	MOVQ BX, ret+40(FP)
+	MOVQ BX, ret+72(FP)
 	RET
 
-// func distributeBackward128(data *byte, scratch *byte, limit int, lo int, hi int) int
+// func distributeBackward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeBackward128(SB), NOSPLIT, $0-48
-	MOVQ         data+0(FP), AX
-	MOVQ         scratch+8(FP), CX
-	MOVQ         limit+16(FP), DX
-	MOVQ         lo+24(FP), BX
-	MOVQ         hi+32(FP), SI
+TEXT ·distributeBackward128(SB), NOSPLIT, $0-80
+	MOVQ         data_base+0(FP), AX
+	MOVQ         scratch_base+24(FP), CX
+	MOVQ         limit+48(FP), DX
+	MOVQ         lo+56(FP), BX
+	MOVQ         hi+64(FP), SI
 	SHLQ         $0x04, DX
 	SHLQ         $0x04, BX
 	SHLQ         $0x04, SI
@@ -231,14 +232,15 @@ done:
 	SUBQ AX, SI
 	ADDQ R8, SI
 	SHRQ $0x04, SI
-	MOVQ SI, ret+40(FP)
+	MOVQ SI, ret+72(FP)
 	RET
 
-// func insertionsort256NoSwapAsm(data []byte)
+// func insertionsort256NoSwap(data [][4]uint64, base int, swap func(int, int))
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·insertionsort256NoSwapAsm(SB), NOSPLIT, $0-24
+TEXT ·insertionsort256NoSwap(SB), NOSPLIT, $0-40
 	MOVQ         data_base+0(FP), AX
 	MOVQ         data_len+8(FP), CX
+	SHLQ         $0x05, CX
 	ADDQ         AX, CX
 	TESTQ        AX, CX
 	JE           done
@@ -277,14 +279,14 @@ done:
 	VZEROUPPER
 	RET
 
-// func distributeForward256(data *byte, scratch *byte, limit int, lo int, hi int) int
+// func distributeForward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeForward256(SB), NOSPLIT, $0-48
-	MOVQ         data+0(FP), AX
-	MOVQ         scratch+8(FP), CX
-	MOVQ         limit+16(FP), DX
-	MOVQ         lo+24(FP), BX
-	MOVQ         hi+32(FP), SI
+TEXT ·distributeForward256(SB), NOSPLIT, $0-80
+	MOVQ         data_base+0(FP), AX
+	MOVQ         scratch_base+24(FP), CX
+	MOVQ         limit+48(FP), DX
+	MOVQ         lo+56(FP), BX
+	MOVQ         hi+64(FP), SI
 	SHLQ         $0x05, DX
 	SHLQ         $0x05, BX
 	SHLQ         $0x05, SI
@@ -328,18 +330,18 @@ done:
 	ADDQ R8, BX
 	SHRQ $0x05, BX
 	DECQ BX
-	MOVQ BX, ret+40(FP)
+	MOVQ BX, ret+72(FP)
 	VZEROUPPER
 	RET
 
-// func distributeBackward256(data *byte, scratch *byte, limit int, lo int, hi int) int
+// func distributeBackward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeBackward256(SB), NOSPLIT, $0-48
-	MOVQ         data+0(FP), AX
-	MOVQ         scratch+8(FP), CX
-	MOVQ         limit+16(FP), DX
-	MOVQ         lo+24(FP), BX
-	MOVQ         hi+32(FP), SI
+TEXT ·distributeBackward256(SB), NOSPLIT, $0-80
+	MOVQ         data_base+0(FP), AX
+	MOVQ         scratch_base+24(FP), CX
+	MOVQ         limit+48(FP), DX
+	MOVQ         lo+56(FP), BX
+	MOVQ         hi+64(FP), SI
 	SHLQ         $0x05, DX
 	SHLQ         $0x05, BX
 	SHLQ         $0x05, SI
@@ -381,6 +383,6 @@ done:
 	SUBQ AX, SI
 	ADDQ R8, SI
 	SHRQ $0x05, SI
-	MOVQ SI, ret+40(FP)
+	MOVQ SI, ret+72(FP)
 	VZEROUPPER
 	RET
