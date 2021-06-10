@@ -2,7 +2,7 @@
 
 package qsort
 
-func insertionsort128NoSwap(data []byte) {
+func insertionsort128NoSwapAsm(data []byte) {
 	panic("not implemented")
 }
 
@@ -14,7 +14,7 @@ func distributeBackward128(data, scratch *byte, limit, lo, hi, pivot int) int {
 	panic("not implemented")
 }
 
-func insertionsort256NoSwap(data []byte) {
+func insertionsort256NoSwapAsm(data []byte) {
 	panic("not implemented")
 }
 

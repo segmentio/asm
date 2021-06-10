@@ -64,7 +64,7 @@ func less(size uint64, register func() VecVirtual, a, b, msb Op) {
 }
 
 func insertionsort(size uint64, register func() VecVirtual) {
-	TEXT(fmt.Sprintf("insertionsort%dNoSwap", size*8), NOSPLIT, "func(data []byte)")
+	TEXT(fmt.Sprintf("insertionsort%dNoSwapAsm", size*8), NOSPLIT, "func(data []byte)")
 
 	data := Load(Param("data").Base(), GP64())
 	end := Load(Param("data").Len(), GP64())

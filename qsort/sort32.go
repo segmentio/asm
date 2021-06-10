@@ -39,6 +39,12 @@ func insertionsort256(data []uint256, base int, swap func(int, int)) {
 	}
 }
 
+func insertionsort256NoSwap(data []uint256, base int, swap func(int, int)) {
+	// FIXME: how can we define the function below as func(data []uint256, base int, swap func(int, int))
+	//  to avoid the indirection? It fails because uint256 isn't available at Avo build time
+	insertionsort256NoSwapAsm(unsafeU256ToBytes(data))
+}
+
 func medianOfThree256(data []uint256, base int, swap func(int, int)) {
 	end := len(data) - 1
 	mid := len(data) / 2
@@ -81,34 +87,40 @@ func hoarePartition256(data []uint256, base int, swap func(int, int)) int {
 	return j
 }
 
-func hybridPartition256(data, tmp []uint256) int {
+func hybridPartition256(data, scratch []uint256) int {
 	lo := 0
 	hi := len(data) - 1
 
 	pivot := lo
 	lo++
-	p := distributeForward256(unsafeU256Addr(data), unsafeU256Addr(tmp), len(tmp), lo, hi, pivot)
-	if hi-p <= len(tmp) {
-		copy(data[p+1:], tmp[len(tmp)-hi+p:])
+	p := distributeForward256(unsafeU256Addr(data), unsafeU256Addr(scratch), len(scratch), lo, hi, pivot)
+	if hi-p <= len(scratch) {
+		copy(data[p+1:], scratch[len(scratch)-hi+p:])
 		data[pivot], data[p] = data[p], data[pivot]
 		return p
 	}
-	lo = p + len(tmp)
+	lo = p + len(scratch)
 	for {
-		hi = distributeBackward256(unsafeU256Addr(data), unsafeU256Addr(data[lo+1-len(tmp):]), len(tmp), lo, hi, pivot) - len(tmp)
+		hi = distributeBackward256(unsafeU256Addr(data), unsafeU256Addr(data[lo+1-len(scratch):]), len(scratch), lo, hi, pivot) - len(scratch)
 		if hi < lo {
 			p = hi
 			break
 		}
-		lo = distributeForward256(unsafeU256Addr(data), unsafeU256Addr(data[hi+1:]), len(tmp), lo, hi, pivot) + len(tmp)
+		lo = distributeForward256(unsafeU256Addr(data), unsafeU256Addr(data[hi+1:]), len(scratch), lo, hi, pivot) + len(scratch)
 		if hi < lo {
-			p = lo - len(tmp)
+			p = lo - len(scratch)
 			break
 		}
 	}
-	copy(data[p+1:], tmp[:])
+	copy(data[p+1:], scratch[:])
 	data[pivot], data[p] = data[p], data[pivot]
 	return p
+}
+
+func hybridPartition256Using(scratch []byte) partition256 {
+	return func(data []uint256, base int, swap func(int, int)) int {
+		return hybridPartition256(data, unsafeBytesToU256(scratch[:]))
+	}
 }
 
 func less256(a, b uint256) bool {

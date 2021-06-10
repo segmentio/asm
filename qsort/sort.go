@@ -63,25 +63,17 @@ func hybridQuicksort(data []byte, size int) {
 	// requires scratch space. We allocate some stack space for the task here,
 	// and we do it outside the main Sort() function so that we don't pay the
 	// stack cost unless necessary.
-	var buf [1024]byte
+	var scratch [1024]byte
+
+	// For reasons unknown, using the smallsort sooner (with larger chunks)
+	// yields better results.
+	cutoff := smallCutoff * 2
 
 	switch size {
 	case 16:
-		smallsort := func(data []uint128, base int, swap func(int, int)) {
-			insertionsort128NoSwap(unsafeU128ToBytes(data))
-		}
-		partition := func(data []uint128, base int, swap func(int, int)) int {
-			return hybridPartition128(data, unsafeBytesToU128(buf[:]))
-		}
-		quicksort128(unsafeBytesToU128(data), smallCutoff*2, 0, smallsort, partition, nil)
+		quicksort128(unsafeBytesToU128(data), 0, cutoff, insertionsort128NoSwap, hybridPartition128Using(scratch[:]), nil)
 	case 32:
-		smallsort := func(data []uint256, base int, swap func(int, int)) {
-			insertionsort256NoSwap(unsafeU256ToBytes(data))
-		}
-		partition := func(data []uint256, base int, swap func(int, int)) int {
-			return hybridPartition256(data, unsafeBytesToU256(buf[:]))
-		}
-		quicksort256(unsafeBytesToU256(data), 0, smallCutoff*2, smallsort, partition, nil)
+		quicksort256(unsafeBytesToU256(data), 0, cutoff, insertionsort256NoSwap, hybridPartition256Using(scratch[:]), nil)
 	}
 }
 

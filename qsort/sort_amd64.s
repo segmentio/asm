@@ -2,9 +2,9 @@
 
 #include "textflag.h"
 
-// func insertionsort128NoSwap(data []byte)
+// func insertionsort128NoSwapAsm(data []byte)
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·insertionsort128NoSwap(SB), NOSPLIT, $0-24
+TEXT ·insertionsort128NoSwapAsm(SB), NOSPLIT, $0-24
 	MOVQ         data_base+0(FP), AX
 	MOVQ         data_len+8(FP), CX
 	ADDQ         AX, CX
@@ -161,9 +161,9 @@ done:
 	MOVQ SI, ret+48(FP)
 	RET
 
-// func insertionsort256NoSwap(data []byte)
+// func insertionsort256NoSwapAsm(data []byte)
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·insertionsort256NoSwap(SB), NOSPLIT, $0-24
+TEXT ·insertionsort256NoSwapAsm(SB), NOSPLIT, $0-24
 	MOVQ         data_base+0(FP), AX
 	MOVQ         data_len+8(FP), CX
 	ADDQ         AX, CX
