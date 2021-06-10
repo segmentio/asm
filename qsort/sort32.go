@@ -7,73 +7,67 @@ type uint256 struct {
 	d uint64 // lo
 }
 
-func quicksort256(data []uint256, lo, hi int, swap func(int, int)) {
-	for lo < hi {
-		if hi-lo < smallCutoff/24 {
-			insertionsort256(data, lo, hi, swap)
+func quicksort256(data []uint256, swap func(int, int)) {
+	for len(data) > 1 {
+		if len(data) < smallCutoff/16 {
+			insertionsort256(data, swap)
 			return
 		}
-		mid := lo + (hi-lo)/2
-		medianOfThree256(data, mid, lo, hi, swap)
-		p := hoarePartition256(data, lo, hi, swap)
-		if p-lo < hi-p { // recurse on the smaller side
-			quicksort256(data, lo, p-1, swap)
-			lo = p + 1
+		medianOfThree256(data, swap)
+		p := hoarePartition256(data, swap)
+		if p < len(data)-p { // recurse on the smaller side
+			quicksort256(data[:p], swap)
+			data = data[p+1:]
 		} else {
-			quicksort256(data, p+1, hi, swap)
-			hi = p - 1
+			quicksort256(data[p+1:], swap)
+			data = data[:p]
 		}
 	}
 }
 
-func insertionsort256(data []uint256, lo, hi int, swap func(int, int)) {
-	// Extra superfluous checks have been added to prevent the compiler
-	// from adding bounds checks in the inner loop.
-	i := lo + 1
-	if i < 0 || hi >= len(data) {
-		return
-	}
-	for ; i <= hi; i++ {
+func insertionsort256(data []uint256, swap func(int, int)) {
+	for i := 1; i < len(data); i++ {
 		item := data[i]
-		for j := i; j > 0 && j > lo && less256(item, data[j-1]); j-- {
+		for j := i; j > 0 && less256(item, data[j-1]); j-- {
 			swap256(data, j, j-1, swap)
 		}
 	}
 }
 
-func medianOfThree256(data []uint256, a, b, c int, swap func(int, int)) int {
-	if less256(data[b], data[a]) {
-		swap256(data, a, b, swap)
+func medianOfThree256(data []uint256, swap func(int, int)) {
+	end := len(data) - 1
+	mid := len(data) / 2
+	if less256(data[0], data[mid]) {
+		swap256(data, mid, 0, swap)
 	}
-	if less256(data[c], data[b]) {
-		swap256(data, b, c, swap)
-		if less256(data[b], data[a]) {
-			swap256(data, a, b, swap)
+	if less256(data[end], data[0]) {
+		swap256(data, 0, end, swap)
+		if less256(data[0], data[mid]) {
+			swap256(data, mid, 0, swap)
 		}
 	}
-	return b
 }
 
-func hoarePartition256(data []uint256, lo, hi int, swap func(int, int)) int {
-	// Extra superfluous checks have been added to prevent the compiler
-	// from adding bounds checks in the inner loops.
-	i, j := lo+1, hi
-	pivot := data[lo]
-	for i >= 0 && hi < len(data) && j < len(data) {
-		for i <= hi && less256(data[i], pivot) {
+func hoarePartition256(data []uint256, swap func(int, int)) int {
+	i, j := 1, len(data)-1
+	if len(data) > 0 {
+		pivot := data[0]
+		for j < len(data) {
+			for i < len(data) && less256(data[i], pivot) {
+				i++
+			}
+			for j > 0 && less256(pivot, data[j]) {
+				j--
+			}
+			if i >= j {
+				break
+			}
+			swap256(data, i, j, swap)
 			i++
-		}
-		for j > lo && less256(pivot, data[j]) {
 			j--
 		}
-		if i >= j {
-			break
-		}
-		swap256(data, i, j, swap)
-		i++
-		j--
+		swap256(data, 0, j, swap)
 	}
-	swap256(data, lo, j, swap)
 	return j
 }
 

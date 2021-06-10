@@ -6,73 +6,67 @@ type uint192 struct {
 	lo  uint64
 }
 
-func quicksort192(data []uint192, lo, hi int, swap func(int, int)) {
-	for lo < hi {
-		if hi-lo < smallCutoff/24 {
-			insertionsort192(data, lo, hi, swap)
+func quicksort192(data []uint192, swap func(int, int)) {
+	for len(data) > 1 {
+		if len(data) < smallCutoff/16 {
+			insertionsort192(data, swap)
 			return
 		}
-		mid := lo + (hi-lo)/2
-		medianOfThree192(data, mid, lo, hi, swap)
-		p := hoarePartition192(data, lo, hi, swap)
-		if p-lo < hi-p { // recurse on the smaller side
-			quicksort192(data, lo, p-1, swap)
-			lo = p + 1
+		medianOfThree192(data, swap)
+		p := hoarePartition192(data, swap)
+		if p < len(data)-p { // recurse on the smaller side
+			quicksort192(data[:p], swap)
+			data = data[p+1:]
 		} else {
-			quicksort192(data, p+1, hi, swap)
-			hi = p - 1
+			quicksort192(data[p+1:], swap)
+			data = data[:p]
 		}
 	}
 }
 
-func insertionsort192(data []uint192, lo, hi int, swap func(int, int)) {
-	// Extra superfluous checks have been added to prevent the compiler
-	// from adding bounds checks in the inner loop.
-	i := lo + 1
-	if i < 0 || hi >= len(data) {
-		return
-	}
-	for ; i <= hi; i++ {
+func insertionsort192(data []uint192, swap func(int, int)) {
+	for i := 1; i < len(data); i++ {
 		item := data[i]
-		for j := i; j > 0 && j > lo && less192(item, data[j-1]); j-- {
+		for j := i; j > 0 && less192(item, data[j-1]); j-- {
 			swap192(data, j, j-1, swap)
 		}
 	}
 }
 
-func medianOfThree192(data []uint192, a, b, c int, swap func(int, int)) int {
-	if less192(data[b], data[a]) {
-		swap192(data, a, b, swap)
+func medianOfThree192(data []uint192, swap func(int, int)) {
+	end := len(data) - 1
+	mid := len(data) / 2
+	if less192(data[0], data[mid]) {
+		swap192(data, mid, 0, swap)
 	}
-	if less192(data[c], data[b]) {
-		swap192(data, b, c, swap)
-		if less192(data[b], data[a]) {
-			swap192(data, a, b, swap)
+	if less192(data[end], data[0]) {
+		swap192(data, 0, end, swap)
+		if less192(data[0], data[mid]) {
+			swap192(data, mid, 0, swap)
 		}
 	}
-	return b
 }
 
-func hoarePartition192(data []uint192, lo, hi int, swap func(int, int)) int {
-	// Extra superfluous checks have been added to prevent the compiler
-	// from adding bounds checks in the inner loops.
-	i, j := lo+1, hi
-	pivot := data[lo]
-	for i >= 0 && hi < len(data) && j < len(data) {
-		for i <= hi && less192(data[i], pivot) {
+func hoarePartition192(data []uint192, swap func(int, int)) int {
+	i, j := 1, len(data)-1
+	if len(data) > 0 {
+		pivot := data[0]
+		for j < len(data) {
+			for i < len(data) && less192(data[i], pivot) {
+				i++
+			}
+			for j > 0 && less192(pivot, data[j]) {
+				j--
+			}
+			if i >= j {
+				break
+			}
+			swap192(data, i, j, swap)
 			i++
-		}
-		for j > lo && less192(pivot, data[j]) {
 			j--
 		}
-		if i >= j {
-			break
-		}
-		swap192(data, i, j, swap)
-		i++
-		j--
+		swap192(data, 0, j, swap)
 	}
-	swap192(data, lo, j, swap)
 	return j
 }
 
