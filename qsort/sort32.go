@@ -7,48 +7,53 @@ type uint256 struct {
 	d uint64 // lo
 }
 
-func quicksort256(data []uint256, swap func(int, int)) {
+func quicksort256(data []uint256, base int, swap func(int, int)) {
 	for len(data) > 1 {
-		if len(data) < smallCutoff/16 {
-			insertionsort256(data, swap)
+		if len(data) <= smallCutoff/32 {
+			insertionsort256(data, base, swap)
 			return
 		}
-		medianOfThree256(data, swap)
-		p := hoarePartition256(data, swap)
+		medianOfThree256(data, base, swap)
+		p := hoarePartition256(data, base, swap)
 		if p < len(data)-p { // recurse on the smaller side
-			quicksort256(data[:p], swap)
+			quicksort256(data[:p], base, swap)
 			data = data[p+1:]
+			base = base + p + 1
 		} else {
-			quicksort256(data[p+1:], swap)
+			quicksort256(data[p+1:], base+p+1, swap)
 			data = data[:p]
 		}
 	}
 }
 
-func insertionsort256(data []uint256, swap func(int, int)) {
+func insertionsort256(data []uint256, base int, swap func(int, int)) {
 	for i := 1; i < len(data); i++ {
 		item := data[i]
 		for j := i; j > 0 && less256(item, data[j-1]); j-- {
-			swap256(data, j, j-1, swap)
+			data[j], data[j-1] = data[j-1], data[j]
+			callswap(base, swap, j, j-1)
 		}
 	}
 }
 
-func medianOfThree256(data []uint256, swap func(int, int)) {
+func medianOfThree256(data []uint256, base int, swap func(int, int)) {
 	end := len(data) - 1
 	mid := len(data) / 2
 	if less256(data[0], data[mid]) {
-		swap256(data, mid, 0, swap)
+		data[mid], data[0] = data[0], data[mid]
+		callswap(base, swap, mid, 0)
 	}
 	if less256(data[end], data[0]) {
-		swap256(data, 0, end, swap)
+		data[0], data[end] = data[end], data[0]
+		callswap(base, swap, 0, end)
 		if less256(data[0], data[mid]) {
-			swap256(data, mid, 0, swap)
+			data[mid], data[0] = data[0], data[mid]
+			callswap(base, swap, mid, 0)
 		}
 	}
 }
 
-func hoarePartition256(data []uint256, swap func(int, int)) int {
+func hoarePartition256(data []uint256, base int, swap func(int, int)) int {
 	i, j := 1, len(data)-1
 	if len(data) > 0 {
 		pivot := data[0]
@@ -62,20 +67,15 @@ func hoarePartition256(data []uint256, swap func(int, int)) int {
 			if i >= j {
 				break
 			}
-			swap256(data, i, j, swap)
+			data[i], data[j] = data[j], data[i]
+			callswap(base, swap, i, j)
 			i++
 			j--
 		}
-		swap256(data, 0, j, swap)
+		data[0], data[j] = data[j], data[0]
+		callswap(base, swap, 0, j)
 	}
 	return j
-}
-
-func swap256(data []uint256, a, b int, swap func(int, int)) {
-	data[a], data[b] = data[b], data[a]
-	if swap != nil {
-		swap(a, b)
-	}
 }
 
 func less256(a, b uint256) bool {

@@ -6,48 +6,53 @@ type uint192 struct {
 	lo  uint64
 }
 
-func quicksort192(data []uint192, swap func(int, int)) {
+func quicksort192(data []uint192, base int, swap func(int, int)) {
 	for len(data) > 1 {
-		if len(data) < smallCutoff/16 {
-			insertionsort192(data, swap)
+		if len(data) <= smallCutoff/24 {
+			insertionsort192(data, base, swap)
 			return
 		}
-		medianOfThree192(data, swap)
-		p := hoarePartition192(data, swap)
+		medianOfThree192(data, base, swap)
+		p := hoarePartition192(data, base, swap)
 		if p < len(data)-p { // recurse on the smaller side
-			quicksort192(data[:p], swap)
+			quicksort192(data[:p], base, swap)
 			data = data[p+1:]
+			base = base + p + 1
 		} else {
-			quicksort192(data[p+1:], swap)
+			quicksort192(data[p+1:], base+p+1, swap)
 			data = data[:p]
 		}
 	}
 }
 
-func insertionsort192(data []uint192, swap func(int, int)) {
+func insertionsort192(data []uint192, base int, swap func(int, int)) {
 	for i := 1; i < len(data); i++ {
 		item := data[i]
 		for j := i; j > 0 && less192(item, data[j-1]); j-- {
-			swap192(data, j, j-1, swap)
+			data[j], data[j-1] = data[j-1], data[j]
+			callswap(base, swap, j, j-1)
 		}
 	}
 }
 
-func medianOfThree192(data []uint192, swap func(int, int)) {
+func medianOfThree192(data []uint192, base int, swap func(int, int)) {
 	end := len(data) - 1
 	mid := len(data) / 2
 	if less192(data[0], data[mid]) {
-		swap192(data, mid, 0, swap)
+		data[mid], data[0] = data[0], data[mid]
+		callswap(base, swap, mid, 0)
 	}
 	if less192(data[end], data[0]) {
-		swap192(data, 0, end, swap)
+		data[0], data[end] = data[end], data[0]
+		callswap(base, swap, 0, end)
 		if less192(data[0], data[mid]) {
-			swap192(data, mid, 0, swap)
+			data[mid], data[0] = data[0], data[mid]
+			callswap(base, swap, mid, 0)
 		}
 	}
 }
 
-func hoarePartition192(data []uint192, swap func(int, int)) int {
+func hoarePartition192(data []uint192, base int, swap func(int, int)) int {
 	i, j := 1, len(data)-1
 	if len(data) > 0 {
 		pivot := data[0]
@@ -61,20 +66,15 @@ func hoarePartition192(data []uint192, swap func(int, int)) int {
 			if i >= j {
 				break
 			}
-			swap192(data, i, j, swap)
+			data[i], data[j] = data[j], data[i]
+			callswap(base, swap, i, j)
 			i++
 			j--
 		}
-		swap192(data, 0, j, swap)
+		data[0], data[j] = data[j], data[0]
+		callswap(base, swap, 0, j)
 	}
 	return j
-}
-
-func swap192(data []uint192, a, b int, swap func(int, int)) {
-	data[a], data[b] = data[b], data[a]
-	if swap != nil {
-		swap(a, b)
-	}
 }
 
 func less192(a, b uint192) bool {
