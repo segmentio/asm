@@ -29,36 +29,11 @@ func smallsort192(data []uint192, base int, swap func(int, int)) {
 	if swap != nil {
 		insertionsort192(data, base, swap)
 	} else {
-		bubblesort192NoSwap2(data)
+		bubblesort192NoSwap(data)
 	}
 }
 
-func bubblesort192NoSwap1(data []uint192) {
-	for i := len(data); i > 1; i-- {
-		max := data[0]
-
-		for j := 1; j < i; j++ {
-			y := data[j]
-			x := uint192{}
-
-			if lessOrEqual192(max, y) {
-				x = max
-			} else {
-				x = y
-			}
-
-			if lessOrEqual192(max, y) {
-				max = y
-			}
-
-			data[j-1] = x
-		}
-
-		data[i-1] = max
-	}
-}
-
-func bubblesort192NoSwap2(data []uint192) {
+func bubblesort192NoSwap(data []uint192) {
 	for i := len(data); i > 1; i -= 2 {
 		x := data[0]
 		y := data[1]

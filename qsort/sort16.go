@@ -28,36 +28,11 @@ func smallsort128(data []uint128, base int, swap func(int, int)) {
 	if swap != nil {
 		insertionsort128(data, base, swap)
 	} else {
-		bubblesort128NoSwap2(data)
+		bubblesort128NoSwap(data)
 	}
 }
 
-func bubblesort128NoSwap1(data []uint128) {
-	for i := len(data); i > 1; i-- {
-		max := data[0]
-
-		for j := 1; j < i; j++ {
-			y := data[j]
-			x := uint128{}
-
-			if lessOrEqual128(max, y) {
-				x = max
-			} else {
-				x = y
-			}
-
-			if lessOrEqual128(max, y) {
-				max = y
-			}
-
-			data[j-1] = x
-		}
-
-		data[i-1] = max
-	}
-}
-
-func bubblesort128NoSwap2(data []uint128) {
+func bubblesort128NoSwap(data []uint128) {
 	for i := len(data); i > 1; i -= 2 {
 		x := data[0]
 		y := data[1]
