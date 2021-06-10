@@ -79,6 +79,36 @@ func hoarePartition128(data []uint128, base int, swap func(int, int)) int {
 	return j
 }
 
+func hybridPartition128(data, tmp []uint128) int {
+	lo := 0
+	hi := len(data) - 1
+
+	pivot := lo
+	lo++
+	p := distributeForward128(unsafeU128Addr(data), unsafeU128Addr(tmp), len(tmp), lo, hi, pivot)
+	if hi-p <= len(tmp) {
+		copy(data[p+1:], tmp[len(tmp)-hi+p:])
+		data[pivot], data[p] = data[p], data[pivot]
+		return p
+	}
+	lo = p + len(tmp)
+	for {
+		hi = distributeBackward128(unsafeU128Addr(data), unsafeU128Addr(data[lo+1-len(tmp):]), len(tmp), lo, hi, pivot) - len(tmp)
+		if hi < lo {
+			p = hi
+			break
+		}
+		lo = distributeForward128(unsafeU128Addr(data), unsafeU128Addr(data[hi+1:]), len(tmp), lo, hi, pivot) + len(tmp)
+		if hi < lo {
+			p = lo - len(tmp)
+			break
+		}
+	}
+	copy(data[p+1:], tmp[:])
+	data[pivot], data[p] = data[p], data[pivot]
+	return p
+}
+
 func less128(a, b uint128) bool {
 	return a.hi < b.hi || (a.hi == b.hi && a.lo <= b.lo)
 }

@@ -58,6 +58,35 @@ func Sort(data []byte, size int, swap func(int, int)) {
 	}
 }
 
+func hybridQuicksort(data []byte, size int) {
+	// The hybrid Lomuto/Hoare partition scheme at https://blog.reverberate.org/2020/05/29/hoares-rebuttal-bubble-sorts-comeback.html
+	// requires scratch space. We allocate some stack space for the task here,
+	// and we do it outside the main Sort() function so that we don't pay the
+	// stack cost unless necessary.
+	var buf [1024]byte
+
+	switch size {
+	case 16:
+		smallsort := func(data []uint128, base int, swap func(int, int)) {
+			insertionsort128NoSwap(unsafeU128ToBytes(data))
+		}
+		scratch := unsafeBytesToU128(buf[:])
+		partition := func(data []uint128, base int, swap func(int, int)) int {
+			return hybridPartition128(data, scratch)
+		}
+		quicksort128(unsafeBytesToU128(data), 0, smallsort, partition, nil)
+	case 32:
+		smallsort := func(data []uint256, base int, swap func(int, int)) {
+			insertionsort256NoSwap(unsafeU256ToBytes(data))
+		}
+		scratch := unsafeBytesToU256(buf[:])
+		partition := func(data []uint256, base int, swap func(int, int)) int {
+			return hybridPartition256(data, scratch)
+		}
+		quicksort256(unsafeBytesToU256(data), 0, smallsort, partition, nil)
+	}
+}
+
 // The threshold at which log-linear sorting methods switch to
 // a quadratic (but cache-friendly) method such as insertionsort.
 const smallCutoff = 256
