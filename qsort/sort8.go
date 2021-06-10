@@ -32,17 +32,15 @@ func insertionsort64(data []uint64, swap func(int, int)) {
 }
 
 func medianOfThree64(data []uint64, swap func(int, int)) {
-	if len(data) > 0 {
-		end := len(data) - 1
-		mid := len(data) / 2
+	end := len(data) - 1
+	mid := len(data) / 2
+	if data[0] < data[mid] {
+		swap64(data, mid, 0, swap)
+	}
+	if data[end] < data[0] {
+		swap64(data, 0, end, swap)
 		if data[0] < data[mid] {
 			swap64(data, mid, 0, swap)
-		}
-		if data[end] < data[0] {
-			swap64(data, 0, end, swap)
-			if data[0] < data[mid] {
-				swap64(data, mid, 0, swap)
-			}
 		}
 	}
 }
