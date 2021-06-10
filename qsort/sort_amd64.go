@@ -2,6 +2,10 @@
 
 package qsort
 
+func distributeForward64(data *byte, scratch *byte, limit int, lo int, hi int) int
+
+func distributeBackward64(data *byte, scratch *byte, limit int, lo int, hi int) int
+
 func insertionsort128NoSwapAsm(data []byte)
 
 func distributeForward128(data *byte, scratch *byte, limit int, lo int, hi int) int

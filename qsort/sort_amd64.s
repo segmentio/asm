@@ -2,6 +2,94 @@
 
 #include "textflag.h"
 
+// func distributeForward64(data *byte, scratch *byte, limit int, lo int, hi int) int
+// Requires: CMOV
+TEXT ·distributeForward64(SB), NOSPLIT, $0-48
+	MOVQ data+0(FP), AX
+	MOVQ scratch+8(FP), CX
+	MOVQ limit+16(FP), DX
+	MOVQ lo+24(FP), BX
+	MOVQ hi+32(FP), SI
+	SHLQ $0x03, DX
+	SHLQ $0x03, BX
+	SHLQ $0x03, SI
+	LEAQ (AX)(BX*1), BX
+	LEAQ (AX)(SI*1), SI
+	LEAQ -8(CX)(DX*1), CX
+	MOVQ (AX), DI
+	XORQ R8, R8
+	XORQ R9, R9
+	NEGQ DX
+
+loop:
+	MOVQ    (BX), R10
+	CMPQ    R10, DI
+	SETNE   R11
+	SETCS   R9
+	ANDB    R11, R9
+	XORB    $0x01, R9
+	MOVQ    BX, R11
+	CMOVQNE CX, R11
+	MOVQ    R10, (R11)(R8*1)
+	SHLQ    $0x03, R9
+	SUBQ    R9, R8
+	ADDQ    $0x08, BX
+	CMPQ    BX, SI
+	JA      done
+	CMPQ    R8, DX
+	JNE     loop
+
+done:
+	SUBQ AX, BX
+	ADDQ R8, BX
+	SHRQ $0x03, BX
+	DECQ BX
+	MOVQ BX, ret+40(FP)
+	RET
+
+// func distributeBackward64(data *byte, scratch *byte, limit int, lo int, hi int) int
+// Requires: CMOV
+TEXT ·distributeBackward64(SB), NOSPLIT, $0-48
+	MOVQ data+0(FP), AX
+	MOVQ scratch+8(FP), CX
+	MOVQ limit+16(FP), DX
+	MOVQ lo+24(FP), BX
+	MOVQ hi+32(FP), SI
+	SHLQ $0x03, DX
+	SHLQ $0x03, BX
+	SHLQ $0x03, SI
+	LEAQ (AX)(BX*1), BX
+	LEAQ (AX)(SI*1), SI
+	MOVQ (AX), DI
+	XORQ R8, R8
+	XORQ R9, R9
+	CMPQ SI, BX
+	JBE  done
+
+loop:
+	MOVQ    (SI), R10
+	CMPQ    R10, DI
+	SETNE   R11
+	SETCS   R9
+	ANDB    R11, R9
+	MOVQ    CX, R11
+	CMOVQEQ SI, R11
+	MOVQ    R10, (R11)(R8*1)
+	SHLQ    $0x03, R9
+	ADDQ    R9, R8
+	SUBQ    $0x08, SI
+	CMPQ    SI, BX
+	JBE     done
+	CMPQ    R8, DX
+	JNE     loop
+
+done:
+	SUBQ AX, SI
+	ADDQ R8, SI
+	SHRQ $0x03, SI
+	MOVQ SI, ret+40(FP)
+	RET
+
 // func insertionsort128NoSwapAsm(data []byte)
 // Requires: AVX, AVX2, SSE4.1
 TEXT ·insertionsort128NoSwapAsm(SB), NOSPLIT, $0-24

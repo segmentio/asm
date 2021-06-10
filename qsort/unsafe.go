@@ -42,6 +42,10 @@ func unsafeU256ToBytes(u []uint256) []byte {
 	}))
 }
 
+func unsafeU64Addr(slice []uint64) *byte {
+	return (*byte)(unsafe.Pointer(&slice[0]))
+}
+
 func unsafeU128Addr(slice []uint128) *byte {
 	return (*byte)(unsafe.Pointer(&slice[0]))
 }

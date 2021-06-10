@@ -35,7 +35,7 @@ func Sort(data []byte, size int, swap func(int, int)) {
 
 	// If no indirect swapping is required, try to use the hybrid partitioning scheme from
 	// https://blog.reverberate.org/2020/05/29/hoares-rebuttal-bubble-sorts-comeback.html
-	if swap == nil && (size == 16 || size == 32) && cpu.X86.Has(cpu.AVX2) {
+	if swap == nil && size != 24 && cpu.X86.Has(cpu.AVX2) {
 		hybridQuicksort(data, size)
 		return
 	}
@@ -66,10 +66,12 @@ func hybridQuicksort(data []byte, size int) {
 	var scratch [1024]byte
 
 	// For reasons unknown, using the smallsort sooner (with larger chunks)
-	// yields better results.
+	// yields better results in some cases.
 	cutoff := smallCutoff * 2
 
 	switch size {
+	case 8:
+		quicksort64(unsafeBytesToU64(data), 0, smallCutoff, bubblesort64NoSwap2, hybridPartition64Using(scratch[:]), nil)
 	case 16:
 		quicksort128(unsafeBytesToU128(data), 0, cutoff, insertionsort128NoSwap, hybridPartition128Using(scratch[:]), nil)
 	case 32:

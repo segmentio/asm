@@ -13,13 +13,16 @@ import (
 )
 
 func main() {
-	insertionsort(&SortableVector{register: XMM, size: 16})
-	distributeForward(&SortableVector{register: XMM, size: 16})
-	distributeBackward(&SortableVector{register: XMM, size: 16})
+	distributeForward(&SortableScalar{reg: GP64, size: 8, mov: MOVQ, cmp: CMPQ})
+	distributeBackward(&SortableScalar{reg: GP64, size: 8, mov: MOVQ, cmp: CMPQ})
 
-	insertionsort(&SortableVector{register: YMM, size: 32})
-	distributeForward(&SortableVector{register: YMM, size: 32})
-	distributeBackward(&SortableVector{register: YMM, size: 32})
+	insertionsort(&SortableVector{reg: XMM, size: 16})
+	distributeForward(&SortableVector{reg: XMM, size: 16})
+	distributeBackward(&SortableVector{reg: XMM, size: 16})
+
+	insertionsort(&SortableVector{reg: YMM, size: 32})
+	distributeForward(&SortableVector{reg: YMM, size: 32})
+	distributeBackward(&SortableVector{reg: YMM, size: 32})
 
 	Generate()
 }
@@ -32,14 +35,39 @@ type Sortable interface {
 	Compare(Register, Register)
 }
 
+type SortableScalar struct {
+	reg  func() GPVirtual
+	size uint64
+	mov  func(Op, Op)
+	cmp  func(Op, Op)
+}
+
+func (s *SortableScalar) Register() Register {
+	return s.reg()
+}
+
+func (s *SortableScalar) Size() uint64 {
+	return s.size
+}
+
+func (s *SortableScalar) Init() {}
+
+func (s *SortableScalar) Move(a, b Op) {
+	s.mov(a, b)
+}
+
+func (s *SortableScalar) Compare(a, b Register) {
+	s.cmp(a, b)
+}
+
 type SortableVector struct {
-	register func() VecVirtual
-	size     uint64
-	msb      Register
+	reg  func() VecVirtual
+	size uint64
+	msb  Register
 }
 
 func (s *SortableVector) Register() Register {
-	return s.register()
+	return s.reg()
 }
 
 func (s *SortableVector) Size() uint64 {
@@ -47,7 +75,7 @@ func (s *SortableVector) Size() uint64 {
 }
 
 func (s *SortableVector) Init() {
-	s.msb = s.register()
+	s.msb = s.reg()
 	VecBroadcast(U64(1<<63), s.msb)
 }
 
@@ -92,6 +120,7 @@ func (s *SortableVector) Compare(a, b Register) {
 	BSFL(eqMask, unequalByteIndex) // set ZF
 	BTSL(unequalByteIndex, ltMask) // set CF
 }
+
 
 func insertionsort(s Sortable) {
 	size := s.Size()
