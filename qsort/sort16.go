@@ -5,48 +5,53 @@ type uint128 struct {
 	lo uint64
 }
 
-func quicksort128(data []uint128, swap func(int, int)) {
+func quicksort128(data []uint128, base int, swap func(int, int)) {
 	for len(data) > 1 {
-		if len(data) < smallCutoff/16 {
-			insertionsort128(data, swap)
+		if len(data) <= smallCutoff/16 {
+			insertionsort128(data, base, swap)
 			return
 		}
-		medianOfThree128(data, swap)
-		p := hoarePartition128(data, swap)
+		medianOfThree128(data, base, swap)
+		p := hoarePartition128(data, base, swap)
 		if p < len(data)-p { // recurse on the smaller side
-			quicksort128(data[:p], swap)
+			quicksort128(data[:p], base, swap)
 			data = data[p+1:]
+			base = base + p + 1
 		} else {
-			quicksort128(data[p+1:], swap)
+			quicksort128(data[p+1:], base+p+1, swap)
 			data = data[:p]
 		}
 	}
 }
 
-func insertionsort128(data []uint128, swap func(int, int)) {
+func insertionsort128(data []uint128, base int, swap func(int, int)) {
 	for i := 1; i < len(data); i++ {
 		item := data[i]
 		for j := i; j > 0 && less128(item, data[j-1]); j-- {
-			swap128(data, j, j-1, swap)
+			data[j], data[j-1] = data[j-1], data[j]
+			callswap(base, swap, j, j-1)
 		}
 	}
 }
 
-func medianOfThree128(data []uint128, swap func(int, int)) {
+func medianOfThree128(data []uint128, base int, swap func(int, int)) {
 	end := len(data) - 1
 	mid := len(data) / 2
 	if less128(data[0], data[mid]) {
-		swap128(data, mid, 0, swap)
+		data[mid], data[0] = data[0], data[mid]
+		callswap(base, swap, mid, 0)
 	}
 	if less128(data[end], data[0]) {
-		swap128(data, 0, end, swap)
+		data[0], data[end] = data[end], data[0]
+		callswap(base, swap, 0, end)
 		if less128(data[0], data[mid]) {
-			swap128(data, mid, 0, swap)
+			data[mid], data[0] = data[0], data[mid]
+			callswap(base, swap, mid, 0)
 		}
 	}
 }
 
-func hoarePartition128(data []uint128, swap func(int, int)) int {
+func hoarePartition128(data []uint128, base int, swap func(int, int)) int {
 	i, j := 1, len(data)-1
 	if len(data) > 0 {
 		pivot := data[0]
@@ -60,20 +65,15 @@ func hoarePartition128(data []uint128, swap func(int, int)) int {
 			if i >= j {
 				break
 			}
-			swap128(data, i, j, swap)
+			data[i], data[j] = data[j], data[i]
+			callswap(base, swap, i, j)
 			i++
 			j--
 		}
-		swap128(data, 0, j, swap)
+		data[0], data[j] = data[j], data[0]
+		callswap(base, swap, 0, j)
 	}
 	return j
-}
-
-func swap128(data []uint128, a, b int, swap func(int, int)) {
-	data[a], data[b] = data[b], data[a]
-	if swap != nil {
-		swap(a, b)
-	}
 }
 
 func less128(a, b uint128) bool {

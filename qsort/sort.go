@@ -42,12 +42,22 @@ func Sort(data []byte, size int, swap func(int, int)) {
 
 	switch size {
 	case 8:
-		quicksort64(unsafeBytesTo64(data), swap)
+		quicksort64(unsafeBytesTo64(data), 0, swap)
 	case 16:
-		quicksort128(unsafeBytesTo128(data), swap)
+		quicksort128(unsafeBytesTo128(data), 0, swap)
 	case 24:
-		quicksort192(unsafeBytesTo192(data), swap)
+		quicksort192(unsafeBytesTo192(data), 0, swap)
 	case 32:
-		quicksort256(unsafeBytesTo256(data), swap)
+		quicksort256(unsafeBytesTo256(data), 0, swap)
+	}
+}
+
+// The threshold at which log-linear sorting methods switch to
+// a quadratic (but cache-friendly) method such as insertionsort.
+const smallCutoff = 256
+
+func callswap(base int, swap func(int, int), i, j int) {
+	if swap != nil {
+		swap(base+i, base+j)
 	}
 }
