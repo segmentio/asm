@@ -65,11 +65,20 @@ func hybridQuicksort(data []byte, size int) {
 
 	switch size {
 	case 8:
-		quicksort64(unsafeBytesTo64(data), 0, smallCutoff/2, bubblesort64NoSwap2, hybridPartition64Using(scratch[:]), nil)
+		partition := func(data []uint64, base int, swap func(int, int)) int {
+			return hybridPartition64(data, unsafeBytesTo64(scratch[:]))
+		}
+		quicksort64(unsafeBytesTo64(data), 0, smallCutoff/2, bubblesort64NoSwap2, partition, nil)
 	case 16:
-		quicksort128(unsafeBytesTo128(data), 0, cutoff, insertionsort128NoSwap, hybridPartition128Using(scratch[:]), nil)
+		partition := func(data []uint128, base int, swap func(int, int)) int {
+			return hybridPartition128(data, unsafeBytesTo128(scratch[:]))
+		}
+		quicksort128(unsafeBytesTo128(data), 0, cutoff, insertionsort128NoSwap, partition, nil)
 	case 32:
-		quicksort256(unsafeBytesTo256(data), 0, cutoff, insertionsort256NoSwap, hybridPartition256Using(scratch[:]), nil)
+		partition := func(data []uint256, base int, swap func(int, int)) int {
+			return hybridPartition256(data, unsafeBytesTo256(scratch[:]))
+		}
+		quicksort256(unsafeBytesTo256(data), 0, cutoff, insertionsort256NoSwap, partition, nil)
 	}
 }
 

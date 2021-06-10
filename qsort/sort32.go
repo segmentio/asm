@@ -103,12 +103,6 @@ func hybridPartition256(data, scratch []uint256) int {
 	return p
 }
 
-func hybridPartition256Using(scratch []byte) partition256 {
-	return func(data []uint256, base int, swap func(int, int)) int {
-		return hybridPartition256(data, unsafeBytesTo256(scratch[:]))
-	}
-}
-
 func less256(a, b uint256) bool {
 	return a[0] < b[0] ||
 		(a[0] == b[0] && a[1] < b[1]) ||

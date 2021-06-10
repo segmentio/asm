@@ -2,18 +2,26 @@
 
 package qsort
 
+//go:noescape
 func distributeForward64(data []uint64, scratch []uint64, limit int, lo int, hi int) int
 
+//go:noescape
 func distributeBackward64(data []uint64, scratch []uint64, limit int, lo int, hi int) int
 
+//go:noescape
 func insertionsort128NoSwap(data [][2]uint64, base int, swap func(int, int))
 
+//go:noescape
 func distributeForward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
 
+//go:noescape
 func distributeBackward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
 
+//go:noescape
 func insertionsort256NoSwap(data [][4]uint64, base int, swap func(int, int))
 
+//go:noescape
 func distributeForward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int
 
+//go:noescape
 func distributeBackward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int

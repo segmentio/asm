@@ -124,6 +124,7 @@ func (s *SortableVector) Compare(a, b Register) {
 func insertionsort(s Sortable) {
 	size := s.Size()
 	TEXT(fmt.Sprintf("insertionsort%dNoSwap", size*8), NOSPLIT, fmt.Sprintf("func(data []%s, base int, swap func(int, int))", typeFor(size)))
+	Pragma("noescape")
 
 	data := Load(Param("data").Base(), GP64())
 	end := Load(Param("data").Len(), GP64())
@@ -170,6 +171,7 @@ func insertionsort(s Sortable) {
 func distributeForward(s Sortable) {
 	size := s.Size()
 	TEXT(fmt.Sprintf("distributeForward%d", size*8), NOSPLIT, fmt.Sprintf("func(data, scratch []%s, limit, lo, hi int) int", typeFor(size)))
+	Pragma("noescape")
 
 	// Load inputs.
 	data := Load(Param("data").Base(), GP64())
@@ -250,6 +252,7 @@ func distributeForward(s Sortable) {
 func distributeBackward(s Sortable) {
 	size := s.Size()
 	TEXT(fmt.Sprintf("distributeBackward%d", size*8), NOSPLIT, fmt.Sprintf("func(data, scratch []%s, limit, lo, hi int) int", typeFor(size)))
+	Pragma("noescape")
 
 	// Load inputs.
 	data := Load(Param("data").Base(), GP64())

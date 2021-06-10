@@ -103,12 +103,6 @@ func hybridPartition128(data, scratch []uint128) int {
 	return p
 }
 
-func hybridPartition128Using(scratch []byte) partition128 {
-	return func(data []uint128, base int, swap func(int, int)) int {
-		return hybridPartition128(data, unsafeBytesTo128(scratch[:]))
-	}
-}
-
 func less128(a, b uint128) bool {
 	return a[0] < b[0] ||
 		(a[0] == b[0] && a[1] <= b[1])
