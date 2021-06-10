@@ -7,7 +7,8 @@ const smallCutoff = 256
 func quicksort64(data []uint64, swap func(int, int)) {
 	for len(data) > 1 {
 		if len(data) < smallCutoff/8 {
-			smallsort64(data, swap)
+			insertionsort64(data, swap)
+			//smallsort64(data, swap)
 			return
 		}
 		medianOfThree64(data, swap)

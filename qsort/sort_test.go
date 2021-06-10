@@ -1,6 +1,7 @@
 package qsort
 
 import (
+	"bytes"
 	"math/rand"
 	"reflect"
 	"sort"
@@ -55,6 +56,25 @@ func testSort(t *testing.T, size int) {
 		if !reflect.DeepEqual(expect, slice) {
 			t.Fatal("buffer was not sorted correctly")
 		}
+	}
+
+	// One more test to validate that the swap function is called properly:
+	prng.Read(buf)
+
+	values := make([]byte, len(buf))
+	copy(values, buf)
+
+	tmp := make([]byte, size)
+	Sort(buf, size, func(i, j int) {
+		vi := values[i*size : i*size+size]
+		vj := values[j*size : j*size+size]
+		copy(tmp, vi)
+		copy(vi, vj)
+		copy(vj, tmp)
+	})
+
+	if !bytes.Equal(buf, values) {
+		t.Error("values were not sorted correctly by the swap function")
 	}
 }
 
