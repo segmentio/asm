@@ -2,6 +2,14 @@
 
 package qsort
 
+func distributeForward64(data, scratch *byte, limit, lo, hi, pivot int) int {
+	panic("not implemented")
+}
+
+func distributeBackward64(data, scratch *byte, limit, lo, hi, pivot int) int {
+	panic("not implemented")
+}
+
 func insertionsort128NoSwapAsm(data []byte) {
 	panic("not implemented")
 }
