@@ -1,33 +1,28 @@
 package qsort
 
-func quicksort64(data []uint64, base int, swap func(int, int)) {
+type smallsort64 func(data []uint64, base int, swap func(int, int))
+type partition64 func(data []uint64, base int, swap func(int, int)) int
+
+func quicksort64(data []uint64, base int, smallsort smallsort64, partition partition64, swap func(int, int)) {
 	for len(data) > 1 {
 		if len(data) <= smallCutoff/8 {
-			smallsort64(data, base, swap)
+			smallsort(data, base, swap)
 			return
 		}
 		medianOfThree64(data, base, swap)
-		p := hoarePartition64(data, base, swap)
+		p := partition(data, base, swap)
 		if p < len(data)-p { // recurse on the smaller side
-			quicksort64(data[:p], base, swap)
+			quicksort64(data[:p], base, smallsort, partition, swap)
 			data = data[p+1:]
 			base = base + p + 1
 		} else {
-			quicksort64(data[p+1:], base+p+1, swap)
+			quicksort64(data[p+1:], base+p+1, smallsort, partition, swap)
 			data = data[:p]
 		}
 	}
 }
 
-func smallsort64(data []uint64, base int, swap func(int, int)) {
-	if swap != nil {
-		insertionsort64(data, base, swap)
-	} else {
-		bubblesort64NoSwap2(data)
-	}
-}
-
-func bubblesort64NoSwap1(data []uint64) {
+func bubblesort64NoSwap1(data []uint64, base int, swap func(int, int)) {
 	for i := len(data); i > 1; i-- {
 		max := data[0]
 
@@ -52,7 +47,7 @@ func bubblesort64NoSwap1(data []uint64) {
 	}
 }
 
-func bubblesort64NoSwap2(data []uint64) {
+func bubblesort64NoSwap2(data []uint64, base int, swap func(int, int)) {
 	for i := len(data); i > 1; i -= 2 {
 		x := data[0]
 		y := data[1]
