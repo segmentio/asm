@@ -1,14 +1,9 @@
 package qsort
 
-// The threshold at which log-linear sorting methods switch to
-// a quadratic (but cache-friendly) method such as insertionsort.
-const smallCutoff = 256
-
 func quicksort64(data []uint64, base int, swap func(int, int)) {
 	for len(data) > 1 {
 		if len(data) <= smallCutoff/8 {
-			insertionsort64(data, base, swap)
-			//smallsort64(data, swap)
+			smallsort64(data, base, swap)
 			return
 		}
 		medianOfThree64(data, base, swap)
@@ -103,16 +98,8 @@ func insertionsort64(data []uint64, base int, swap func(int, int)) {
 	for i := 1; i < len(data); i++ {
 		item := data[i]
 		for j := i; j > 0 && item < data[j-1]; j-- {
-			swap64(data, j, j-1, base, swap)
-		}
-	}
-}
-
-func insertionsort64NoSwap(data []uint64) {
-	for i := 1; i < len(data); i++ {
-		item := data[i]
-		for j := i; j > 0 && item < data[j-1]; j-- {
 			data[j], data[j-1] = data[j-1], data[j]
+			swap(base+j, base+j-1)
 		}
 	}
 }
@@ -121,12 +108,15 @@ func medianOfThree64(data []uint64, base int, swap func(int, int)) {
 	end := len(data) - 1
 	mid := len(data) / 2
 	if data[0] < data[mid] {
-		swap64(data, mid, 0, base, swap)
+		data[mid], data[0] = data[0], data[mid]
+		callswap(base, swap, mid, 0)
 	}
 	if data[end] < data[0] {
-		swap64(data, 0, end, base, swap)
+		data[0], data[end] = data[end], data[0]
+		callswap(base, swap, 0, end)
 		if data[0] < data[mid] {
-			swap64(data, mid, 0, base, swap)
+			data[mid], data[0] = data[0], data[mid]
+			callswap(base, swap, mid, 0)
 		}
 	}
 }
@@ -145,18 +135,13 @@ func hoarePartition64(data []uint64, base int, swap func(int, int)) int {
 			if i >= j {
 				break
 			}
-			swap64(data, i, j, base, swap)
+			data[i], data[j] = data[j], data[i]
+			callswap(base, swap, i, j)
 			i++
 			j--
 		}
-		swap64(data, 0, j, base, swap)
+		data[0], data[j] = data[j], data[0]
+		callswap(base, swap, 0, j)
 	}
 	return j
-}
-
-func swap64(data []uint64, i, j, base int, swap func(int, int)) {
-	data[i], data[j] = data[j], data[i]
-	if swap != nil {
-		swap(base+i, base+j)
-	}
 }
