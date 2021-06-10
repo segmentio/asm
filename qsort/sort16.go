@@ -8,7 +8,7 @@ type uint128 struct {
 func quicksort128(data []uint128, base int, swap func(int, int)) {
 	for len(data) > 1 {
 		if len(data) <= smallCutoff/16 {
-			smallsort128(data, base, swap)
+			insertionsort128(data, base, swap)
 			return
 		}
 		medianOfThree128(data, base, swap)
@@ -24,62 +24,12 @@ func quicksort128(data []uint128, base int, swap func(int, int)) {
 	}
 }
 
-func smallsort128(data []uint128, base int, swap func(int, int)) {
-	if swap != nil {
-		insertionsort128(data, base, swap)
-	} else {
-		bubblesort128NoSwap(data)
-	}
-}
-
-func bubblesort128NoSwap(data []uint128) {
-	for i := len(data); i > 1; i -= 2 {
-		x := data[0]
-		y := data[1]
-
-		if less128(y, x) {
-			x, y = y, x
-		}
-
-		for j := 2; j < i; j++ {
-			z := data[j]
-			w := uint128{}
-			v := uint128{}
-
-			if lessOrEqual128(y, z) {
-				w = y
-			} else {
-				w = z
-			}
-
-			if lessOrEqual128(y, z) {
-				y = z
-			}
-
-			if lessOrEqual128(x, z) {
-				v = x
-			} else {
-				v = z
-			}
-
-			if lessOrEqual128(x, z) {
-				x = w
-			}
-
-			data[j-2] = v
-		}
-
-		data[i-2] = x
-		data[i-1] = y
-	}
-}
-
 func insertionsort128(data []uint128, base int, swap func(int, int)) {
 	for i := 1; i < len(data); i++ {
 		item := data[i]
 		for j := i; j > 0 && less128(item, data[j-1]); j-- {
 			data[j], data[j-1] = data[j-1], data[j]
-			swap(base+j, base+j-1)
+			callswap(base, swap, j, j-1)
 		}
 	}
 }
@@ -128,8 +78,4 @@ func hoarePartition128(data []uint128, base int, swap func(int, int)) int {
 
 func less128(a, b uint128) bool {
 	return a.hi < b.hi || (a.hi == b.hi && a.lo <= b.lo)
-}
-
-func lessOrEqual128(a, b uint128) bool {
-	return !less128(b, a)
 }

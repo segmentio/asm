@@ -9,7 +9,7 @@ type uint192 struct {
 func quicksort192(data []uint192, base int, swap func(int, int)) {
 	for len(data) > 1 {
 		if len(data) <= smallCutoff/24 {
-			smallsort192(data, base, swap)
+			insertionsort192(data, base, swap)
 			return
 		}
 		medianOfThree192(data, base, swap)
@@ -25,62 +25,12 @@ func quicksort192(data []uint192, base int, swap func(int, int)) {
 	}
 }
 
-func smallsort192(data []uint192, base int, swap func(int, int)) {
-	if swap != nil {
-		insertionsort192(data, base, swap)
-	} else {
-		bubblesort192NoSwap(data)
-	}
-}
-
-func bubblesort192NoSwap(data []uint192) {
-	for i := len(data); i > 1; i -= 2 {
-		x := data[0]
-		y := data[1]
-
-		if less192(y, x) {
-			x, y = y, x
-		}
-
-		for j := 2; j < i; j++ {
-			z := data[j]
-			w := uint192{}
-			v := uint192{}
-
-			if lessOrEqual192(y, z) {
-				w = y
-			} else {
-				w = z
-			}
-
-			if lessOrEqual192(y, z) {
-				y = z
-			}
-
-			if lessOrEqual192(x, z) {
-				v = x
-			} else {
-				v = z
-			}
-
-			if lessOrEqual192(x, z) {
-				x = w
-			}
-
-			data[j-2] = v
-		}
-
-		data[i-2] = x
-		data[i-1] = y
-	}
-}
-
 func insertionsort192(data []uint192, base int, swap func(int, int)) {
 	for i := 1; i < len(data); i++ {
 		item := data[i]
 		for j := i; j > 0 && less192(item, data[j-1]); j-- {
 			data[j], data[j-1] = data[j-1], data[j]
-			swap(base+j, base+j-1)
+			callswap(base, swap, j, j-1)
 		}
 	}
 }
@@ -129,8 +79,4 @@ func hoarePartition192(data []uint192, base int, swap func(int, int)) int {
 
 func less192(a, b uint192) bool {
 	return a.hi < b.hi || (a.hi == b.hi && a.mid < b.mid) || (a.hi == b.hi && a.mid == b.mid && a.lo <= b.lo)
-}
-
-func lessOrEqual192(a, b uint192) bool {
-	return !less192(b, a)
 }

@@ -10,7 +10,7 @@ type uint256 struct {
 func quicksort256(data []uint256, base int, swap func(int, int)) {
 	for len(data) > 1 {
 		if len(data) <= smallCutoff/32 {
-			smallsort256(data, base, swap)
+			insertionsort256(data, base, swap)
 			return
 		}
 		medianOfThree256(data, base, swap)
@@ -26,62 +26,12 @@ func quicksort256(data []uint256, base int, swap func(int, int)) {
 	}
 }
 
-func smallsort256(data []uint256, base int, swap func(int, int)) {
-	if swap != nil {
-		insertionsort256(data, base, swap)
-	} else {
-		bubblesort256NoSwap(data)
-	}
-}
-
-func bubblesort256NoSwap(data []uint256) {
-	for i := len(data); i > 1; i -= 2 {
-		x := data[0]
-		y := data[1]
-
-		if less256(y, x) {
-			x, y = y, x
-		}
-
-		for j := 2; j < i; j++ {
-			z := data[j]
-			w := uint256{}
-			v := uint256{}
-
-			if lessOrEqual256(y, z) {
-				w = y
-			} else {
-				w = z
-			}
-
-			if lessOrEqual256(y, z) {
-				y = z
-			}
-
-			if lessOrEqual256(x, z) {
-				v = x
-			} else {
-				v = z
-			}
-
-			if lessOrEqual256(x, z) {
-				x = w
-			}
-
-			data[j-2] = v
-		}
-
-		data[i-2] = x
-		data[i-1] = y
-	}
-}
-
 func insertionsort256(data []uint256, base int, swap func(int, int)) {
 	for i := 1; i < len(data); i++ {
 		item := data[i]
 		for j := i; j > 0 && less256(item, data[j-1]); j-- {
 			data[j], data[j-1] = data[j-1], data[j]
-			swap(base+j, base+j-1)
+			callswap(base, swap, j, j-1)
 		}
 	}
 }
@@ -130,8 +80,4 @@ func hoarePartition256(data []uint256, base int, swap func(int, int)) int {
 
 func less256(a, b uint256) bool {
 	return a.a < b.a || (a.a == b.a && a.b < b.b) || (a.a == b.a && a.b == b.b && a.c < b.c) || (a.a == b.a && a.b == b.b && a.c == b.c && a.d <= b.d)
-}
-
-func lessOrEqual256(a, b uint256) bool {
-	return !less256(b, a)
 }
