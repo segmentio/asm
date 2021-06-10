@@ -4,28 +4,29 @@ package qsort
 // a quadratic (but cache-friendly) method such as insertionsort.
 const smallCutoff = 256
 
-func quicksort64(data []uint64, swap func(int, int)) {
+func quicksort64(data []uint64, base int, swap func(int, int)) {
 	for len(data) > 1 {
-		if len(data) < smallCutoff/8 {
-			insertionsort64(data, swap)
+		if len(data) <= smallCutoff/8 {
+			insertionsort64(data, base, swap)
 			//smallsort64(data, swap)
 			return
 		}
-		medianOfThree64(data, swap)
-		p := hoarePartition64(data, swap)
+		medianOfThree64(data, base, swap)
+		p := hoarePartition64(data, base, swap)
 		if p < len(data)-p { // recurse on the smaller side
-			quicksort64(data[:p], swap)
+			quicksort64(data[:p], base, swap)
 			data = data[p+1:]
+			base = base + p + 1
 		} else {
-			quicksort64(data[p+1:], swap)
+			quicksort64(data[p+1:], base+p+1, swap)
 			data = data[:p]
 		}
 	}
 }
 
-func smallsort64(data []uint64, swap func(int, int)) {
+func smallsort64(data []uint64, base int, swap func(int, int)) {
 	if swap != nil {
-		insertionsort64(data, swap)
+		insertionsort64(data, base, swap)
 	} else {
 		bubblesort64NoSwap2(data)
 	}
@@ -98,11 +99,11 @@ func bubblesort64NoSwap2(data []uint64) {
 	}
 }
 
-func insertionsort64(data []uint64, swap func(int, int)) {
+func insertionsort64(data []uint64, base int, swap func(int, int)) {
 	for i := 1; i < len(data); i++ {
 		item := data[i]
 		for j := i; j > 0 && item < data[j-1]; j-- {
-			swap64(data, j, j-1, swap)
+			swap64(data, j, j-1, base, swap)
 		}
 	}
 }
@@ -116,21 +117,21 @@ func insertionsort64NoSwap(data []uint64) {
 	}
 }
 
-func medianOfThree64(data []uint64, swap func(int, int)) {
+func medianOfThree64(data []uint64, base int, swap func(int, int)) {
 	end := len(data) - 1
 	mid := len(data) / 2
 	if data[0] < data[mid] {
-		swap64(data, mid, 0, swap)
+		swap64(data, mid, 0, base, swap)
 	}
 	if data[end] < data[0] {
-		swap64(data, 0, end, swap)
+		swap64(data, 0, end, base, swap)
 		if data[0] < data[mid] {
-			swap64(data, mid, 0, swap)
+			swap64(data, mid, 0, base, swap)
 		}
 	}
 }
 
-func hoarePartition64(data []uint64, swap func(int, int)) int {
+func hoarePartition64(data []uint64, base int, swap func(int, int)) int {
 	i, j := 1, len(data)-1
 	if len(data) > 0 {
 		pivot := data[0]
@@ -144,18 +145,18 @@ func hoarePartition64(data []uint64, swap func(int, int)) int {
 			if i >= j {
 				break
 			}
-			swap64(data, i, j, swap)
+			swap64(data, i, j, base, swap)
 			i++
 			j--
 		}
-		swap64(data, 0, j, swap)
+		swap64(data, 0, j, base, swap)
 	}
 	return j
 }
 
-func swap64(data []uint64, a, b int, swap func(int, int)) {
-	data[a], data[b] = data[b], data[a]
+func swap64(data []uint64, i, j, base int, swap func(int, int)) {
+	data[i], data[j] = data[j], data[i]
 	if swap != nil {
-		swap(a, b)
+		swap(base+i, base+j)
 	}
 }

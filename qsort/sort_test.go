@@ -35,6 +35,24 @@ func testSort(t *testing.T, size int) {
 	)
 
 	buf := make([]byte, maxCount*size)
+	// A first test to validate that the swap function is called properly:
+	prng.Read(buf)
+
+	values := make([]byte, len(buf))
+	copy(values, buf)
+
+	tmp := make([]byte, size)
+	Sort(buf, size, func(i, j int) {
+		vi := values[i*size : (i+1)*size]
+		vj := values[j*size : (j+1)*size]
+		copy(tmp, vi)
+		copy(vi, vj)
+		copy(vj, tmp)
+	})
+
+	if !bytes.Equal(buf, values) {
+		t.Fatal("values were not sorted correctly by the swap function")
+	}
 
 	for i := 0; i < iterations; i++ {
 		count := randint(minCount, maxCount)
@@ -47,34 +65,19 @@ func testSort(t *testing.T, size int) {
 			copy(slice[j:j+repeat], slice[:repeat])
 		}
 
-		expect := make([]byte, len(slice))
+		expect := values[:len(slice)]
 		copy(expect, slice)
 		sort.Sort(newGeneric(expect, size, nil))
+
+		if !sort.IsSorted(newGeneric(expect, size, nil)) {
+			t.Fatal("reference implementation did not produce a sorted output")
+		}
 
 		Sort(slice, size, nil)
 
 		if !reflect.DeepEqual(expect, slice) {
 			t.Fatal("buffer was not sorted correctly")
 		}
-	}
-
-	// One more test to validate that the swap function is called properly:
-	prng.Read(buf)
-
-	values := make([]byte, len(buf))
-	copy(values, buf)
-
-	tmp := make([]byte, size)
-	Sort(buf, size, func(i, j int) {
-		vi := values[i*size : i*size+size]
-		vj := values[j*size : j*size+size]
-		copy(tmp, vi)
-		copy(vi, vj)
-		copy(vj, tmp)
-	})
-
-	if !bytes.Equal(buf, values) {
-		t.Error("values were not sorted correctly by the swap function")
 	}
 }
 
