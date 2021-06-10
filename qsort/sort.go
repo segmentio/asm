@@ -43,7 +43,7 @@ func Sort(data []byte, size int, swap func(int, int)) {
 	case 8:
 		quicksort64(unsafeBytesTo64(data), swap)
 	case 16:
-		quicksort128(unsafeBytesTo128(data), 0, len(data)/16-1, swap)
+		quicksort128(unsafeBytesTo128(data), swap)
 	case 24:
 		quicksort192(unsafeBytesTo192(data), 0, len(data)/24-1, swap)
 	case 32:

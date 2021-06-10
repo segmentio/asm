@@ -5,73 +5,67 @@ type uint128 struct {
 	lo uint64
 }
 
-func quicksort128(data []uint128, lo, hi int, swap func(int, int)) {
-	for lo < hi {
-		if hi-lo < smallCutoff/16 {
-			insertionsort128(data, lo, hi, swap)
+func quicksort128(data []uint128, swap func(int, int)) {
+	for len(data) > 1 {
+		if len(data) < smallCutoff/16 {
+			insertionsort128(data, swap)
 			return
 		}
-		mid := lo + (hi-lo)/2
-		medianOfThree128(data, mid, lo, hi, swap)
-		p := hoarePartition128(data, lo, hi, swap)
-		if p-lo < hi-p { // recurse on the smaller side
-			quicksort128(data, lo, p-1, swap)
-			lo = p + 1
+		medianOfThree128(data, swap)
+		p := hoarePartition128(data, swap)
+		if p < len(data)-p { // recurse on the smaller side
+			quicksort128(data[:p], swap)
+			data = data[p+1:]
 		} else {
-			quicksort128(data, p+1, hi, swap)
-			hi = p - 1
+			quicksort128(data[p+1:], swap)
+			data = data[:p]
 		}
 	}
 }
 
-func insertionsort128(data []uint128, lo, hi int, swap func(int, int)) {
-	// Extra superfluous checks have been added to prevent the compiler
-	// from adding bounds checks in the inner loop.
-	i := lo + 1
-	if i < 0 || hi >= len(data) {
-		return
-	}
-	for ; i <= hi; i++ {
+func insertionsort128(data []uint128, swap func(int, int)) {
+	for i := 1; i < len(data); i++ {
 		item := data[i]
-		for j := i; j > 0 && j > lo && less128(item, data[j-1]); j-- {
+		for j := i; j > 0 && less128(item, data[j-1]); j-- {
 			swap128(data, j, j-1, swap)
 		}
 	}
 }
 
-func medianOfThree128(data []uint128, a, b, c int, swap func(int, int)) int {
-	if less128(data[b], data[a]) {
-		swap128(data, a, b, swap)
+func medianOfThree128(data []uint128, swap func(int, int)) {
+	end := len(data) - 1
+	mid := len(data) / 2
+	if less128(data[0], data[mid]) {
+		swap128(data, mid, 0, swap)
 	}
-	if less128(data[c], data[b]) {
-		swap128(data, b, c, swap)
-		if less128(data[b], data[a]) {
-			swap128(data, a, b, swap)
+	if less128(data[end], data[0]) {
+		swap128(data, 0, end, swap)
+		if less128(data[0], data[mid]) {
+			swap128(data, mid, 0, swap)
 		}
 	}
-	return b
 }
 
-func hoarePartition128(data []uint128, lo, hi int, swap func(int, int)) int {
-	// Extra superfluous checks have been added to prevent the compiler
-	// from adding bounds checks in the inner loops.
-	i, j := lo+1, hi
-	pivot := data[lo]
-	for i >= 0 && hi < len(data) && j < len(data) {
-		for i <= hi && less128(data[i], pivot) {
+func hoarePartition128(data []uint128, swap func(int, int)) int {
+	i, j := 1, len(data)-1
+	if len(data) > 0 {
+		pivot := data[0]
+		for j < len(data) {
+			for i < len(data) && less128(data[i], pivot) {
+				i++
+			}
+			for j > 0 && less128(pivot, data[j]) {
+				j--
+			}
+			if i >= j {
+				break
+			}
+			swap128(data, i, j, swap)
 			i++
-		}
-		for j > lo && less128(pivot, data[j]) {
 			j--
 		}
-		if i >= j {
-			break
-		}
-		swap128(data, i, j, swap)
-		i++
-		j--
+		swap128(data, 0, j, swap)
 	}
-	swap128(data, lo, j, swap)
 	return j
 }
 
