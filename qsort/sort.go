@@ -18,7 +18,7 @@ func Sort(data []byte, size int, swap func(int, int)) {
 		panic("input length is not a multiple of element size")
 	}
 
-	// No specialization available. Use the generic, slower sorting routine.
+	// No specialization available. Use the slower generic sorting routine.
 	if size%8 != 0 || size > 32 {
 		sort.Sort(newGeneric(data, size, swap))
 		return

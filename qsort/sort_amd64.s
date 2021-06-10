@@ -32,7 +32,6 @@ inner:
 	VMOVMSKPD X4, R8
 	NOTL      DI
 	BSFL      DI, BX
-	TESTL     DI, DI
 	BTSL      BX, R8
 	JAE       outer
 	VMOVDQU   X2, (SI)
@@ -77,7 +76,6 @@ loop:
 	VMOVMSKPD X4, R11
 	NOTL      R10
 	BSFL      R10, DI
-	TESTL     R10, R10
 	BTSL      DI, R11
 	SETNE     R10
 	SETCS     R9
@@ -134,7 +132,6 @@ loop:
 	VMOVMSKPD X4, R11
 	NOTL      R10
 	BSFL      R10, DI
-	TESTL     R10, R10
 	BTSL      DI, R11
 	SETNE     R10
 	SETCS     R9
@@ -187,7 +184,6 @@ inner:
 	VMOVMSKPD Y4, R8
 	NOTL      DI
 	BSFL      DI, BX
-	TESTL     DI, DI
 	BTSL      BX, R8
 	JAE       outer
 	VMOVDQU   Y2, (SI)
@@ -233,7 +229,6 @@ loop:
 	VMOVMSKPD Y4, R11
 	NOTL      R10
 	BSFL      R10, DI
-	TESTL     R10, R10
 	BTSL      DI, R11
 	SETNE     R10
 	SETCS     R9
@@ -291,7 +286,6 @@ loop:
 	VMOVMSKPD Y4, R11
 	NOTL      R10
 	BSFL      R10, DI
-	TESTL     R10, R10
 	BTSL      DI, R11
 	SETNE     R10
 	SETCS     R9

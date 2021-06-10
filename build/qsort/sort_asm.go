@@ -13,28 +13,55 @@ import (
 )
 
 func main() {
-	insertionsort(16, XMM)
-	distributeForward(16, XMM)
-	distributeBackward(16, XMM)
+	insertionsort(&SortableVector{register: XMM, size: 16})
+	distributeForward(&SortableVector{register: XMM, size: 16})
+	distributeBackward(&SortableVector{register: XMM, size: 16})
 
-	insertionsort(32, YMM)
-	distributeForward(32, YMM)
-	distributeBackward(32, YMM)
+	insertionsort(&SortableVector{register: YMM, size: 32})
+	distributeForward(&SortableVector{register: YMM, size: 32})
+	distributeBackward(&SortableVector{register: YMM, size: 32})
 
 	Generate()
 }
 
-func shiftForSize(size uint64) uint64 {
-	return uint64(math.Log2(float64(size)))
+type Sortable interface {
+	Register() Register
+	Size() uint64
+	Init()
+	Move(Op, Op)
+	Compare(Register, Register)
 }
 
-// less compares two vector registers containing packed unsigned qwords.
-// The ZF/CF flags are set in the same way as a CMP(a,b) instruction:
-// - ZF=(a==b)
-// - CF=(a<b)
-func less(size uint64, register func() VecVirtual, a, b, msb Op) {
-	ne := register()
-	VPCMPEQQ(a, b, ne)
+type SortableVector struct {
+	register func() VecVirtual
+	size     uint64
+	msb      Register
+}
+
+func (s *SortableVector) Register() Register {
+	return s.register()
+}
+
+func (s *SortableVector) Size() uint64 {
+	return s.size
+}
+
+func (s *SortableVector) Init() {
+	s.msb = s.register()
+	VecBroadcast(U64(1<<63), s.msb)
+}
+
+func (s *SortableVector) Move(a, b Op) {
+	VMOVDQU(a, b)
+}
+
+func (s *SortableVector) Compare(a, b Register) {
+	// The following is a routine for vectors that yields the same ZF/CF
+	// result as a CMP instruction.
+
+	// First compare each packed qword for equality.
+	eq := s.Register()
+	VPCMPEQQ(a, b, eq)
 
 	// SSE4.2 and AVX2 have a CMPGTQ to compare packed qwords, but
 	// unfortunately it's a signed comparison. We know that u64 has
@@ -44,26 +71,30 @@ func less(size uint64, register func() VecVirtual, a, b, msb Op) {
 	// allows us to utilize a signed comparison, and yields the same
 	// result as if we were doing an unsigned comparison with the input.
 	// As usual, AVX-512 fixes the problem with its VPCMPUQ.
-	lt := register()
-	aSigned := register()
-	bSigned := register()
-	VPADDQ(a, msb, aSigned)
-	VPADDQ(b, msb, bSigned)
+	lt := s.Register()
+	aSigned := s.Register()
+	bSigned := s.Register()
+	VPADDQ(a, s.msb, aSigned)
+	VPADDQ(b, s.msb, bSigned)
 	VPCMPGTQ(aSigned, bSigned, lt)
 
-	neMask := GP32()
+	// Extract bit masks.
+	eqMask := GP32()
 	ltMask := GP32()
-	VMOVMSKPD(ne, neMask)
+	VMOVMSKPD(eq, eqMask)
 	VMOVMSKPD(lt, ltMask)
 
-	NOTL(neMask)
+	// Invert the equality mask to find qwords that weren't equal.
+	// Bit-scan forward to find the first unequal byte, then test
+	// that bit in the less-than mask.
+	NOTL(eqMask)
 	unequalByteIndex := GP32()
-	BSFL(neMask, unequalByteIndex)
-	TESTL(neMask, neMask)          // set ZF
+	BSFL(eqMask, unequalByteIndex) // set ZF
 	BTSL(unequalByteIndex, ltMask) // set CF
 }
 
-func insertionsort(size uint64, register func() VecVirtual) {
+func insertionsort(s Sortable) {
+	size := s.Size()
 	TEXT(fmt.Sprintf("insertionsort%dNoSwapAsm", size*8), NOSPLIT, "func(data []byte)")
 
 	data := Load(Param("data").Base(), GP64())
@@ -72,8 +103,7 @@ func insertionsort(size uint64, register func() VecVirtual) {
 	TESTQ(data, end)
 	JE(LabelRef("done"))
 
-	msb := register()
-	VecBroadcast(U64(1 << 63), msb)
+	s.Init()
 
 	i := GP64()
 	MOVQ(data, i)
@@ -82,20 +112,19 @@ func insertionsort(size uint64, register func() VecVirtual) {
 	ADDQ(Imm(size), i)
 	CMPQ(i, end)
 	JAE(LabelRef("done"))
-	item := register()
-	VMOVDQU(Mem{Base: i}, item)
+	item := s.Register()
+	s.Move(Mem{Base: i}, item)
 	j := GP64()
 	MOVQ(i, j)
 
 	Label("inner")
-	prev := register()
-	VMOVDQU(Mem{Base: j, Disp: -int(size)}, prev)
-
-	less(size, register, item, prev, msb)
+	prev := s.Register()
+	s.Move(Mem{Base: j, Disp: -int(size)}, prev)
+	s.Compare(item, prev)
 	JAE(LabelRef("outer"))
 
-	VMOVDQU(prev, Mem{Base: j})
-	VMOVDQU(item, Mem{Base: j, Disp: -int(size)})
+	s.Move(prev, Mem{Base: j})
+	s.Move(item, Mem{Base: j, Disp: -int(size)})
 	SUBQ(Imm(size), j)
 	CMPQ(j, data)
 	JA(LabelRef("inner"))
@@ -108,10 +137,9 @@ func insertionsort(size uint64, register func() VecVirtual) {
 	RET()
 }
 
-func distributeForward(size uint64, register func() VecVirtual) {
+func distributeForward(s Sortable) {
+	size := s.Size()
 	TEXT(fmt.Sprintf("distributeForward%d", size*8), NOSPLIT, "func(data, scratch *byte, limit, lo, hi int) int")
-
-	shift := shiftForSize(size)
 
 	// Load inputs.
 	data := Load(Param("data"), GP64())
@@ -121,6 +149,7 @@ func distributeForward(size uint64, register func() VecVirtual) {
 	hiIndex := Load(Param("hi"), GP64())
 
 	// Convert indices to byte offsets.
+	shift := log2(size)
 	SHLQ(Imm(shift), limit)
 	SHLQ(Imm(shift), loIndex)
 	SHLQ(Imm(shift), hiIndex)
@@ -133,12 +162,11 @@ func distributeForward(size uint64, register func() VecVirtual) {
 	LEAQ(Mem{Base: data, Index: hiIndex, Scale: 1}, hi)
 	LEAQ(Mem{Base: scratch, Index: limit, Scale: 1, Disp: -int(size)}, tail)
 
-	msb := register()
-	VecBroadcast(U64(1 << 63), msb)
+	s.Init()
 
 	// Load the pivot item.
-	pivot := register()
-	VMOVDQU(Mem{Base: data}, pivot)
+	pivot := s.Register()
+	s.Move(Mem{Base: data}, pivot)
 
 	offset := GP64()
 	isLess := GP64()
@@ -152,12 +180,12 @@ func distributeForward(size uint64, register func() VecVirtual) {
 	Label("loop")
 
 	// Load the next item.
-	next := register()
-	VMOVDQU(Mem{Base: lo}, next)
+	next := s.Register()
+	s.Move(Mem{Base: lo}, next)
 
 	// Compare the item with the pivot.
 	hasUnequalByte := GP8()
-	less(size, register, next, pivot, msb)
+	s.Compare(next, pivot)
 	SETNE(hasUnequalByte)
 	SETCS(isLess.As8())
 	ANDB(hasUnequalByte, isLess.As8())
@@ -168,7 +196,7 @@ func distributeForward(size uint64, register func() VecVirtual) {
 	dst := GP64()
 	MOVQ(lo, dst)
 	CMOVQNE(tail, dst)
-	VMOVDQU(next, Mem{Base: dst, Index: offset, Scale: 1})
+	s.Move(next, Mem{Base: dst, Index: offset, Scale: 1})
 	SHLQ(Imm(shift), isLess)
 	SUBQ(isLess, offset)
 	ADDQ(Imm(size), lo)
@@ -192,10 +220,9 @@ func distributeForward(size uint64, register func() VecVirtual) {
 	RET()
 }
 
-func distributeBackward(size uint64, register func() VecVirtual) {
+func distributeBackward(s Sortable) {
+	size := s.Size()
 	TEXT(fmt.Sprintf("distributeBackward%d", size*8), NOSPLIT, "func(data, scratch *byte, limit, lo, hi int) int")
-
-	shift := shiftForSize(size)
 
 	// Load inputs.
 	data := Load(Param("data"), GP64())
@@ -205,6 +232,7 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 	hiIndex := Load(Param("hi"), GP64())
 
 	// Convert indices to byte offsets.
+	shift := log2(size)
 	SHLQ(Imm(shift), limit)
 	SHLQ(Imm(shift), loIndex)
 	SHLQ(Imm(shift), hiIndex)
@@ -215,12 +243,11 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 	LEAQ(Mem{Base: data, Index: loIndex, Scale: 1}, lo)
 	LEAQ(Mem{Base: data, Index: hiIndex, Scale: 1}, hi)
 
-	msb := register()
-	VecBroadcast(U64(1 << 63), msb)
+	s.Init()
 
 	// Load the pivot item.
-	pivot := register()
-	VMOVDQU(Mem{Base: data}, pivot)
+	pivot := s.Register()
+	s.Move(Mem{Base: data}, pivot)
 
 	offset := GP64()
 	isLess := GP64()
@@ -233,12 +260,12 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 	Label("loop")
 
 	// Load the next item.
-	next := register()
-	VMOVDQU(Mem{Base: hi}, next)
+	next := s.Register()
+	s.Move(Mem{Base: hi}, next)
 
 	// Compare the item with the pivot.
 	hasUnequalByte := GP8()
-	less(size, register, next, pivot, msb)
+	s.Compare(next, pivot)
 	SETNE(hasUnequalByte)
 	SETCS(isLess.As8())
 	ANDB(hasUnequalByte, isLess.As8())
@@ -248,7 +275,7 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 	dst := GP64()
 	MOVQ(scratch, dst)
 	CMOVQEQ(hi, dst)
-	VMOVDQU(next, Mem{Base: dst, Index: offset, Scale: 1})
+	s.Move(next, Mem{Base: dst, Index: offset, Scale: 1})
 	SHLQ(Imm(shift), isLess)
 	ADDQ(isLess, offset)
 	SUBQ(Imm(size), hi)
@@ -269,4 +296,8 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 		VZEROUPPER()
 	}
 	RET()
+}
+
+func log2(size uint64) uint64 {
+	return uint64(math.Log2(float64(size)))
 }
