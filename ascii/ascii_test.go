@@ -300,22 +300,11 @@ func TestEqualFold(t *testing.T) {
 	}
 }
 
-func fillValid(b []byte, ch byte) {
-	for i := 0; i < len(b); i++ {
-		b[i] = byte(i%26) + ch
-	}
-}
-
 func genValidString(n int, ch byte) (s string) {
 	for i := 0; i < n; i++ {
 		s += string(byte(i%26) + ch)
 	}
 	return
-}
-
-func fillEqual(lower []byte, upper []byte) {
-	fillValid(lower, 'a')
-	fillValid(upper, 'A')
 }
 
 func genEqualStrings(n int) (l string, u string) {
