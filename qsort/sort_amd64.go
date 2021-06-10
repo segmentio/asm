@@ -4,12 +4,12 @@ package qsort
 
 func insertionsort128NoSwapAsm(data []byte)
 
-func distributeForward128(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+func distributeForward128(data *byte, scratch *byte, limit int, lo int, hi int) int
 
-func distributeBackward128(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+func distributeBackward128(data *byte, scratch *byte, limit int, lo int, hi int) int
 
 func insertionsort256NoSwapAsm(data []byte)
 
-func distributeForward256(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+func distributeForward256(data *byte, scratch *byte, limit int, lo int, hi int) int
 
-func distributeBackward256(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+func distributeBackward256(data *byte, scratch *byte, limit int, lo int, hi int) int

@@ -109,7 +109,7 @@ func insertionsort(size uint64, register func() VecVirtual) {
 }
 
 func distributeForward(size uint64, register func() VecVirtual) {
-	TEXT(fmt.Sprintf("distributeForward%d", size*8), NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
+	TEXT(fmt.Sprintf("distributeForward%d", size*8), NOSPLIT, "func(data, scratch *byte, limit, lo, hi int) int")
 
 	shift := shiftForSize(size)
 
@@ -119,13 +119,11 @@ func distributeForward(size uint64, register func() VecVirtual) {
 	limit := Load(Param("limit"), GP64())
 	loIndex := Load(Param("lo"), GP64())
 	hiIndex := Load(Param("hi"), GP64())
-	pivotIndex := Load(Param("pivot"), GP64())
 
 	// Convert indices to byte offsets.
 	SHLQ(Imm(shift), limit)
 	SHLQ(Imm(shift), loIndex)
 	SHLQ(Imm(shift), hiIndex)
-	SHLQ(Imm(shift), pivotIndex)
 
 	// Prepare read/cmp pointers.
 	lo := GP64()
@@ -140,7 +138,7 @@ func distributeForward(size uint64, register func() VecVirtual) {
 
 	// Load the pivot item.
 	pivot := register()
-	VMOVDQU(Mem{Base: data, Index: pivotIndex, Scale: 1}, pivot)
+	VMOVDQU(Mem{Base: data}, pivot)
 
 	offset := GP64()
 	isLess := GP64()
@@ -195,7 +193,7 @@ func distributeForward(size uint64, register func() VecVirtual) {
 }
 
 func distributeBackward(size uint64, register func() VecVirtual) {
-	TEXT(fmt.Sprintf("distributeBackward%d", size*8), NOSPLIT, "func(data, scratch *byte, limit, lo, hi, pivot int) int")
+	TEXT(fmt.Sprintf("distributeBackward%d", size*8), NOSPLIT, "func(data, scratch *byte, limit, lo, hi int) int")
 
 	shift := shiftForSize(size)
 
@@ -205,13 +203,11 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 	limit := Load(Param("limit"), GP64())
 	loIndex := Load(Param("lo"), GP64())
 	hiIndex := Load(Param("hi"), GP64())
-	pivotIndex := Load(Param("pivot"), GP64())
 
 	// Convert indices to byte offsets.
 	SHLQ(Imm(shift), limit)
 	SHLQ(Imm(shift), loIndex)
 	SHLQ(Imm(shift), hiIndex)
-	SHLQ(Imm(shift), pivotIndex)
 
 	// Prepare read/cmp pointers.
 	lo := GP64()
@@ -224,7 +220,7 @@ func distributeBackward(size uint64, register func() VecVirtual) {
 
 	// Load the pivot item.
 	pivot := register()
-	VMOVDQU(Mem{Base: data, Index: pivotIndex, Scale: 1}, pivot)
+	VMOVDQU(Mem{Base: data}, pivot)
 
 	offset := GP64()
 	isLess := GP64()

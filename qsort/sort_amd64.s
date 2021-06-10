@@ -45,27 +45,25 @@ inner:
 done:
 	RET
 
-// func distributeForward128(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+// func distributeForward128(data *byte, scratch *byte, limit int, lo int, hi int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeForward128(SB), NOSPLIT, $0-56
+TEXT ·distributeForward128(SB), NOSPLIT, $0-48
 	MOVQ         data+0(FP), AX
 	MOVQ         scratch+8(FP), CX
 	MOVQ         limit+16(FP), DX
 	MOVQ         lo+24(FP), BX
 	MOVQ         hi+32(FP), SI
-	MOVQ         pivot+40(FP), DI
 	SHLQ         $0x04, DX
 	SHLQ         $0x04, BX
 	SHLQ         $0x04, SI
-	SHLQ         $0x04, DI
 	LEAQ         (AX)(BX*1), BX
 	LEAQ         (AX)(SI*1), SI
 	LEAQ         -16(CX)(DX*1), CX
-	MOVQ         $0x8000000000000000, R9
-	PINSRQ       $0x00, R9, X0
+	MOVQ         $0x8000000000000000, R8
+	PINSRQ       $0x00, R8, X0
 	VPBROADCASTQ X0, X0
-	VMOVDQU      (AX)(DI*1), X1
-	XORQ         DI, DI
+	VMOVDQU      (AX), X1
+	XORQ         R8, R8
 	XORQ         R9, R9
 	NEGQ         DX
 
@@ -78,52 +76,50 @@ loop:
 	VMOVMSKPD X3, R10
 	VMOVMSKPD X4, R11
 	NOTL      R10
-	BSFL      R10, R8
+	BSFL      R10, DI
 	TESTL     R10, R10
-	BTSL      R8, R11
+	BTSL      DI, R11
 	SETNE     R10
 	SETCS     R9
 	ANDB      R10, R9
 	XORB      $0x01, R9
 	MOVQ      BX, R10
 	CMOVQNE   CX, R10
-	VMOVDQU   X2, (R10)(DI*1)
+	VMOVDQU   X2, (R10)(R8*1)
 	SHLQ      $0x04, R9
-	SUBQ      R9, DI
+	SUBQ      R9, R8
 	ADDQ      $0x10, BX
 	CMPQ      BX, SI
 	JA        done
-	CMPQ      DI, DX
+	CMPQ      R8, DX
 	JNE       loop
 
 done:
 	SUBQ AX, BX
-	ADDQ DI, BX
+	ADDQ R8, BX
 	SHRQ $0x04, BX
 	DECQ BX
-	MOVQ BX, ret+48(FP)
+	MOVQ BX, ret+40(FP)
 	RET
 
-// func distributeBackward128(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+// func distributeBackward128(data *byte, scratch *byte, limit int, lo int, hi int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeBackward128(SB), NOSPLIT, $0-56
+TEXT ·distributeBackward128(SB), NOSPLIT, $0-48
 	MOVQ         data+0(FP), AX
 	MOVQ         scratch+8(FP), CX
 	MOVQ         limit+16(FP), DX
 	MOVQ         lo+24(FP), BX
 	MOVQ         hi+32(FP), SI
-	MOVQ         pivot+40(FP), DI
 	SHLQ         $0x04, DX
 	SHLQ         $0x04, BX
 	SHLQ         $0x04, SI
-	SHLQ         $0x04, DI
 	LEAQ         (AX)(BX*1), BX
 	LEAQ         (AX)(SI*1), SI
-	MOVQ         $0x8000000000000000, R9
-	PINSRQ       $0x00, R9, X0
+	MOVQ         $0x8000000000000000, R8
+	PINSRQ       $0x00, R8, X0
 	VPBROADCASTQ X0, X0
-	VMOVDQU      (AX)(DI*1), X1
-	XORQ         DI, DI
+	VMOVDQU      (AX), X1
+	XORQ         R8, R8
 	XORQ         R9, R9
 	CMPQ         SI, BX
 	JBE          done
@@ -137,28 +133,28 @@ loop:
 	VMOVMSKPD X3, R10
 	VMOVMSKPD X4, R11
 	NOTL      R10
-	BSFL      R10, R8
+	BSFL      R10, DI
 	TESTL     R10, R10
-	BTSL      R8, R11
+	BTSL      DI, R11
 	SETNE     R10
 	SETCS     R9
 	ANDB      R10, R9
 	MOVQ      CX, R10
 	CMOVQEQ   SI, R10
-	VMOVDQU   X2, (R10)(DI*1)
+	VMOVDQU   X2, (R10)(R8*1)
 	SHLQ      $0x04, R9
-	ADDQ      R9, DI
+	ADDQ      R9, R8
 	SUBQ      $0x10, SI
 	CMPQ      SI, BX
 	JBE       done
-	CMPQ      DI, DX
+	CMPQ      R8, DX
 	JNE       loop
 
 done:
 	SUBQ AX, SI
-	ADDQ DI, SI
+	ADDQ R8, SI
 	SHRQ $0x04, SI
-	MOVQ SI, ret+48(FP)
+	MOVQ SI, ret+40(FP)
 	RET
 
 // func insertionsort256NoSwapAsm(data []byte)
@@ -205,27 +201,25 @@ done:
 	VZEROUPPER
 	RET
 
-// func distributeForward256(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+// func distributeForward256(data *byte, scratch *byte, limit int, lo int, hi int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeForward256(SB), NOSPLIT, $0-56
+TEXT ·distributeForward256(SB), NOSPLIT, $0-48
 	MOVQ         data+0(FP), AX
 	MOVQ         scratch+8(FP), CX
 	MOVQ         limit+16(FP), DX
 	MOVQ         lo+24(FP), BX
 	MOVQ         hi+32(FP), SI
-	MOVQ         pivot+40(FP), DI
 	SHLQ         $0x05, DX
 	SHLQ         $0x05, BX
 	SHLQ         $0x05, SI
-	SHLQ         $0x05, DI
 	LEAQ         (AX)(BX*1), BX
 	LEAQ         (AX)(SI*1), SI
 	LEAQ         -32(CX)(DX*1), CX
-	MOVQ         $0x8000000000000000, R9
-	PINSRQ       $0x00, R9, X0
+	MOVQ         $0x8000000000000000, R8
+	PINSRQ       $0x00, R8, X0
 	VPBROADCASTQ X0, Y0
-	VMOVDQU      (AX)(DI*1), Y1
-	XORQ         DI, DI
+	VMOVDQU      (AX), Y1
+	XORQ         R8, R8
 	XORQ         R9, R9
 	NEGQ         DX
 
@@ -238,53 +232,51 @@ loop:
 	VMOVMSKPD Y3, R10
 	VMOVMSKPD Y4, R11
 	NOTL      R10
-	BSFL      R10, R8
+	BSFL      R10, DI
 	TESTL     R10, R10
-	BTSL      R8, R11
+	BTSL      DI, R11
 	SETNE     R10
 	SETCS     R9
 	ANDB      R10, R9
 	XORB      $0x01, R9
 	MOVQ      BX, R10
 	CMOVQNE   CX, R10
-	VMOVDQU   Y2, (R10)(DI*1)
+	VMOVDQU   Y2, (R10)(R8*1)
 	SHLQ      $0x05, R9
-	SUBQ      R9, DI
+	SUBQ      R9, R8
 	ADDQ      $0x20, BX
 	CMPQ      BX, SI
 	JA        done
-	CMPQ      DI, DX
+	CMPQ      R8, DX
 	JNE       loop
 
 done:
 	SUBQ AX, BX
-	ADDQ DI, BX
+	ADDQ R8, BX
 	SHRQ $0x05, BX
 	DECQ BX
-	MOVQ BX, ret+48(FP)
+	MOVQ BX, ret+40(FP)
 	VZEROUPPER
 	RET
 
-// func distributeBackward256(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
+// func distributeBackward256(data *byte, scratch *byte, limit int, lo int, hi int) int
 // Requires: AVX, AVX2, CMOV, SSE4.1
-TEXT ·distributeBackward256(SB), NOSPLIT, $0-56
+TEXT ·distributeBackward256(SB), NOSPLIT, $0-48
 	MOVQ         data+0(FP), AX
 	MOVQ         scratch+8(FP), CX
 	MOVQ         limit+16(FP), DX
 	MOVQ         lo+24(FP), BX
 	MOVQ         hi+32(FP), SI
-	MOVQ         pivot+40(FP), DI
 	SHLQ         $0x05, DX
 	SHLQ         $0x05, BX
 	SHLQ         $0x05, SI
-	SHLQ         $0x05, DI
 	LEAQ         (AX)(BX*1), BX
 	LEAQ         (AX)(SI*1), SI
-	MOVQ         $0x8000000000000000, R9
-	PINSRQ       $0x00, R9, X0
+	MOVQ         $0x8000000000000000, R8
+	PINSRQ       $0x00, R8, X0
 	VPBROADCASTQ X0, Y0
-	VMOVDQU      (AX)(DI*1), Y1
-	XORQ         DI, DI
+	VMOVDQU      (AX), Y1
+	XORQ         R8, R8
 	XORQ         R9, R9
 	CMPQ         SI, BX
 	JBE          done
@@ -298,27 +290,27 @@ loop:
 	VMOVMSKPD Y3, R10
 	VMOVMSKPD Y4, R11
 	NOTL      R10
-	BSFL      R10, R8
+	BSFL      R10, DI
 	TESTL     R10, R10
-	BTSL      R8, R11
+	BTSL      DI, R11
 	SETNE     R10
 	SETCS     R9
 	ANDB      R10, R9
 	MOVQ      CX, R10
 	CMOVQEQ   SI, R10
-	VMOVDQU   Y2, (R10)(DI*1)
+	VMOVDQU   Y2, (R10)(R8*1)
 	SHLQ      $0x05, R9
-	ADDQ      R9, DI
+	ADDQ      R9, R8
 	SUBQ      $0x20, SI
 	CMPQ      SI, BX
 	JBE       done
-	CMPQ      DI, DX
+	CMPQ      R8, DX
 	JNE       loop
 
 done:
 	SUBQ AX, SI
-	ADDQ DI, SI
+	ADDQ R8, SI
 	SHRQ $0x05, SI
-	MOVQ SI, ret+48(FP)
+	MOVQ SI, ret+40(FP)
 	VZEROUPPER
 	RET

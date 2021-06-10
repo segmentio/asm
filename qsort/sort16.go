@@ -86,27 +86,27 @@ func hoarePartition128(data []uint128, base int, swap func(int, int)) int {
 }
 
 func hybridPartition128(data, scratch []uint128) int {
-	lo := 0
+	pivot := 0
+	lo := 1
 	hi := len(data) - 1
+	limit := len(scratch)
 
-	pivot := lo
-	lo++
-	p := distributeForward128(unsafeU128Addr(data), unsafeU128Addr(scratch), len(scratch), lo, hi, pivot)
-	if hi-p <= len(scratch) {
-		copy(data[p+1:], scratch[len(scratch)-hi+p:])
+	p := distributeForward128(unsafeU128Addr(data), unsafeU128Addr(scratch), limit, lo, hi)
+	if hi-p <= limit {
+		copy(data[p+1:], scratch[limit-hi+p:])
 		data[pivot], data[p] = data[p], data[pivot]
 		return p
 	}
-	lo = p + len(scratch)
+	lo = p + limit
 	for {
-		hi = distributeBackward128(unsafeU128Addr(data), unsafeU128Addr(data[lo+1-len(scratch):]), len(scratch), lo, hi, pivot) - len(scratch)
+		hi = distributeBackward128(unsafeU128Addr(data), unsafeU128Addr(data[lo+1-limit:]), limit, lo, hi) - limit
 		if hi < lo {
 			p = hi
 			break
 		}
-		lo = distributeForward128(unsafeU128Addr(data), unsafeU128Addr(data[hi+1:]), len(scratch), lo, hi, pivot) + len(scratch)
+		lo = distributeForward128(unsafeU128Addr(data), unsafeU128Addr(data[hi+1:]), limit, lo, hi) + limit
 		if hi < lo {
-			p = lo - len(scratch)
+			p = lo - limit
 			break
 		}
 	}
