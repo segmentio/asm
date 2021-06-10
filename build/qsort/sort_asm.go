@@ -213,19 +213,16 @@ func distributeForward(s Sortable) {
 	s.Move(Mem{Base: lo}, next)
 
 	// Compare the item with the pivot.
-	hasUnequalByte := GP8()
 	s.Compare(next, pivot)
-	SETNE(hasUnequalByte)
 	SETCS(isLess.As8())
-	ANDB(hasUnequalByte, isLess.As8())
-	XORB(Imm(1), isLess.As8())
 
 	// Conditionally write to either the beginning of the data slice, or
 	// end of the scratch slice.
 	dst := GP64()
 	MOVQ(lo, dst)
-	CMOVQNE(tail, dst)
+	CMOVQCC(tail, dst)
 	s.Move(next, Mem{Base: dst, Index: offset, Scale: 1})
+	XORB(Imm(1), isLess.As8())
 	SHLQ(Imm(shift), isLess)
 	SUBQ(isLess, offset)
 	ADDQ(Imm(size), lo)
@@ -293,17 +290,14 @@ func distributeBackward(s Sortable) {
 	s.Move(Mem{Base: hi}, next)
 
 	// Compare the item with the pivot.
-	hasUnequalByte := GP8()
 	s.Compare(next, pivot)
-	SETNE(hasUnequalByte)
 	SETCS(isLess.As8())
-	ANDB(hasUnequalByte, isLess.As8())
 
 	// Conditionally write to either the end of the data slice, or
 	// beginning of the scratch slice.
 	dst := GP64()
 	MOVQ(scratch, dst)
-	CMOVQEQ(hi, dst)
+	CMOVQCC(hi, dst)
 	s.Move(next, Mem{Base: dst, Index: offset, Scale: 1})
 	SHLQ(Imm(shift), isLess)
 	ADDQ(isLess, offset)

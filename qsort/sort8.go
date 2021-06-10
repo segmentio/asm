@@ -141,7 +141,6 @@ func hoarePartition64(data []uint64, base int, swap func(int, int)) int {
 	return j
 }
 
-
 func hybridPartition64(data, scratch []uint64) int {
 	pivot := 0
 	lo := 1
