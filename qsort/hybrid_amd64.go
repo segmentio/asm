@@ -2,15 +2,11 @@
 
 package qsort
 
-func medianOfThree16(data *byte, a int, b int, c int)
-
 func insertionsort16(data *byte, lo int, hi int)
 
 func distributeForward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
 
 func distributeBackward16(data *byte, scratch *byte, limit int, lo int, hi int, pivot int) int
-
-func medianOfThree32(data *byte, a int, b int, c int)
 
 func insertionsort32(data *byte, lo int, hi int)
 

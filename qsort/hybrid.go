@@ -10,9 +10,9 @@ func hybridQuicksort(data []byte, size int) {
 
 	switch size {
 	case 16:
-		hybridQuicksort16(unsafeBytesTo128(data), unsafeBytesTo128(tmp[:]), 0, len(data)/16-1)
+		hybridQuicksort16(unsafeBytesTo128(data), unsafeBytesTo128(tmp[:]))
 	case 32:
-		hybridQuicksort32(unsafeBytesTo256(data), unsafeBytesTo256(tmp[:]), 0, len(data)/32-1)
+		hybridQuicksort32(unsafeBytesTo256(data), unsafeBytesTo256(tmp[:]))
 	default:
 		panic("unreachable")
 	}
@@ -26,45 +26,48 @@ func ptr32(slice []uint256) *byte {
 	return (*byte)(unsafe.Pointer(&slice[0]))
 }
 
-func hybridQuicksort16(data, tmp []uint128, lo, hi int) {
-	for lo < hi {
-		if hi-lo < smallCutoff/16*2 {
-			insertionsort16(ptr16(data), lo, hi)
+func hybridQuicksort16(data, tmp []uint128) {
+	for len(data) > 1 {
+		if len(data) < smallCutoff/16*2 {
+			insertionsort16(ptr16(data), 0, len(data)-1)
 			return
 		}
-		mid := lo + (hi-lo)/2
-		medianOfThree16(ptr16(data), mid, lo, hi)
-		p := hybridPartition16(data, tmp, lo, hi)
-		if p-lo < hi-p {
-			hybridQuicksort16(data, tmp, lo, p-1)
-			lo = p + 1
+		medianOfThree128(data, nil)
+
+		p := hybridPartition16(data, tmp)
+		if p < len(data)-p {
+			hybridQuicksort16(data[:p], tmp)
+			data = data[p+1:]
 		} else {
-			hybridQuicksort16(data, tmp, p+1, hi)
-			hi = p - 1
+			hybridQuicksort16(data[p+1:], tmp)
+			data = data[:p]
 		}
 	}
 }
 
-func hybridQuicksort32(data, tmp []uint256, lo, hi int) {
-	for lo < hi {
-		if hi-lo < smallCutoff/32*2 {
-			insertionsort32(ptr32(data), lo, hi)
+func hybridQuicksort32(data, tmp []uint256) {
+	for len(data) > 1 {
+		if len(data) < smallCutoff/32*2 {
+			insertionsort32(ptr32(data), 0, len(data)-1)
 			return
 		}
-		mid := lo + (hi-lo)/2
-		medianOfThree32(ptr32(data), mid, lo, hi)
-		p := hybridPartition32(data, tmp, lo, hi)
-		if p-lo < hi-p {
-			hybridQuicksort32(data, tmp, lo, p-1)
-			lo = p + 1
+		medianOfThree256(data, nil)
+
+		p := hybridPartition32(data, tmp)
+		if p < len(data)-p {
+			hybridQuicksort32(data[:p], tmp)
+			data = data[p+1:]
 		} else {
-			hybridQuicksort32(data, tmp, p+1, hi)
-			hi = p - 1
+			hybridQuicksort32(data[p+1:], tmp)
+			data = data[:p]
 		}
 	}
 }
 
-func hybridPartition16(data, tmp []uint128, lo, hi int) int {
+func hybridPartition16(data, tmp []uint128) int {
+	lo := 0
+	hi := len(data) - 1
+
 	pivot := lo
 	lo++
 	p := distributeForward16(ptr16(data), ptr16(tmp), len(tmp), lo, hi, pivot)
@@ -91,7 +94,10 @@ func hybridPartition16(data, tmp []uint128, lo, hi int) int {
 	return p
 }
 
-func hybridPartition32(data, tmp []uint256, lo, hi int) int {
+func hybridPartition32(data, tmp []uint256) int {
+	lo := 0
+	hi := len(data) - 1
+
 	pivot := lo
 	lo++
 	p := distributeForward32(ptr32(data), ptr32(tmp), len(tmp), lo, hi, pivot)

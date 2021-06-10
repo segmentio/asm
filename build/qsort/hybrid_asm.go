@@ -13,12 +13,10 @@ import (
 )
 
 func main() {
-	medianOfThree(16, XMM)
 	insertionsort(16, XMM)
 	distributeForward(16, XMM)
 	distributeBackward(16, XMM)
 
-	medianOfThree(32, YMM)
 	insertionsort(32, YMM)
 	distributeForward(32, YMM)
 	distributeBackward(32, YMM)
@@ -32,7 +30,7 @@ func shiftForSize(size uint64) uint64 {
 
 // less compares two vector registers containing packed unsigned qwords.
 // The ZF/CF flags are set in the same way as a CMP(a,b) instruction:
-// - ZF=(a==B)
+// - ZF=(a==b)
 // - CF=(a<b)
 func less(size uint64, register func() VecVirtual, a, b, msb Op) {
 	ne := register()
@@ -63,62 +61,6 @@ func less(size uint64, register func() VecVirtual, a, b, msb Op) {
 	BSFL(neMask, unequalByteIndex)
 	TESTL(neMask, neMask)          // set ZF
 	BTSL(unequalByteIndex, ltMask) // set CF
-}
-
-func medianOfThree(size uint64, register func() VecVirtual) {
-	TEXT(fmt.Sprintf("medianOfThree%d", size), NOSPLIT, "func(data *byte, a, b, c int)")
-
-	shift := shiftForSize(size)
-
-	data := Load(Param("data"), GP64())
-	aPtr := Load(Param("a"), GP64())
-	bPtr := Load(Param("b"), GP64())
-	cPtr := Load(Param("c"), GP64())
-	SHLQ(Imm(shift), aPtr)
-	SHLQ(Imm(shift), bPtr)
-	SHLQ(Imm(shift), cPtr)
-	ADDQ(data, aPtr)
-	ADDQ(data, bPtr)
-	ADDQ(data, cPtr)
-
-	a := register()
-	b := register()
-	c := register()
-	tmp := register()
-	VMOVDQU(Mem{Base: aPtr}, a)
-	VMOVDQU(Mem{Base: bPtr}, b)
-	VMOVDQU(Mem{Base: cPtr}, c)
-
-	msb := register()
-	VecBroadcast(U64(1 << 63), msb)
-
-	// Swap a/b if b<a.
-	less(size, register, b, a, msb)
-	JAE(LabelRef("part2"))
-	VMOVDQU(b, Mem{Base: aPtr})
-	VMOVDQU(a, Mem{Base: bPtr})
-	VMOVDQA(b, tmp)
-	VMOVDQA(a, b)
-	VMOVDQA(tmp, a)
-
-	// Swap b/c if c<b.
-	Label("part2")
-	less(size, register, c, b, msb)
-	JAE(LabelRef("done"))
-	VMOVDQU(c, Mem{Base: bPtr})
-	VMOVDQU(b, Mem{Base: cPtr})
-
-	// Check a/c are in order.
-	less(size, register, c, a, msb)
-	JAE(LabelRef("done"))
-	VMOVDQU(c, Mem{Base: aPtr})
-	VMOVDQU(a, Mem{Base: bPtr})
-
-	Label("done")
-	if size > 16 {
-		VZEROUPPER()
-	}
-	RET()
 }
 
 func insertionsort(size uint64, register func() VecVirtual) {
