@@ -42,13 +42,7 @@ func Sort(data []byte, size int, swap func(int, int)) {
 
 	switch size {
 	case 8:
-		var smallsort smallsort64
-		if swap == nil {
-			smallsort = bubblesort64NoSwap2
-		} else {
-			smallsort = insertionsort64
-		}
-		quicksort64(unsafeBytesTo64(data), 0, smallCutoff, smallsort, hoarePartition64, swap)
+		quicksort64(unsafeBytesTo64(data), 0, smallCutoff, insertionsort64, hoarePartition64, swap)
 	case 16:
 		quicksort128(unsafeBytesTo128(data), 0, smallCutoff, insertionsort128, hoarePartition128, swap)
 	case 24:

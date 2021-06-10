@@ -77,30 +77,27 @@ func hoarePartition128(data []uint128, base int, swap func(int, int)) int {
 }
 
 func hybridPartition128(data, scratch []uint128) int {
-	pivot := 0
-	lo := 1
-	hi := len(data) - 1
-	limit := len(scratch)
+	pivot, lo, hi, limit := 0, 1, len(data)-1, len(scratch)
 
 	p := distributeForward128(data, scratch, limit, lo, hi)
 	if hi-p <= limit {
-		copy(data[p+1:], scratch[limit-hi+p:])
-		data[pivot], data[p] = data[p], data[pivot]
-		return p
-	}
-	lo = p + limit
-	for {
-		hi = distributeBackward128(data, data[lo+1-limit:], limit, lo, hi) - limit
-		if hi < lo {
-			p = hi
-			break
+		scratch = scratch[limit-hi+p:]
+	} else {
+		lo = p + limit
+		for {
+			hi = distributeBackward128(data, data[lo+1-limit:], limit, lo, hi) - limit
+			if hi < lo {
+				p = hi
+				break
+			}
+			lo = distributeForward128(data, data[hi+1:], limit, lo, hi) + limit
+			if hi < lo {
+				p = lo - limit
+				break
+			}
 		}
-		lo = distributeForward128(data, data[hi+1:], limit, lo, hi) + limit
-		if hi < lo {
-			p = lo - limit
-			break
-		}
 	}
+
 	copy(data[p+1:], scratch[:])
 	data[pivot], data[p] = data[p], data[pivot]
 	return p

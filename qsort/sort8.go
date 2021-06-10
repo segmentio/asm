@@ -142,30 +142,27 @@ func hoarePartition64(data []uint64, base int, swap func(int, int)) int {
 }
 
 func hybridPartition64(data, scratch []uint64) int {
-	pivot := 0
-	lo := 1
-	hi := len(data) - 1
-	limit := len(scratch)
+	pivot, lo, hi, limit := 0, 1, len(data)-1, len(scratch)
 
 	p := distributeForward64(data, scratch, limit, lo, hi)
 	if hi-p <= limit {
-		copy(data[p+1:], scratch[limit-hi+p:])
-		data[pivot], data[p] = data[p], data[pivot]
-		return p
-	}
-	lo = p + limit
-	for {
-		hi = distributeBackward64(data, data[lo+1-limit:], limit, lo, hi) - limit
-		if hi < lo {
-			p = hi
-			break
+		scratch = scratch[limit-hi+p:]
+	} else {
+		lo = p + limit
+		for {
+			hi = distributeBackward64(data, data[lo+1-limit:], limit, lo, hi) - limit
+			if hi < lo {
+				p = hi
+				break
+			}
+			lo = distributeForward64(data, data[hi+1:], limit, lo, hi) + limit
+			if hi < lo {
+				p = lo - limit
+				break
+			}
 		}
-		lo = distributeForward64(data, data[hi+1:], limit, lo, hi) + limit
-		if hi < lo {
-			p = lo - limit
-			break
-		}
 	}
+
 	copy(data[p+1:], scratch[:])
 	data[pivot], data[p] = data[p], data[pivot]
 	return p
