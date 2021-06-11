@@ -56,6 +56,7 @@ const (
 	AVX512VNNI                                // AVX-512 Vector Neural Network Instructions
 	AVX512VP2INTERSECT                        // AVX-512 Intersect for D/Q
 	AVX512VPOPCNTDQ                           // AVX-512 Vector Population Count Doubleword and Quadword
+	CMOV                                      // Conditional move
 )
 
 const (
@@ -90,6 +91,7 @@ func init() {
 	X86.Set(AVX512VNNI, cpuid.CPU.Has(cpuid.AVX512VNNI))
 	X86.Set(AVX512VP2INTERSECT, cpuid.CPU.Has(cpuid.AVX512VP2INTERSECT))
 	X86.Set(AVX512VPOPCNTDQ, cpuid.CPU.Has(cpuid.AVX512VPOPCNTDQ))
+	X86.Set(CMOV, cpuid.CPU.Has(cpuid.CMOV))
 
 	ARM.Set(ASIMD, cpuid.CPU.Has(cpuid.ASIMD))
 	ARM.Set(ASIMDDP, cpuid.CPU.Has(cpuid.ASIMDDP))
