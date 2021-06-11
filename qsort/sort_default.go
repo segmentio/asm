@@ -10,7 +10,7 @@ func distributeBackward64(data, scratch []uint64, limit, lo, hi int) int {
 	panic("not implemented")
 }
 
-func insertionsort128NoSwapAsm(data []uint128, base int, swap func(int, int)) {
+func insertionsort128NoSwap(data []uint128, base int, swap func(int, int)) {
 	panic("not implemented")
 }
 
@@ -22,7 +22,7 @@ func distributeBackward128(data, scratch []uint128, limit, lo, hi int) int {
 	panic("not implemented")
 }
 
-func insertionsort256NoSwapAsm(data []uint256, base int, swap func(int, int)) {
+func insertionsort256NoSwap(data []uint256, base int, swap func(int, int)) {
 	panic("not implemented")
 }
 
