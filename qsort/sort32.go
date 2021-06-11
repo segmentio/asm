@@ -104,8 +104,10 @@ func hybridPartition256(data, scratch []uint256) int {
 }
 
 func less256(a, b uint256) bool {
-	return a[0] < b[0] ||
-		(a[0] == b[0] && a[1] < b[1]) ||
-		(a[0] == b[0] && a[1] == b[1] && a[2] < b[2]) ||
-		(a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] <= b[3])
+	a0, b0 := a[0], b[0]
+	a1, b1 := a[1], b[1]
+	return a0 < b0 ||
+		(a0 == b0 && a1 < b1) ||
+		(a0 == b0 && a1 == b1 && a[2] < b[2]) ||
+		(a0 == b0 && a1 == b1 && a[2] == b[2] && a[3] <= b[3])
 }
