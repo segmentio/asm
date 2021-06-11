@@ -76,7 +76,7 @@ done:
 	MOVQ SI, ret+72(FP)
 	RET
 
-// func insertionsort128NoSwap(data [][2]uint64, base int, swap func(int, int))
+// func insertionsort128NoSwap(data []struct{hi uint64; lo uint64}, base int, swap func(int, int))
 // Requires: AVX
 TEXT ·insertionsort128NoSwap(SB), NOSPLIT, $0-40
 	MOVQ     data_base+0(FP), AX
@@ -118,7 +118,7 @@ inner:
 done:
 	RET
 
-// func distributeForward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
+// func distributeForward128(data []struct{hi uint64; lo uint64}, scratch []struct{hi uint64; lo uint64}, limit int, lo int, hi int) int
 // Requires: AVX, CMOV
 TEXT ·distributeForward128(SB), NOSPLIT, $0-80
 	MOVQ     data_base+0(FP), AX
@@ -170,7 +170,7 @@ done:
 	MOVQ BX, ret+72(FP)
 	RET
 
-// func distributeBackward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
+// func distributeBackward128(data []struct{hi uint64; lo uint64}, scratch []struct{hi uint64; lo uint64}, limit int, lo int, hi int) int
 // Requires: AVX, CMOV
 TEXT ·distributeBackward128(SB), NOSPLIT, $0-80
 	MOVQ     data_base+0(FP), AX
@@ -221,7 +221,7 @@ done:
 	MOVQ SI, ret+72(FP)
 	RET
 
-// func insertionsort256NoSwap(data [][4]uint64, base int, swap func(int, int))
+// func insertionsort256NoSwap(data []struct{a uint64; b uint64; c uint64; d uint64}, base int, swap func(int, int))
 // Requires: AVX, AVX2
 TEXT ·insertionsort256NoSwap(SB), NOSPLIT, $0-40
 	MOVQ     data_base+0(FP), AX
@@ -264,7 +264,7 @@ done:
 	VZEROUPPER
 	RET
 
-// func distributeForward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int
+// func distributeForward256(data []struct{a uint64; b uint64; c uint64; d uint64}, scratch []struct{a uint64; b uint64; c uint64; d uint64}, limit int, lo int, hi int) int
 // Requires: AVX, AVX2, CMOV
 TEXT ·distributeForward256(SB), NOSPLIT, $0-80
 	MOVQ     data_base+0(FP), AX
@@ -317,7 +317,7 @@ done:
 	VZEROUPPER
 	RET
 
-// func distributeBackward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int
+// func distributeBackward256(data []struct{a uint64; b uint64; c uint64; d uint64}, scratch []struct{a uint64; b uint64; c uint64; d uint64}, limit int, lo int, hi int) int
 // Requires: AVX, AVX2, CMOV
 TEXT ·distributeBackward256(SB), NOSPLIT, $0-80
 	MOVQ     data_base+0(FP), AX

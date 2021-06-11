@@ -1,6 +1,11 @@
 package qsort
 
-type uint256 = [4]uint64
+type uint256 = struct {
+	a uint64 // hi
+	b uint64
+	c uint64
+	d uint64 // lo
+}
 
 type smallsort256 func(data []uint256, base int, swap func(int, int))
 type partition256 func(data []uint256, base int, swap func(int, int)) int
@@ -104,10 +109,8 @@ func hybridPartition256(data, scratch []uint256) int {
 }
 
 func less256(a, b uint256) bool {
-	a0, b0 := a[0], b[0]
-	a1, b1 := a[1], b[1]
-	return a0 < b0 ||
-		(a0 == b0 && a1 < b1) ||
-		(a0 == b0 && a1 == b1 && a[2] < b[2]) ||
-		(a0 == b0 && a1 == b1 && a[2] == b[2] && a[3] <= b[3])
+	return a.a < b.a ||
+		(a.a == b.a && a.b < b.b) ||
+		(a.a == b.a && a.b == b.b && a.c < b.c) ||
+		(a.a == b.a && a.b == b.b && a.c == b.c && a.d <= b.d)
 }

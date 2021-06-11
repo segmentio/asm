@@ -1,6 +1,9 @@
 package qsort
 
-type uint128 = [2]uint64
+type uint128 = struct {
+	hi uint64
+	lo uint64
+}
 
 type smallsort128 func(data []uint128, base int, swap func(int, int))
 type partition128 func(data []uint128, base int, swap func(int, int)) int
@@ -104,6 +107,5 @@ func hybridPartition128(data, scratch []uint128) int {
 }
 
 func less128(a, b uint128) bool {
-	return a[0] < b[0] ||
-		(a[0] == b[0] && a[1] <= b[1])
+	return a.hi < b.hi || (a.hi == b.hi && a.lo <= b.lo)
 }

@@ -9,19 +9,59 @@ func distributeForward64(data []uint64, scratch []uint64, limit int, lo int, hi 
 func distributeBackward64(data []uint64, scratch []uint64, limit int, lo int, hi int) int
 
 //go:noescape
-func insertionsort128NoSwap(data [][2]uint64, base int, swap func(int, int))
+func insertionsort128NoSwap(data []struct {
+	hi uint64
+	lo uint64
+}, base int, swap func(int, int))
 
 //go:noescape
-func distributeForward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
+func distributeForward128(data []struct {
+	hi uint64
+	lo uint64
+}, scratch []struct {
+	hi uint64
+	lo uint64
+}, limit int, lo int, hi int) int
 
 //go:noescape
-func distributeBackward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
+func distributeBackward128(data []struct {
+	hi uint64
+	lo uint64
+}, scratch []struct {
+	hi uint64
+	lo uint64
+}, limit int, lo int, hi int) int
 
 //go:noescape
-func insertionsort256NoSwap(data [][4]uint64, base int, swap func(int, int))
+func insertionsort256NoSwap(data []struct {
+	a uint64
+	b uint64
+	c uint64
+	d uint64
+}, base int, swap func(int, int))
 
 //go:noescape
-func distributeForward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int
+func distributeForward256(data []struct {
+	a uint64
+	b uint64
+	c uint64
+	d uint64
+}, scratch []struct {
+	a uint64
+	b uint64
+	c uint64
+	d uint64
+}, limit int, lo int, hi int) int
 
 //go:noescape
-func distributeBackward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int
+func distributeBackward256(data []struct {
+	a uint64
+	b uint64
+	c uint64
+	d uint64
+}, scratch []struct {
+	a uint64
+	b uint64
+	c uint64
+	d uint64
+}, limit int, lo int, hi int) int

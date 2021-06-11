@@ -360,8 +360,12 @@ func log2(size uint64) uint64 {
 }
 
 func typeFor(size uint64) string {
-	if size <= 8 {
+	switch size {
+	case 32:
+		return "struct { a, b, c, d uint64 }"
+	case 16:
+		return "struct { hi, lo uint64 }"
+	default:
 		return fmt.Sprintf("uint%d", size*8)
 	}
-	return fmt.Sprintf("[%d]uint64", size/8)
 }

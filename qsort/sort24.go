@@ -1,6 +1,10 @@
 package qsort
 
-type uint192 struct{ a, b, c uint64 }
+type uint192 = struct {
+	hi  uint64
+	mid uint64
+	lo  uint64
+}
 
 type smallsort192 func(data []uint192, base int, swap func(int, int))
 type partition192 func(data []uint192, base int, swap func(int, int)) int
@@ -77,7 +81,7 @@ func hoarePartition192(data []uint192, base int, swap func(int, int)) int {
 }
 
 func less192(a, b uint192) bool {
-	return a.a < b.a ||
-		(a.a == b.a && a.b < b.b) ||
-		(a.a == b.a && a.b == b.b && a.c <= b.c)
+	return a.hi < b.hi ||
+		(a.hi == b.hi && a.mid < b.mid) ||
+		(a.hi == b.hi && a.mid == b.mid && a.lo <= b.lo)
 }
