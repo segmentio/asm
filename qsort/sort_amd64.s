@@ -10,12 +10,9 @@ TEXT ·distributeForward64(SB), NOSPLIT, $0-80
 	MOVQ limit+48(FP), DX
 	MOVQ lo+56(FP), BX
 	MOVQ hi+64(FP), SI
-	SHLQ $0x03, DX
-	SHLQ $0x03, BX
-	SHLQ $0x03, SI
-	LEAQ (AX)(BX*1), BX
-	LEAQ (AX)(SI*1), SI
-	LEAQ -8(CX)(DX*1), CX
+	LEAQ (AX)(BX*8), BX
+	LEAQ (AX)(SI*8), SI
+	LEAQ -8(CX)(DX*8), CX
 	MOVQ (AX), DI
 	XORQ R8, R8
 	XORQ R9, R9
@@ -27,9 +24,8 @@ loop:
 	SETCS   R9
 	MOVQ    BX, R11
 	CMOVQCC CX, R11
-	MOVQ    R10, (R11)(R8*1)
+	MOVQ    R10, (R11)(R8*8)
 	XORB    $0x01, R9
-	SHLQ    $0x03, R9
 	SUBQ    R9, R8
 	ADDQ    $0x08, BX
 	CMPQ    BX, SI
@@ -39,7 +35,7 @@ loop:
 
 done:
 	SUBQ AX, BX
-	ADDQ R8, BX
+	LEAQ (BX)(R8*8), BX
 	SHRQ $0x03, BX
 	DECQ BX
 	MOVQ BX, ret+72(FP)
@@ -53,11 +49,8 @@ TEXT ·distributeBackward64(SB), NOSPLIT, $0-80
 	MOVQ limit+48(FP), DX
 	MOVQ lo+56(FP), BX
 	MOVQ hi+64(FP), SI
-	SHLQ $0x03, DX
-	SHLQ $0x03, BX
-	SHLQ $0x03, SI
-	LEAQ (AX)(BX*1), BX
-	LEAQ (AX)(SI*1), SI
+	LEAQ (AX)(BX*8), BX
+	LEAQ (AX)(SI*8), SI
 	MOVQ (AX), DI
 	XORQ R8, R8
 	XORQ R9, R9
@@ -70,8 +63,7 @@ loop:
 	SETCS   R9
 	MOVQ    CX, R11
 	CMOVQCC SI, R11
-	MOVQ    R10, (R11)(R8*1)
-	SHLQ    $0x03, R9
+	MOVQ    R10, (R11)(R8*8)
 	ADDQ    R9, R8
 	SUBQ    $0x08, SI
 	CMPQ    SI, BX
@@ -81,7 +73,7 @@ loop:
 
 done:
 	SUBQ AX, SI
-	ADDQ R8, SI
+	LEAQ (SI)(R8*8), SI
 	SHRQ $0x03, SI
 	MOVQ SI, ret+72(FP)
 	RET
@@ -177,7 +169,7 @@ loop:
 
 done:
 	SUBQ AX, BX
-	ADDQ R8, BX
+	LEAQ (BX)(R8*1), BX
 	SHRQ $0x04, BX
 	DECQ BX
 	MOVQ BX, ret+72(FP)
@@ -230,7 +222,7 @@ loop:
 
 done:
 	SUBQ AX, SI
-	ADDQ R8, SI
+	LEAQ (SI)(R8*1), SI
 	SHRQ $0x04, SI
 	MOVQ SI, ret+72(FP)
 	RET
@@ -327,7 +319,7 @@ loop:
 
 done:
 	SUBQ AX, BX
-	ADDQ R8, BX
+	LEAQ (BX)(R8*1), BX
 	SHRQ $0x05, BX
 	DECQ BX
 	MOVQ BX, ret+72(FP)
@@ -381,7 +373,7 @@ loop:
 
 done:
 	SUBQ AX, SI
-	ADDQ R8, SI
+	LEAQ (SI)(R8*1), SI
 	SHRQ $0x05, SI
 	MOVQ SI, ret+72(FP)
 	VZEROUPPER
