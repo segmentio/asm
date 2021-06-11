@@ -211,7 +211,7 @@ func distributeForward(s Sortable) {
 	zero := GP64()
 	XORQ(offset, offset)
 	XORQ(zero, zero)
-	isLess := zero
+	isGreaterOrEqual := zero
 
 	// We'll be keeping a negative offset. Negate the limit so we can
 	// compare the two in the loop.
@@ -233,13 +233,16 @@ func distributeForward(s Sortable) {
 	CMOVQCC(tail, dst)
 	s.Move(next, Mem{Base: dst, Index: offset, Scale: scale})
 	if size <= 8 {
+		// If we're only subtracting one from the index, we can invert CF and use
+		// subtract with carry.
 		CMC()
 		SBBQ(zero, offset)
 	} else {
-		SETCS(isLess.As8())
-		XORB(Imm(1), isLess.As8())
-		SHLQ(Imm(shift), isLess)
-		SUBQ(isLess, offset)
+		// Otherwise we need to extract an inverted CF and shift to get a byte
+		// amount to advance by.
+		SETCC(isGreaterOrEqual.As8())
+		SHLQ(Imm(shift), isGreaterOrEqual)
+		SUBQ(isGreaterOrEqual, offset)
 	}
 	ADDQ(Imm(size), lo)
 

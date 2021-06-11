@@ -155,8 +155,7 @@ loop:
 	MOVQ      BX, R10
 	CMOVQCC   CX, R10
 	VMOVDQU   X2, (R10)(R8*1)
-	SETCS     R9
-	XORB      $0x01, R9
+	SETCC     R9
 	SHLQ      $0x04, R9
 	SUBQ      R9, R8
 	ADDQ      $0x10, BX
@@ -305,8 +304,7 @@ loop:
 	MOVQ      BX, R10
 	CMOVQCC   CX, R10
 	VMOVDQU   Y2, (R10)(R8*1)
-	SETCS     R9
-	XORB      $0x01, R9
+	SETCC     R9
 	SHLQ      $0x05, R9
 	SUBQ      R9, R8
 	ADDQ      $0x20, BX
