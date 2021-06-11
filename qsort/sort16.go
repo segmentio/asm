@@ -1,5 +1,10 @@
 package qsort
 
+// A type alias is used here so that we can pass values to an avo
+// generated assembly routine. At present, we can't figure out how
+// to use the uint128 type in function signatures there. A type
+// alias allows us to use struct { a, b uint64 } in the signature,
+// and implicit conversions only work if you're using a type alias.
 type uint128 = struct {
 	hi uint64
 	lo uint64
