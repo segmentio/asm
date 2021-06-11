@@ -36,7 +36,7 @@ func Sort(data []byte, size int, swap func(int, int)) {
 	// If no indirect swapping is required, try to use the hybrid partitioning scheme from
 	// https://blog.reverberate.org/2020/05/29/hoares-rebuttal-bubble-sorts-comeback.html
 	switch {
-	case swap == nil && size == 8:
+	case swap == nil && size == 8 && cpu.AMD64:
 		hybridQuicksort64(unsafeBytesTo64(data))
 	case swap == nil && size == 16 && cpu.X86.Has(cpu.AVX2):
 		hybridQuicksort128(unsafeBytesTo128(data))
