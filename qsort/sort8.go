@@ -94,7 +94,7 @@ func insertionsort64(data []uint64, base int, swap func(int, int)) {
 		item := data[i]
 		for j := i; j > 0 && item < data[j-1]; j-- {
 			data[j], data[j-1] = data[j-1], data[j]
-			swap(base+j, base+j-1)
+			callswap(base, swap, j, j-1)
 		}
 	}
 }
