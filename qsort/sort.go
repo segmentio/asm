@@ -35,51 +35,53 @@ func Sort(data []byte, size int, swap func(int, int)) {
 
 	// If no indirect swapping is required, try to use the hybrid partitioning scheme from
 	// https://blog.reverberate.org/2020/05/29/hoares-rebuttal-bubble-sorts-comeback.html
-	if swap == nil && size != 24 && cpu.X86.Has(cpu.AVX2) {
-		hybridQuicksort(data, size)
-		return
-	}
-
-	switch size {
-	case 8:
+	switch {
+	case swap == nil && size == 8:
+		hybridQuicksort64(unsafeBytesTo64(data))
+	case swap == nil && size == 16 && cpu.X86.Has(cpu.AVX2):
+		hybridQuicksort128(unsafeBytesTo128(data))
+	case swap == nil && size == 32 && cpu.X86.Has(cpu.AVX2):
+		hybridQuicksort256(unsafeBytesTo256(data))
+	case size == 8:
 		quicksort64(unsafeBytesTo64(data), 0, smallCutoff, insertionsort64, hoarePartition64, swap)
-	case 16:
+	case size == 16:
 		quicksort128(unsafeBytesTo128(data), 0, smallCutoff, insertionsort128, hoarePartition128, swap)
-	case 24:
+	case size == 24:
 		quicksort192(unsafeBytesTo192(data), 0, smallCutoff, insertionsort192, hoarePartition192, swap)
-	case 32:
+	case size == 32:
 		quicksort256(unsafeBytesTo256(data), 0, smallCutoff, insertionsort256, hoarePartition256, swap)
 	}
 }
 
-func hybridQuicksort(data []byte, size int) {
+func hybridQuicksort64(data []uint64) {
 	// The hybrid Lomuto/Hoare partition scheme at https://blog.reverberate.org/2020/05/29/hoares-rebuttal-bubble-sorts-comeback.html
 	// requires scratch space. We allocate some stack space for the task here,
 	// and we do it outside the main Sort() function so that we don't pay the
 	// stack cost unless necessary.
-	var scratch [1024]byte
-
-	// For reasons unknown, using the smallsort sooner (with larger chunks)
-	// yields better results in some cases.
-	const cutoff = smallCutoff * 2
-
-	switch size {
-	case 8:
-		partition := func(data []uint64, base int, swap func(int, int)) int {
-			return hybridPartition64(data, unsafeBytesTo64(scratch[:]))
-		}
-		quicksort64(unsafeBytesTo64(data), 0, smallCutoff/2, bubblesort64NoSwap2, partition, nil)
-	case 16:
-		partition := func(data []uint128, base int, swap func(int, int)) int {
-			return hybridPartition128(data, unsafeBytesTo128(scratch[:]))
-		}
-		quicksort128(unsafeBytesTo128(data), 0, cutoff, insertionsort128NoSwap, partition, nil)
-	case 32:
-		partition := func(data []uint256, base int, swap func(int, int)) int {
-			return hybridPartition256(data, unsafeBytesTo256(scratch[:]))
-		}
-		quicksort256(unsafeBytesTo256(data), 0, cutoff, insertionsort256NoSwap, partition, nil)
+	var buf [1024]byte
+	scratch := unsafeBytesTo64(buf[:])
+	partition := func(data []uint64, base int, swap func(int, int)) int {
+		return hybridPartition64(data, scratch)
 	}
+	quicksort64(data, 0, smallCutoff/2, bubblesort64NoSwap2, partition, nil)
+}
+
+func hybridQuicksort128(data []uint128) {
+	var buf [1024]byte
+	scratch := unsafeBytesTo128(buf[:])
+	partition := func(data []uint128, base int, swap func(int, int)) int {
+		return hybridPartition128(data, scratch)
+	}
+	quicksort128(data, 0, smallCutoff*2, insertionsort128NoSwap, partition, nil)
+}
+
+func hybridQuicksort256(data []uint256) {
+	var buf [1024]byte
+	scratch := unsafeBytesTo256(buf[:])
+	partition := func(data []uint256, base int, swap func(int, int)) int {
+		return hybridPartition256(data, scratch)
+	}
+	quicksort256(data, 0, smallCutoff*2, insertionsort256NoSwap, partition, nil)
 }
 
 // The threshold at which log-linear sorting methods switch to
