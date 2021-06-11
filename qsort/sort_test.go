@@ -29,7 +29,7 @@ func TestSort32(t *testing.T) {
 
 func testSort(t *testing.T, size int) {
 	const (
-		iterations = 10000
+		iterations = 1000
 		minCount   = 0
 		maxCount   = 1000
 	)

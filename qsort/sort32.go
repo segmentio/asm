@@ -1,26 +1,29 @@
 package qsort
 
-type uint256 struct {
+type uint256 = struct {
 	a uint64 // hi
 	b uint64
 	c uint64
 	d uint64 // lo
 }
 
-func quicksort256(data []uint256, base int, swap func(int, int)) {
+type smallsort256 func(data []uint256, base int, swap func(int, int))
+type partition256 func(data []uint256, base int, swap func(int, int)) int
+
+func quicksort256(data []uint256, base, cutoff int, smallsort smallsort256, partition partition256, swap func(int, int)) {
 	for len(data) > 1 {
-		if len(data) <= smallCutoff/32 {
-			insertionsort256(data, base, swap)
+		if len(data) <= cutoff/32 {
+			smallsort(data, base, swap)
 			return
 		}
 		medianOfThree256(data, base, swap)
-		p := hoarePartition256(data, base, swap)
+		p := partition(data, base, swap)
 		if p < len(data)-p { // recurse on the smaller side
-			quicksort256(data[:p], base, swap)
+			quicksort256(data[:p], base, cutoff, smallsort, partition, swap)
 			data = data[p+1:]
 			base = base + p + 1
 		} else {
-			quicksort256(data[p+1:], base+p+1, swap)
+			quicksort256(data[p+1:], base+p+1, cutoff, smallsort, partition, swap)
 			data = data[:p]
 		}
 	}
@@ -78,6 +81,36 @@ func hoarePartition256(data []uint256, base int, swap func(int, int)) int {
 	return j
 }
 
+func hybridPartition256(data, scratch []uint256) int {
+	pivot, lo, hi, limit := 0, 1, len(data)-1, len(scratch)
+
+	p := distributeForward256(data, scratch, limit, lo, hi)
+	if hi-p <= limit {
+		scratch = scratch[limit-hi+p:]
+	} else {
+		lo = p + limit
+		for {
+			hi = distributeBackward256(data, data[lo+1-limit:], limit, lo, hi) - limit
+			if hi < lo {
+				p = hi
+				break
+			}
+			lo = distributeForward256(data, data[hi+1:], limit, lo, hi) + limit
+			if hi < lo {
+				p = lo - limit
+				break
+			}
+		}
+	}
+
+	copy(data[p+1:], scratch[:])
+	data[pivot], data[p] = data[p], data[pivot]
+	return p
+}
+
 func less256(a, b uint256) bool {
-	return a.a < b.a || (a.a == b.a && a.b < b.b) || (a.a == b.a && a.b == b.b && a.c < b.c) || (a.a == b.a && a.b == b.b && a.c == b.c && a.d <= b.d)
+	return a.a < b.a ||
+		(a.a == b.a && a.b < b.b) ||
+		(a.a == b.a && a.b == b.b && a.c < b.c) ||
+		(a.a == b.a && a.b == b.b && a.c == b.c && a.d <= b.d)
 }

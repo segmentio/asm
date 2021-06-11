@@ -1,33 +1,28 @@
 package qsort
 
-func quicksort64(data []uint64, base int, swap func(int, int)) {
+type smallsort64 func(data []uint64, base int, swap func(int, int))
+type partition64 func(data []uint64, base int, swap func(int, int)) int
+
+func quicksort64(data []uint64, base, cutoff int, smallsort smallsort64, partition partition64, swap func(int, int)) {
 	for len(data) > 1 {
-		if len(data) <= smallCutoff/8 {
-			smallsort64(data, base, swap)
+		if len(data) <= cutoff/8 {
+			smallsort(data, base, swap)
 			return
 		}
 		medianOfThree64(data, base, swap)
-		p := hoarePartition64(data, base, swap)
+		p := partition(data, base, swap)
 		if p < len(data)-p { // recurse on the smaller side
-			quicksort64(data[:p], base, swap)
+			quicksort64(data[:p], base, cutoff, smallsort, partition, swap)
 			data = data[p+1:]
 			base = base + p + 1
 		} else {
-			quicksort64(data[p+1:], base+p+1, swap)
+			quicksort64(data[p+1:], base+p+1, cutoff, smallsort, partition, swap)
 			data = data[:p]
 		}
 	}
 }
 
-func smallsort64(data []uint64, base int, swap func(int, int)) {
-	if swap != nil {
-		insertionsort64(data, base, swap)
-	} else {
-		bubblesort64NoSwap2(data)
-	}
-}
-
-func bubblesort64NoSwap1(data []uint64) {
+func bubblesort64NoSwap1(data []uint64, base int, swap func(int, int)) {
 	for i := len(data); i > 1; i-- {
 		max := data[0]
 
@@ -52,7 +47,7 @@ func bubblesort64NoSwap1(data []uint64) {
 	}
 }
 
-func bubblesort64NoSwap2(data []uint64) {
+func bubblesort64NoSwap2(data []uint64, base int, swap func(int, int)) {
 	for i := len(data); i > 1; i -= 2 {
 		x := data[0]
 		y := data[1]
@@ -99,7 +94,7 @@ func insertionsort64(data []uint64, base int, swap func(int, int)) {
 		item := data[i]
 		for j := i; j > 0 && item < data[j-1]; j-- {
 			data[j], data[j-1] = data[j-1], data[j]
-			swap(base+j, base+j-1)
+			callswap(base, swap, j, j-1)
 		}
 	}
 }
@@ -144,4 +139,31 @@ func hoarePartition64(data []uint64, base int, swap func(int, int)) int {
 		callswap(base, swap, 0, j)
 	}
 	return j
+}
+
+func hybridPartition64(data, scratch []uint64) int {
+	pivot, lo, hi, limit := 0, 1, len(data)-1, len(scratch)
+
+	p := distributeForward64(data, scratch, limit, lo, hi)
+	if hi-p <= limit {
+		scratch = scratch[limit-hi+p:]
+	} else {
+		lo = p + limit
+		for {
+			hi = distributeBackward64(data, data[lo+1-limit:], limit, lo, hi) - limit
+			if hi < lo {
+				p = hi
+				break
+			}
+			lo = distributeForward64(data, data[hi+1:], limit, lo, hi) + limit
+			if hi < lo {
+				p = lo - limit
+				break
+			}
+		}
+	}
+
+	copy(data[p+1:], scratch[:])
+	data[pivot], data[p] = data[p], data[pivot]
+	return p
 }
