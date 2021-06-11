@@ -77,42 +77,41 @@ done:
 	RET
 
 // func insertionsort128NoSwap(data [][2]uint64, base int, swap func(int, int))
-// Requires: AVX, AVX2, SSE4.1
+// Requires: AVX
 TEXT ·insertionsort128NoSwap(SB), NOSPLIT, $0-40
-	MOVQ         data_base+0(FP), AX
-	MOVQ         data_len+8(FP), CX
-	SHLQ         $0x04, CX
-	ADDQ         AX, CX
-	TESTQ        AX, CX
-	JE           done
-	MOVQ         $0x8000000000000000, DX
-	PINSRQ       $0x00, DX, X0
-	VPBROADCASTQ X0, X0
-	MOVQ         AX, DX
+	MOVQ     data_base+0(FP), AX
+	MOVQ     data_len+8(FP), CX
+	SHLQ     $0x04, CX
+	ADDQ     AX, CX
+	TESTQ    AX, CX
+	JE       done
+	VPCMPEQB X0, X0, X0
+	VPSLLQ   $0x3f, X0, X0
+	MOVQ     AX, DX
 
 outer:
 	ADDQ    $0x10, DX
 	CMPQ    DX, CX
 	JAE     done
 	VMOVDQU (DX), X1
-	MOVQ    DX, SI
+	MOVQ    DX, BX
 
 inner:
-	VMOVDQU   -16(SI), X2
+	VMOVDQU   -16(BX), X2
 	VPCMPEQQ  X1, X2, X3
 	VPADDQ    X1, X0, X4
 	VPADDQ    X2, X0, X5
 	VPCMPGTQ  X4, X5, X4
-	VMOVMSKPD X3, DI
-	VMOVMSKPD X4, R8
-	NOTL      DI
-	BSFL      DI, BX
-	BTSL      BX, R8
+	VMOVMSKPD X3, SI
+	VMOVMSKPD X4, DI
+	NOTL      SI
+	BSFL      SI, R8
+	BTSL      R8, DI
 	JAE       outer
-	VMOVDQU   X2, (SI)
-	VMOVDQU   X1, -16(SI)
-	SUBQ      $0x10, SI
-	CMPQ      SI, AX
+	VMOVDQU   X2, (BX)
+	VMOVDQU   X1, -16(BX)
+	SUBQ      $0x10, BX
+	CMPQ      BX, AX
 	JA        inner
 	JMP       outer
 
@@ -120,26 +119,25 @@ done:
 	RET
 
 // func distributeForward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
-// Requires: AVX, AVX2, CMOV, SSE4.1
+// Requires: AVX, CMOV
 TEXT ·distributeForward128(SB), NOSPLIT, $0-80
-	MOVQ         data_base+0(FP), AX
-	MOVQ         scratch_base+24(FP), CX
-	MOVQ         limit+48(FP), DX
-	MOVQ         lo+56(FP), BX
-	MOVQ         hi+64(FP), SI
-	SHLQ         $0x04, DX
-	SHLQ         $0x04, BX
-	SHLQ         $0x04, SI
-	LEAQ         (AX)(BX*1), BX
-	LEAQ         (AX)(SI*1), SI
-	LEAQ         -16(CX)(DX*1), CX
-	MOVQ         $0x8000000000000000, R8
-	PINSRQ       $0x00, R8, X0
-	VPBROADCASTQ X0, X0
-	VMOVDQU      (AX), X1
-	XORQ         R8, R8
-	XORQ         R9, R9
-	NEGQ         DX
+	MOVQ     data_base+0(FP), AX
+	MOVQ     scratch_base+24(FP), CX
+	MOVQ     limit+48(FP), DX
+	MOVQ     lo+56(FP), BX
+	MOVQ     hi+64(FP), SI
+	SHLQ     $0x04, DX
+	SHLQ     $0x04, BX
+	SHLQ     $0x04, SI
+	LEAQ     (AX)(BX*1), BX
+	LEAQ     (AX)(SI*1), SI
+	LEAQ     -16(CX)(DX*1), CX
+	VPCMPEQB X0, X0, X0
+	VPSLLQ   $0x3f, X0, X0
+	VMOVDQU  (AX), X1
+	XORQ     R8, R8
+	XORQ     R9, R9
+	NEGQ     DX
 
 loop:
 	VMOVDQU   (BX), X2
@@ -173,26 +171,25 @@ done:
 	RET
 
 // func distributeBackward128(data [][2]uint64, scratch [][2]uint64, limit int, lo int, hi int) int
-// Requires: AVX, AVX2, CMOV, SSE4.1
+// Requires: AVX, CMOV
 TEXT ·distributeBackward128(SB), NOSPLIT, $0-80
-	MOVQ         data_base+0(FP), AX
-	MOVQ         scratch_base+24(FP), CX
-	MOVQ         limit+48(FP), DX
-	MOVQ         lo+56(FP), BX
-	MOVQ         hi+64(FP), SI
-	SHLQ         $0x04, DX
-	SHLQ         $0x04, BX
-	SHLQ         $0x04, SI
-	LEAQ         (AX)(BX*1), BX
-	LEAQ         (AX)(SI*1), SI
-	MOVQ         $0x8000000000000000, R8
-	PINSRQ       $0x00, R8, X0
-	VPBROADCASTQ X0, X0
-	VMOVDQU      (AX), X1
-	XORQ         R8, R8
-	XORQ         R9, R9
-	CMPQ         SI, BX
-	JBE          done
+	MOVQ     data_base+0(FP), AX
+	MOVQ     scratch_base+24(FP), CX
+	MOVQ     limit+48(FP), DX
+	MOVQ     lo+56(FP), BX
+	MOVQ     hi+64(FP), SI
+	SHLQ     $0x04, DX
+	SHLQ     $0x04, BX
+	SHLQ     $0x04, SI
+	LEAQ     (AX)(BX*1), BX
+	LEAQ     (AX)(SI*1), SI
+	VPCMPEQB X0, X0, X0
+	VPSLLQ   $0x3f, X0, X0
+	VMOVDQU  (AX), X1
+	XORQ     R8, R8
+	XORQ     R9, R9
+	CMPQ     SI, BX
+	JBE      done
 
 loop:
 	VMOVDQU   (SI), X2
@@ -225,42 +222,41 @@ done:
 	RET
 
 // func insertionsort256NoSwap(data [][4]uint64, base int, swap func(int, int))
-// Requires: AVX, AVX2, SSE4.1
+// Requires: AVX, AVX2
 TEXT ·insertionsort256NoSwap(SB), NOSPLIT, $0-40
-	MOVQ         data_base+0(FP), AX
-	MOVQ         data_len+8(FP), CX
-	SHLQ         $0x05, CX
-	ADDQ         AX, CX
-	TESTQ        AX, CX
-	JE           done
-	MOVQ         $0x8000000000000000, DX
-	PINSRQ       $0x00, DX, X0
-	VPBROADCASTQ X0, Y0
-	MOVQ         AX, DX
+	MOVQ     data_base+0(FP), AX
+	MOVQ     data_len+8(FP), CX
+	SHLQ     $0x05, CX
+	ADDQ     AX, CX
+	TESTQ    AX, CX
+	JE       done
+	VPCMPEQB Y0, Y0, Y0
+	VPSLLQ   $0x3f, Y0, Y0
+	MOVQ     AX, DX
 
 outer:
 	ADDQ    $0x20, DX
 	CMPQ    DX, CX
 	JAE     done
 	VMOVDQU (DX), Y1
-	MOVQ    DX, SI
+	MOVQ    DX, BX
 
 inner:
-	VMOVDQU   -32(SI), Y2
+	VMOVDQU   -32(BX), Y2
 	VPCMPEQQ  Y1, Y2, Y3
 	VPADDQ    Y1, Y0, Y4
 	VPADDQ    Y2, Y0, Y5
 	VPCMPGTQ  Y4, Y5, Y4
-	VMOVMSKPD Y3, DI
-	VMOVMSKPD Y4, R8
-	NOTL      DI
-	BSFL      DI, BX
-	BTSL      BX, R8
+	VMOVMSKPD Y3, SI
+	VMOVMSKPD Y4, DI
+	NOTL      SI
+	BSFL      SI, R8
+	BTSL      R8, DI
 	JAE       outer
-	VMOVDQU   Y2, (SI)
-	VMOVDQU   Y1, -32(SI)
-	SUBQ      $0x20, SI
-	CMPQ      SI, AX
+	VMOVDQU   Y2, (BX)
+	VMOVDQU   Y1, -32(BX)
+	SUBQ      $0x20, BX
+	CMPQ      BX, AX
 	JA        inner
 	JMP       outer
 
@@ -269,26 +265,25 @@ done:
 	RET
 
 // func distributeForward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int
-// Requires: AVX, AVX2, CMOV, SSE4.1
+// Requires: AVX, AVX2, CMOV
 TEXT ·distributeForward256(SB), NOSPLIT, $0-80
-	MOVQ         data_base+0(FP), AX
-	MOVQ         scratch_base+24(FP), CX
-	MOVQ         limit+48(FP), DX
-	MOVQ         lo+56(FP), BX
-	MOVQ         hi+64(FP), SI
-	SHLQ         $0x05, DX
-	SHLQ         $0x05, BX
-	SHLQ         $0x05, SI
-	LEAQ         (AX)(BX*1), BX
-	LEAQ         (AX)(SI*1), SI
-	LEAQ         -32(CX)(DX*1), CX
-	MOVQ         $0x8000000000000000, R8
-	PINSRQ       $0x00, R8, X0
-	VPBROADCASTQ X0, Y0
-	VMOVDQU      (AX), Y1
-	XORQ         R8, R8
-	XORQ         R9, R9
-	NEGQ         DX
+	MOVQ     data_base+0(FP), AX
+	MOVQ     scratch_base+24(FP), CX
+	MOVQ     limit+48(FP), DX
+	MOVQ     lo+56(FP), BX
+	MOVQ     hi+64(FP), SI
+	SHLQ     $0x05, DX
+	SHLQ     $0x05, BX
+	SHLQ     $0x05, SI
+	LEAQ     (AX)(BX*1), BX
+	LEAQ     (AX)(SI*1), SI
+	LEAQ     -32(CX)(DX*1), CX
+	VPCMPEQB Y0, Y0, Y0
+	VPSLLQ   $0x3f, Y0, Y0
+	VMOVDQU  (AX), Y1
+	XORQ     R8, R8
+	XORQ     R9, R9
+	NEGQ     DX
 
 loop:
 	VMOVDQU   (BX), Y2
@@ -323,26 +318,25 @@ done:
 	RET
 
 // func distributeBackward256(data [][4]uint64, scratch [][4]uint64, limit int, lo int, hi int) int
-// Requires: AVX, AVX2, CMOV, SSE4.1
+// Requires: AVX, AVX2, CMOV
 TEXT ·distributeBackward256(SB), NOSPLIT, $0-80
-	MOVQ         data_base+0(FP), AX
-	MOVQ         scratch_base+24(FP), CX
-	MOVQ         limit+48(FP), DX
-	MOVQ         lo+56(FP), BX
-	MOVQ         hi+64(FP), SI
-	SHLQ         $0x05, DX
-	SHLQ         $0x05, BX
-	SHLQ         $0x05, SI
-	LEAQ         (AX)(BX*1), BX
-	LEAQ         (AX)(SI*1), SI
-	MOVQ         $0x8000000000000000, R8
-	PINSRQ       $0x00, R8, X0
-	VPBROADCASTQ X0, Y0
-	VMOVDQU      (AX), Y1
-	XORQ         R8, R8
-	XORQ         R9, R9
-	CMPQ         SI, BX
-	JBE          done
+	MOVQ     data_base+0(FP), AX
+	MOVQ     scratch_base+24(FP), CX
+	MOVQ     limit+48(FP), DX
+	MOVQ     lo+56(FP), BX
+	MOVQ     hi+64(FP), SI
+	SHLQ     $0x05, DX
+	SHLQ     $0x05, BX
+	SHLQ     $0x05, SI
+	LEAQ     (AX)(BX*1), BX
+	LEAQ     (AX)(SI*1), SI
+	VPCMPEQB Y0, Y0, Y0
+	VPSLLQ   $0x3f, Y0, Y0
+	VMOVDQU  (AX), Y1
+	XORQ     R8, R8
+	XORQ     R9, R9
+	CMPQ     SI, BX
+	JBE      done
 
 loop:
 	VMOVDQU   (SI), Y2

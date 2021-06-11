@@ -9,7 +9,6 @@ import (
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
-	. "github.com/segmentio/asm/build/internal/x86"
 )
 
 func main() {
@@ -63,6 +62,7 @@ func (s *SortableScalar) Compare(a, b Register) {
 type SortableVector struct {
 	reg  func() VecVirtual
 	size uint64
+	ones Register
 	msb  Register
 }
 
@@ -75,8 +75,10 @@ func (s *SortableVector) Size() uint64 {
 }
 
 func (s *SortableVector) Init() {
+	s.ones = s.reg()
+	VPCMPEQB(s.ones, s.ones, s.ones)
 	s.msb = s.reg()
-	VecBroadcast(U64(1<<63), s.msb)
+	VPSLLQ(Imm(63), s.ones, s.msb)
 }
 
 func (s *SortableVector) Move(a, b Op) {
