@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/segmentio/asm/internal/buffer"
 )
 
 var testStrings = [...]string{
@@ -65,45 +67,49 @@ func testValidPrint(s string) bool {
 }
 
 func TestValid(t *testing.T) {
-	var input [1024]byte
+	buf := newBuffer(t, 1024)
 
-	for i := 0; i < len(input); i++ {
-		in := input[:i+1]
+	for _, input := range [2][]byte{buf.ProtectHead(), buf.ProtectTail()} {
+		for i := 0; i < len(input); i++ {
+			in := input[:i+1]
 
-		for b := 0; b <= 0xFF; b++ {
-			in[i] = byte(b)
-			if b < 0x80 {
-				if !Valid(in) {
-					t.Errorf("should be valid: %v", in)
+			for b := 0; b <= 0xFF; b++ {
+				in[i] = byte(b)
+				if b < 0x80 {
+					if !Valid(in) {
+						t.Errorf("should be valid: %v", in)
+					}
+				} else {
+					if Valid(in) {
+						t.Errorf("should not be valid: %v", in)
+					}
 				}
-			} else {
-				if Valid(in) {
-					t.Errorf("should not be valid: %v", in)
-				}
+				in[i] = 'x'
 			}
-			in[i] = 'x'
 		}
 	}
 }
 
 func TestValidPrint(t *testing.T) {
-	var input [1024]byte
+	buf := newBuffer(t, 1024)
 
-	for i := 0; i < len(input); i++ {
-		in := input[:i+1]
+	for _, input := range [2][]byte{buf.ProtectHead(), buf.ProtectTail()} {
+		for i := 0; i < len(input); i++ {
+			in := input[:i+1]
 
-		for b := 0; b <= 0xFF; b++ {
-			in[i] = byte(b)
-			if ' ' <= b && b <= '~' {
-				if !ValidPrint(in) {
-					t.Errorf("should be valid: %v", in)
+			for b := 0; b <= 0xFF; b++ {
+				in[i] = byte(b)
+				if ' ' <= b && b <= '~' {
+					if !ValidPrint(in) {
+						t.Errorf("should be valid: %v", in)
+					}
+				} else {
+					if ValidPrint(in) {
+						t.Errorf("should not be valid: %v", in)
+					}
 				}
-			} else {
-				if ValidPrint(in) {
-					t.Errorf("should not be valid: %v", in)
-				}
+				in[i] = 'x'
 			}
-			in[i] = 'x'
 		}
 	}
 }
@@ -232,8 +238,27 @@ func TestEqualFoldString(t *testing.T) {
 	}
 }
 
+func newBuffer(t *testing.T, n int) buffer.Buffer {
+	buf, err := buffer.New(n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return buf
+}
+
 func TestEqualFold(t *testing.T) {
-	var upper, lower, mixed [1024]byte
+	ubuf := newBuffer(t, 1024)
+	defer ubuf.Release()
+
+	lbuf := newBuffer(t, 1024)
+	defer lbuf.Release()
+
+	mbuf := newBuffer(t, 1024)
+	defer mbuf.Release()
+
+	upper := ubuf.ProtectHead()
+	lower := lbuf.ProtectTail()
+	mixed := mbuf.ProtectHead()
 
 	for i := 0; i < len(upper); i++ {
 		u := upper[:i+1]
