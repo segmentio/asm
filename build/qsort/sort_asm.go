@@ -208,9 +208,10 @@ func distributeForward(s Sortable) {
 	s.Move(Mem{Base: data}, pivot)
 
 	offset := GP64()
-	isLess := GP64()
+	zero := GP64()
 	XORQ(offset, offset)
-	XORQ(isLess, isLess)
+	XORQ(zero, zero)
+	isLess := zero
 
 	// We'll be keeping a negative offset. Negate the limit so we can
 	// compare the two in the loop.
@@ -224,7 +225,6 @@ func distributeForward(s Sortable) {
 
 	// Compare the item with the pivot.
 	s.Compare(next, pivot)
-	SETCS(isLess.As8())
 
 	// Conditionally write to either the beginning of the data slice, or
 	// end of the scratch slice.
@@ -232,11 +232,15 @@ func distributeForward(s Sortable) {
 	MOVQ(lo, dst)
 	CMOVQCC(tail, dst)
 	s.Move(next, Mem{Base: dst, Index: offset, Scale: scale})
-	XORB(Imm(1), isLess.As8())
-	if size > 8 {
+	if size <= 8 {
+		CMC()
+		SBBQ(zero, offset)
+	} else {
+		SETCS(isLess.As8())
+		XORB(Imm(1), isLess.As8())
 		SHLQ(Imm(shift), isLess)
+		SUBQ(isLess, offset)
 	}
-	SUBQ(isLess, offset)
 	ADDQ(Imm(size), lo)
 
 	// Loop while we have more input, and enough room in the scratch slice.
@@ -296,9 +300,10 @@ func distributeBackward(s Sortable) {
 	s.Move(Mem{Base: data}, pivot)
 
 	offset := GP64()
-	isLess := GP64()
+	zero := GP64()
 	XORQ(offset, offset)
-	XORQ(isLess, isLess)
+	XORQ(zero, zero)
+	isLess := zero
 
 	CMPQ(hi, lo)
 	JBE(LabelRef("done"))
@@ -311,7 +316,6 @@ func distributeBackward(s Sortable) {
 
 	// Compare the item with the pivot.
 	s.Compare(next, pivot)
-	SETCS(isLess.As8())
 
 	// Conditionally write to either the end of the data slice, or
 	// beginning of the scratch slice.
@@ -319,10 +323,13 @@ func distributeBackward(s Sortable) {
 	MOVQ(scratch, dst)
 	CMOVQCC(hi, dst)
 	s.Move(next, Mem{Base: dst, Index: offset, Scale: scale})
-	if size > 8 {
+	if size <= 8 {
+		ADCQ(zero, offset)
+	} else {
+		SETCS(isLess.As8())
 		SHLQ(Imm(shift), isLess)
+		ADDQ(isLess, offset)
 	}
-	ADDQ(isLess, offset)
 	SUBQ(Imm(size), hi)
 
 	// Loop while we have more input, and enough room in the scratch slice.

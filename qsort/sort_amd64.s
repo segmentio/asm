@@ -21,12 +21,11 @@ TEXT ·distributeForward64(SB), NOSPLIT, $0-80
 loop:
 	MOVQ    (BX), R10
 	CMPQ    R10, DI
-	SETCS   R9
 	MOVQ    BX, R11
 	CMOVQCC CX, R11
 	MOVQ    R10, (R11)(R8*8)
-	XORB    $0x01, R9
-	SUBQ    R9, R8
+	CMC
+	SBBQ    R9, R8
 	ADDQ    $0x08, BX
 	CMPQ    BX, SI
 	JA      done
@@ -60,11 +59,10 @@ TEXT ·distributeBackward64(SB), NOSPLIT, $0-80
 loop:
 	MOVQ    (SI), R10
 	CMPQ    R10, DI
-	SETCS   R9
 	MOVQ    CX, R11
 	CMOVQCC SI, R11
 	MOVQ    R10, (R11)(R8*8)
-	ADDQ    R9, R8
+	ADCQ    R9, R8
 	SUBQ    $0x08, SI
 	CMPQ    SI, BX
 	JBE     done
@@ -154,10 +152,10 @@ loop:
 	NOTL      R10
 	BSFL      R10, DI
 	BTSL      DI, R11
-	SETCS     R9
 	MOVQ      BX, R10
 	CMOVQCC   CX, R10
 	VMOVDQU   X2, (R10)(R8*1)
+	SETCS     R9
 	XORB      $0x01, R9
 	SHLQ      $0x04, R9
 	SUBQ      R9, R8
@@ -208,10 +206,10 @@ loop:
 	NOTL      R10
 	BSFL      R10, DI
 	BTSL      DI, R11
-	SETCS     R9
 	MOVQ      CX, R10
 	CMOVQCC   SI, R10
 	VMOVDQU   X2, (R10)(R8*1)
+	SETCS     R9
 	SHLQ      $0x04, R9
 	ADDQ      R9, R8
 	SUBQ      $0x10, SI
@@ -304,10 +302,10 @@ loop:
 	NOTL      R10
 	BSFL      R10, DI
 	BTSL      DI, R11
-	SETCS     R9
 	MOVQ      BX, R10
 	CMOVQCC   CX, R10
 	VMOVDQU   Y2, (R10)(R8*1)
+	SETCS     R9
 	XORB      $0x01, R9
 	SHLQ      $0x05, R9
 	SUBQ      R9, R8
@@ -359,10 +357,10 @@ loop:
 	NOTL      R10
 	BSFL      R10, DI
 	BTSL      DI, R11
-	SETCS     R9
 	MOVQ      CX, R10
 	CMOVQCC   SI, R10
 	VMOVDQU   Y2, (R10)(R8*1)
+	SETCS     R9
 	SHLQ      $0x05, R9
 	ADDQ      R9, R8
 	SUBQ      $0x20, SI
