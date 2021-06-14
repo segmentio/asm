@@ -62,6 +62,22 @@ func ConstShuffleMask64(name string, indices ...uint64) operand.Mem {
 	return ConstBytes(name, data)
 }
 
+func ConstLoadMask32(name string, indices ...uint32) operand.Mem {
+	data := make([]uint32, len(indices))
+	for i, index := range indices {
+		data[i] = index << 31
+	}
+	return ConstArray32(name, data...)
+}
+
+func ConstLoadMask64(name string, indices ...uint64) operand.Mem {
+	data := make([]uint64, len(indices))
+	for i, index := range indices {
+		data[i] = index << 63
+	}
+	return ConstArray64(name, data...)
+}
+
 func constBytes8(offset int, data []byte) {
 	for i := 0; i < len(data); i += 8 {
 		DATA(offset+i, operand.U64(binary.LittleEndian.Uint64(data[i:i+8])))
