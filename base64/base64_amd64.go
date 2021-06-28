@@ -31,9 +31,8 @@ func newEncoding(encoder string) *Encoding {
 		enc[2+i] = int8(ch) - 2*letterRange - int8(i)
 	}
 
-	// The input consists of six character sets in the Base64 alphabet,
-	// which we need to map back to the 6-bit values they represent.
-	// There are three ranges, two singles, and then there's the rest.
+	// Translate values from the Base64 alphabet using five sets. Values outside
+	// of these ranges are considered invalid:
 	//
 	// From       To        Add    Index  Example
 	// [47]       [63]      +16        1  /

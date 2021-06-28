@@ -1,4 +1,15 @@
+// +build ignore
+
 package main
+
+// This code borrows idea from:
+//
+// https://github.com/aklomp/base64/tree/eaebee8f666ea0451b0474e7be16006ad994004c/lib/arch/avx2
+// Published under BSD
+// Copyright (c) 2005-2007, Nick Galbreath
+// Copyright (c) 2013-2019, Alfred Klomp
+// Copyright (c) 2015-2017, Wojciech Mula
+// Copyright (c) 2016-2017, Matthieu Darbois
 
 import (
 	. "github.com/mmcloughlin/avo/build"
