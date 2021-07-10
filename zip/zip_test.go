@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var size = 1024
+var size = 1024 * 256
 
 func TestSumUint64(t *testing.T) {
 	x, y := generateSlices()
@@ -13,7 +13,7 @@ func TestSumUint64(t *testing.T) {
 	copy(genericXCopy, x)
 	sumUint64(x, y)
 	sumUint64Generic(genericXCopy, y)
-	for i:=0; i<len(x);i++ {
+	for i := 0; i < len(x); i++ {
 		if x[i] != genericXCopy[i] {
 			t.Fatalf("mismatch sums at index %d, expected %d : got %d", i, genericXCopy[i], x[i])
 		}
@@ -27,7 +27,7 @@ func TestSumUint64YLarger(t *testing.T) {
 	copy(genericXCopy, x)
 	sumUint64(x, y)
 	sumUint64Generic(genericXCopy, y)
-	for i:=0; i<len(x);i++ {
+	for i := 0; i < len(x); i++ {
 		if x[i] != genericXCopy[i] {
 			t.Fatalf("mismatch sums at index %d, expected %d : got %d", i, genericXCopy[i], x[i])
 		}
@@ -41,7 +41,7 @@ func TestSumUint64XLarger(t *testing.T) {
 	copy(genericXCopy, x)
 	sumUint64(x, y)
 	sumUint64Generic(genericXCopy, y)
-	for i:=0; i<len(x);i++ {
+	for i := 0; i < len(x); i++ {
 		if x[i] != genericXCopy[i] {
 			t.Fatalf("mismatch sums at index %d, expected %d : got %d", i, genericXCopy[i], x[i])
 		}
@@ -84,4 +84,3 @@ func BenchmarkSumUnit64Generic(b *testing.B) {
 		sumUint64Generic(x, y)
 	}
 }
-

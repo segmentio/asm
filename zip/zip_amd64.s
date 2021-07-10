@@ -6,35 +6,36 @@
 // Requires: AVX, AVX2
 TEXT ·sumUint64(SB), NOSPLIT, $0-48
 	MOVQ x_base+0(FP), CX
-	MOVQ y_base+24(FP), BX
+	MOVQ y_base+24(FP), DX
 	MOVQ x_len+8(FP), AX
-	MOVQ y_len+32(FP), SI
-	MOVQ CX, DI
-	MOVQ BX, R8
-	MOVQ $0x0000000000000008, R9
-	MULQ R9
+	MOVQ y_len+32(FP), BX
+	MOVQ CX, SI
+	MOVQ DX, DI
+	SHLQ $0x03, AX
+	ADDQ AX, SI
+	MOVQ BX, AX
+	SHLQ $0x03, AX
 	ADDQ AX, DI
-	MOVQ SI, AX
-	MULQ R9
-	ADDQ AX, R8
+	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCC  x86_loop
 
 avx2_loop:
 	MOVQ    CX, AX
-	MOVQ    BX, DX
+	MOVQ    DX, BX
 	ADDQ    $0x80, AX
-	ADDQ    $0x80, DX
-	CMPQ    AX, DI
+	ADDQ    $0x80, BX
+	CMPQ    AX, SI
 	JAE     x86_loop
-	CMPQ    DX, R8
+	CMPQ    BX, DI
 	JAE     x86_loop
 	VMOVDQU (CX), Y0
-	VMOVDQU (BX), Y1
+	VMOVDQU (DX), Y1
 	VMOVDQU 32(CX), Y2
-	VMOVDQU 32(BX), Y3
+	VMOVDQU 32(DX), Y3
 	VMOVDQU 64(CX), Y4
-	VMOVDQU 64(BX), Y5
+	VMOVDQU 64(DX), Y5
 	VMOVDQU 96(CX), Y6
-	VMOVDQU 96(BX), Y7
+	VMOVDQU 96(DX), Y7
 	VPADDQ  Y0, Y1, Y0
 	VPADDQ  Y2, Y3, Y2
 	VPADDQ  Y4, Y5, Y4
@@ -44,19 +45,19 @@ avx2_loop:
 	VMOVDQU Y4, 64(CX)
 	VMOVDQU Y6, 96(CX)
 	MOVQ    AX, CX
-	MOVQ    DX, BX
+	MOVQ    BX, DX
 	JMP     avx2_loop
 
 x86_loop:
-	CMPQ CX, DI
+	CMPQ CX, SI
 	JAE  return
-	CMPQ BX, R8
+	CMPQ DX, DI
 	JAE  return
 	MOVQ (CX), AX
-	ADDQ (BX), AX
+	ADDQ (DX), AX
 	MOVQ AX, (CX)
 	ADDQ $0x08, CX
-	ADDQ $0x08, BX
+	ADDQ $0x08, DX
 	JMP  x86_loop
 
 return:

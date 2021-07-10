@@ -5,7 +5,10 @@ package main
 import (
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
+	. "github.com/segmentio/asm/build/internal/x86"
+
 	"github.com/mmcloughlin/avo/reg"
+	"github.com/segmentio/asm/cpu"
 )
 
 const unroll = 8
@@ -24,20 +27,15 @@ func main() {
 
 	// Little math here to calculate the memory address of our last value
 	// 64bit uints so lex * 8 from our original ptr address
-	z := GP64()
-	MOVQ(U64(8), z)
 	MOVQ(xLen, reg.RAX)
-	MULQ(z)
+	SHLQ(Imm(3), reg.RAX)
 	ADDQ(reg.RAX, xEnd)
 
 	MOVQ(yLen, reg.RAX)
-	MULQ(z)
+	SHLQ(Imm(3), reg.RAX)
 	ADDQ(reg.RAX, yEnd)
 
-	// Hitting an error..
-	// github.com/segmentio/asm/zip.SumUint64: relocation target github.com/segmentio/asm/cpu.X86 not defined
-	// Once resolved we can add this AVX check
-	//JumpUnlessFeature("x86_loop", cpu.AVX2)
+	JumpUnlessFeature("x86_loop", cpu.AVX2)
 
 	Label("avx2_loop")
 	xNext := GP64()
