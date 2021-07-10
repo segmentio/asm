@@ -2,6 +2,8 @@ package zip
 
 import "github.com/segmentio/asm/cpu"
 
+// SumUint64 sums pairs of by index from x and y, similar to python's zip routine.
+// If available AVX instructions will be used to operate on many uint64s simultaneously.
 func SumUint64(x []uint64, y []uint64) {
 	switch {
 	case cpu.X86.Has(cpu.AVX):
