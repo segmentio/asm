@@ -8,7 +8,7 @@ import (
 
 type Encoding struct {
 	enc  [16]int8
-	dec  [16]int8
+	dec  [32]int8
 	base *base64.Encoding
 }
 
@@ -40,7 +40,7 @@ func newEncoding(encoder string) *Encoding {
 	// [48..57]   [52..61]   +4        3  0123456789
 	// [65..90]   [0..25]   -65      4,5  ABCDEFGHIJKLMNOPQRSTUVWXYZ
 	// [97..122]  [26..51]  -71      6,7  abcdefghijklmnopqrstuvwxyz
-	dec := [16]int8{
+	dec := [32]int8{
 		0,
 		prefixRange + 1 - int8(encoder[prefixRange+1]),
 		prefixRange - int8(encoder[prefixRange]),
@@ -49,7 +49,14 @@ func newEncoding(encoder string) *Encoding {
 		0 - int8(encoder[0]),
 		letterRange - int8(encoder[letterRange]),
 		letterRange - int8(encoder[letterRange]),
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x15, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+		0x11, 0x11, 0x13, 0x1B, 0x1B, 0x1B, 0x1B, 0x1B,
 	}
+	dec[encoder[62]&15] = 0x1A
+	dec[encoder[63]&15] = 0x1A
+	dec[(encoder[62]&15)+16] = 0x1A
+	dec[(encoder[63]&15)+16] = 0x1A
 
 	return &Encoding{
 		enc:  enc,

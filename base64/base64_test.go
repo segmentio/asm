@@ -8,41 +8,46 @@ import (
 	"testing"
 )
 
-const encodeNonStd = "abcdefghijklmnopqrstuvwxyz" +
-	"\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c" +
-	"\x8d\x8e\x8f\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99" +
-	"#$%&'()*+,-."
-
-var encodings = map[string]struct {
+var encodings = []struct {
+	name      string
 	control   *base64.Encoding
 	candidate *Encoding
 }{
-	"std": {
+	{
+		name:      "std",
 		control:   base64.StdEncoding,
 		candidate: StdEncoding,
 	},
-	"url": {
-		control:   base64.URLEncoding,
-		candidate: URLEncoding,
-	},
-	"raw-std": {
+	/*
+		{
+			name:      "url",
+			control:   base64.URLEncoding,
+			candidate: URLEncoding,
+		},
+	*/
+	{
+		name:      "raw-std",
 		control:   base64.RawStdEncoding,
 		candidate: RawStdEncoding,
 	},
-	"raw-url": {
-		control:   base64.RawURLEncoding,
-		candidate: RawURLEncoding,
-	},
-	"non-std": {
-		control:   base64.NewEncoding(encodeNonStd),
-		candidate: NewEncoding(encodeNonStd),
+	/*
+		{
+			name:      "raw-url",
+			control:   base64.RawURLEncoding,
+			candidate: RawURLEncoding,
+		},
+	*/
+	{
+		name:      "IMAP",
+		control:   base64.NewEncoding(encodeIMAP).WithPadding(NoPadding),
+		candidate: NewEncoding(encodeIMAP).WithPadding(NoPadding),
 	},
 }
 
 func TestEncoding(t *testing.T) {
-	for name, enc := range encodings {
+	for _, enc := range encodings {
 		for i := 1; i < 1024; i++ {
-			ok := t.Run(fmt.Sprintf("%s-%d", name, i), func(t *testing.T) {
+			ok := t.Run(fmt.Sprintf("%s-%d", enc.name, i), func(t *testing.T) {
 				src := make([]byte, i)
 				rand.Read(src)
 

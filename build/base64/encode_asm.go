@@ -1,15 +1,13 @@
 // +build ignore
-
-package main
-
-// This code borrows idea from:
 //
-// https://github.com/aklomp/base64/tree/eaebee8f666ea0451b0474e7be16006ad994004c/lib/arch/avx2
-// Published under BSD
-// Copyright (c) 2005-2007, Nick Galbreath
-// Copyright (c) 2013-2019, Alfred Klomp
-// Copyright (c) 2015-2017, Wojciech Mula
-// Copyright (c) 2016-2017, Matthieu Darbois
+// This code is a go assembly implementation of:
+//
+// Muła, Wojciech, & Lemire, Daniel (Thu, 14 Jun 2018).
+//   Faster Base64 Encoding and Decoding Using AVX2 Instructions.
+//   [arXiv:1704.00605](https://arxiv.org/abs/1704.00605)
+//
+// ...with changes to support multiple encodings.
+package main
 
 import (
 	. "github.com/mmcloughlin/avo/build"

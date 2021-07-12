@@ -2,4 +2,6 @@
 
 package base64
 
-func decodeAVX2(dst []byte, src []byte, lut [16]int8) (int, int)
+func decodeAVX2(dst []byte, src []byte, lut [32]int8) (int, int)
+
+func decodeAVX2URI(dst []byte, src []byte, lut [32]int8) (int, int)

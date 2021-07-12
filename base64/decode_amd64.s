@@ -2,9 +2,37 @@
 
 #include "textflag.h"
 
-// func decodeAVX2(dst []byte, src []byte, lut [16]int8) (int, int)
+DATA b64_dec_lut_hi<>+0(SB)/8, $0x0804080402011010
+DATA b64_dec_lut_hi<>+8(SB)/8, $0x1010101010101010
+DATA b64_dec_lut_hi<>+16(SB)/8, $0x0804080402011010
+DATA b64_dec_lut_hi<>+24(SB)/8, $0x1010101010101010
+GLOBL b64_dec_lut_hi<>(SB), RODATA|NOPTR, $32
+
+DATA b64_dec_madd1<>+0(SB)/8, $0x0140014001400140
+DATA b64_dec_madd1<>+8(SB)/8, $0x0140014001400140
+DATA b64_dec_madd1<>+16(SB)/8, $0x0140014001400140
+DATA b64_dec_madd1<>+24(SB)/8, $0x0140014001400140
+GLOBL b64_dec_madd1<>(SB), RODATA|NOPTR, $32
+
+DATA b64_dec_madd2<>+0(SB)/8, $0x0001100000011000
+DATA b64_dec_madd2<>+8(SB)/8, $0x0001100000011000
+DATA b64_dec_madd2<>+16(SB)/8, $0x0001100000011000
+DATA b64_dec_madd2<>+24(SB)/8, $0x0001100000011000
+GLOBL b64_dec_madd2<>(SB), RODATA|NOPTR, $32
+
+DATA b64_dec_shuf_lo<>+0(SB)/8, $0x0000000000000000
+DATA b64_dec_shuf_lo<>+8(SB)/8, $0x0600010200000000
+GLOBL b64_dec_shuf_lo<>(SB), RODATA|NOPTR, $16
+
+DATA b64_dec_shuf<>+0(SB)/8, $0x090a040506000102
+DATA b64_dec_shuf<>+8(SB)/8, $0x000000000c0d0e08
+DATA b64_dec_shuf<>+16(SB)/8, $0x0c0d0e08090a0405
+DATA b64_dec_shuf<>+24(SB)/8, $0x0000000000000000
+GLOBL b64_dec_shuf<>(SB), RODATA|NOPTR, $32
+
+// func decodeAVX2(dst []byte, src []byte, lut [32]int8) (int, int)
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·decodeAVX2(SB), NOSPLIT, $0-80
+TEXT ·decodeAVX2(SB), NOSPLIT, $0-96
 	MOVQ         dst_base+0(FP), AX
 	MOVQ         src_base+24(FP), DX
 	MOVQ         src_len+32(FP), SI
@@ -14,11 +42,9 @@ TEXT ·decodeAVX2(SB), NOSPLIT, $0-80
 	XORQ         CX, CX
 	XORQ         BX, BX
 	VPXOR        Y7, Y7, Y7
-
-	// Load the 16-byte LUT into both lanes of the register
-	VPERMQ  $0x44, lut_0+48(FP), Y6
-	VMOVDQA b64_dec_lut_lo<>+0(SB), Y4
-	VMOVDQA b64_dec_lut_hi<>+0(SB), Y5
+	VPERMQ       $0x44, lut_0+48(FP), Y6
+	VPERMQ       $0x44, lut_0+64(FP), Y4
+	VMOVDQA      b64_dec_lut_hi<>+0(SB), Y5
 
 loop:
 	VMOVDQU      (DX)(BX*1), Y0
@@ -33,8 +59,8 @@ loop:
 	VPADDB       Y3, Y2, Y2
 	VPSHUFB      Y2, Y6, Y2
 	VPADDB       Y0, Y2, Y0
-	VPMADDUBSW   b64_dec_maddub<>+0(SB), Y0, Y0
-	VPMADDWD     b64_dec_madd<>+0(SB), Y0, Y0
+	VPMADDUBSW   b64_dec_madd1<>+0(SB), Y0, Y0
+	VPMADDWD     b64_dec_madd2<>+0(SB), Y0, Y0
 	VEXTRACTI128 $0x01, Y0, X1
 	VPSHUFB      b64_dec_shuf_lo<>+0(SB), X1, X1
 	VPSHUFB      b64_dec_shuf<>+0(SB), Y0, Y0
@@ -49,40 +75,63 @@ loop:
 	JMP          loop
 
 done:
-	MOVQ CX, ret+64(FP)
-	MOVQ BX, ret1+72(FP)
+	MOVQ CX, ret+80(FP)
+	MOVQ BX, ret1+88(FP)
 	RET
 
-DATA b64_dec_lut_lo<>+0(SB)/8, $0x1111111111111115
-DATA b64_dec_lut_lo<>+8(SB)/8, $0x1a1b1b1b1a131111
-DATA b64_dec_lut_lo<>+16(SB)/8, $0x1111111111111115
-DATA b64_dec_lut_lo<>+24(SB)/8, $0x1a1b1b1b1a131111
-GLOBL b64_dec_lut_lo<>(SB), RODATA|NOPTR, $32
+// func decodeAVX2URI(dst []byte, src []byte, lut [32]int8) (int, int)
+// Requires: AVX, AVX2, SSE4.1
+TEXT ·decodeAVX2URI(SB), NOSPLIT, $0-96
+	MOVB         $0x2f, AL
+	PINSRB       $0x00, AX, X0
+	VPBROADCASTB X0, Y0
+	MOVB         $0x2f, AL
+	PINSRB       $0x00, AX, X1
+	VPBROADCASTB X1, Y1
+	MOVQ         dst_base+0(FP), AX
+	MOVQ         src_base+24(FP), DX
+	MOVQ         src_len+32(FP), SI
+	MOVB         $0x2f, CL
+	PINSRB       $0x00, CX, X10
+	VPBROADCASTB X10, Y10
+	XORQ         CX, CX
+	XORQ         BX, BX
+	VPXOR        Y9, Y9, Y9
+	VPERMQ       $0x44, lut_0+48(FP), Y8
+	VPERMQ       $0x44, lut_0+64(FP), Y6
+	VMOVDQA      b64_dec_lut_hi<>+0(SB), Y7
 
-DATA b64_dec_lut_hi<>+0(SB)/8, $0x0804080402011010
-DATA b64_dec_lut_hi<>+8(SB)/8, $0x1010101010101010
-DATA b64_dec_lut_hi<>+16(SB)/8, $0x0804080402011010
-DATA b64_dec_lut_hi<>+24(SB)/8, $0x1010101010101010
-GLOBL b64_dec_lut_hi<>(SB), RODATA|NOPTR, $32
+loop:
+	VMOVDQU      (DX)(BX*1), Y2
+	VPCMPEQB     Y2, Y1, Y4
+	VPBLENDVB    Y4, Y0, Y2, Y2
+	VPSRLD       $0x04, Y2, Y4
+	VPAND        Y10, Y2, Y5
+	VPSHUFB      Y5, Y6, Y5
+	VPAND        Y10, Y4, Y4
+	VPSHUFB      Y4, Y7, Y11
+	VPTEST       Y11, Y5
+	JNE          done
+	VPCMPEQB     Y10, Y2, Y5
+	VPADDB       Y5, Y4, Y4
+	VPSHUFB      Y4, Y8, Y4
+	VPADDB       Y2, Y4, Y2
+	VPMADDUBSW   b64_dec_madd1<>+0(SB), Y2, Y2
+	VPMADDWD     b64_dec_madd2<>+0(SB), Y2, Y2
+	VEXTRACTI128 $0x01, Y2, X3
+	VPSHUFB      b64_dec_shuf_lo<>+0(SB), X3, X3
+	VPSHUFB      b64_dec_shuf<>+0(SB), Y2, Y2
+	VPBLENDD     $0x08, Y3, Y2, Y3
+	VPBLENDD     $0xc0, Y9, Y3, Y3
+	VMOVDQU      Y3, (AX)(CX*1)
+	ADDQ         $0x18, CX
+	ADDQ         $0x20, BX
+	SUBQ         $0x20, SI
+	CMPQ         SI, $0x2d
+	JB           done
+	JMP          loop
 
-DATA b64_dec_maddub<>+0(SB)/8, $0x0140014001400140
-DATA b64_dec_maddub<>+8(SB)/8, $0x0140014001400140
-DATA b64_dec_maddub<>+16(SB)/8, $0x0140014001400140
-DATA b64_dec_maddub<>+24(SB)/8, $0x0140014001400140
-GLOBL b64_dec_maddub<>(SB), RODATA|NOPTR, $32
-
-DATA b64_dec_madd<>+0(SB)/8, $0x0001100000011000
-DATA b64_dec_madd<>+8(SB)/8, $0x0001100000011000
-DATA b64_dec_madd<>+16(SB)/8, $0x0001100000011000
-DATA b64_dec_madd<>+24(SB)/8, $0x0001100000011000
-GLOBL b64_dec_madd<>(SB), RODATA|NOPTR, $32
-
-DATA b64_dec_shuf_lo<>+0(SB)/8, $0x0000000000000000
-DATA b64_dec_shuf_lo<>+8(SB)/8, $0x0600010200000000
-GLOBL b64_dec_shuf_lo<>(SB), RODATA|NOPTR, $16
-
-DATA b64_dec_shuf<>+0(SB)/8, $0x090a040506000102
-DATA b64_dec_shuf<>+8(SB)/8, $0x000000000c0d0e08
-DATA b64_dec_shuf<>+16(SB)/8, $0x0c0d0e08090a0405
-DATA b64_dec_shuf<>+24(SB)/8, $0x0000000000000000
-GLOBL b64_dec_shuf<>(SB), RODATA|NOPTR, $32
+done:
+	MOVQ CX, ret+80(FP)
+	MOVQ BX, ret1+88(FP)
+	RET

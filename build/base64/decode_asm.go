@@ -1,30 +1,74 @@
 // +build ignore
-
-package main
-
-// This code borrows idea from:
 //
-// https://github.com/aklomp/base64/tree/eaebee8f666ea0451b0474e7be16006ad994004c/lib/arch/avx2
-// Published under BSD
-// Copyright (c) 2005-2007, Nick Galbreath
-// Copyright (c) 2013-2019, Alfred Klomp
-// Copyright (c) 2015-2017, Wojciech Mula
-// Copyright (c) 2016-2017, Matthieu Darbois
+// This code is a go assembly implementation of:
+//
+// Muła, Wojciech, & Lemire, Daniel (Thu, 14 Jun 2018).
+//   Faster Base64 Encoding and Decoding Using AVX2 Instructions.
+//   [arXiv:1704.00605](https://arxiv.org/abs/1704.00605)
+//
+// ...with changes to support multiple encodings.
+package main
 
 import (
 	. "github.com/mmcloughlin/avo/build"
+	. "github.com/mmcloughlin/avo/gotypes"
 	. "github.com/mmcloughlin/avo/operand"
+	. "github.com/mmcloughlin/avo/reg"
 	. "github.com/segmentio/asm/build/internal/asm"
 	. "github.com/segmentio/asm/build/internal/x86"
 )
 
-func main() {
-	TEXT("decodeAVX2", NOSPLIT, "func(dst, src []byte, lut [16]int8) (int, int)")
+var lutHi = ConstBytes("b64_dec_lut_hi", []byte{
+	16, 16, 1, 2, 4, 8, 4, 8, 16, 16, 16, 16, 16, 16, 16, 16,
+	16, 16, 1, 2, 4, 8, 4, 8, 16, 16, 16, 16, 16, 16, 16, 16,
+})
 
-	dst := Mem{Base: Load(Param("dst").Base(), GP64()), Index: GP64(), Scale: 1}
-	src := Mem{Base: Load(Param("src").Base(), GP64()), Index: GP64(), Scale: 1}
-	rem := Load(Param("src").Len(), GP64())
-	lut, _ := Param("lut").Index(0).Resolve()
+var madd1 = ConstBytes("b64_dec_madd1", []byte{
+	64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1,
+	64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1,
+})
+
+var madd2 = ConstArray16("b64_dec_madd2",
+	4096, 1, 4096, 1, 4096, 1, 4096, 1,
+	4096, 1, 4096, 1, 4096, 1, 4096, 1,
+)
+
+var shufLo = ConstBytes("b64_dec_shuf_lo", []byte{
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 6,
+})
+
+var shuf = ConstBytes("b64_dec_shuf", []byte{
+	2, 1, 0, 6, 5, 4, 10, 9, 8, 14, 13, 12, 0, 0, 0, 0,
+	5, 4, 10, 9, 8, 14, 13, 12, 0, 0, 0, 0, 0, 0, 0, 0,
+})
+
+func main() {
+	TEXT("decodeAVX2", NOSPLIT, "func(dst, src []byte, lut [32]int8) (int, int)")
+	createDecode(Param("dst"), Param("src"), Param("lut"), func(m Mem, r VecVirtual) {
+		VMOVDQU(m, r)
+	})
+
+	TEXT("decodeAVX2URI", NOSPLIT, "func(dst, src []byte, lut [32]int8) (int, int)")
+	slash := VecBroadcast(U8('/'), YMM())
+	underscore := VecBroadcast(U8('/'), YMM())
+	createDecode(Param("dst"), Param("src"), Param("lut"), func(m Mem, r VecVirtual) {
+		eq := YMM()
+		VMOVDQU(m, r)
+		VPCMPEQB(r, underscore, eq)
+		VPBLENDVB(eq, slash, r, r)
+	})
+
+	Generate()
+}
+
+func createDecode(pdst, psrc, plut Component, load func(m Mem, r VecVirtual)) {
+	dst := Mem{Base: Load(pdst.Base(), GP64()), Index: GP64(), Scale: 1}
+	src := Mem{Base: Load(psrc.Base(), GP64()), Index: GP64(), Scale: 1}
+	rem := Load(psrc.Len(), GP64())
+	lut, err := plut.Index(0).Resolve()
+	if err != nil {
+		panic(err)
+	}
 
 	rsrc := YMM()
 	rdst := YMM()
@@ -35,31 +79,23 @@ func main() {
 	shfl := YMM()
 	lutl := YMM()
 	luth := YMM()
-	xtab := YMM()
+	lutr := YMM()
 	zero := YMM()
 	lo := YMM()
 	hi := YMM()
-	mask := VecBroadcast(U8(47), YMM())
+	mask := VecBroadcast(U8(0x2f), YMM())
 
 	XORQ(dst.Index, dst.Index)
 	XORQ(src.Index, src.Index)
 	VPXOR(zero, zero, zero)
 
-	Comment("Load the 16-byte LUT into both lanes of the register")
-	VPERMQ(Imm(1<<6|1<<2), lut.Addr, xtab)
-
-	VMOVDQA(ConstBytes("b64_dec_lut_lo", []byte{
-		21, 17, 17, 17, 17, 17, 17, 17, 17, 17, 19, 26, 27, 27, 27, 26,
-		21, 17, 17, 17, 17, 17, 17, 17, 17, 17, 19, 26, 27, 27, 27, 26,
-	}), lutl)
-	VMOVDQA(ConstBytes("b64_dec_lut_hi", []byte{
-		16, 16, 1, 2, 4, 8, 4, 8, 16, 16, 16, 16, 16, 16, 16, 16,
-		16, 16, 1, 2, 4, 8, 4, 8, 16, 16, 16, 16, 16, 16, 16, 16,
-	}), luth)
+	VPERMQ(Imm(1<<6|1<<2), lut.Addr, lutr)
+	VPERMQ(Imm(1<<6|1<<2), lut.Addr.Offset(16), lutl)
+	VMOVDQA(lutHi, luth)
 
 	Label("loop")
 
-	VMOVDQU(src, rsrc)
+	load(src, rsrc)
 
 	VPSRLD(Imm(4), rsrc, nibh)
 	VPAND(mask, rsrc, nibl)
@@ -73,28 +109,15 @@ func main() {
 	VPCMPEQB(mask, rsrc, emsk)
 	VPADDB(emsk, nibh, roll)
 
-	VPSHUFB(roll, xtab, roll)
+	VPSHUFB(roll, lutr, roll)
 
 	VPADDB(rsrc, roll, shfl)
-	VPMADDUBSW(ConstBytes("b64_dec_maddub", []byte{
-		64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1,
-		64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1, 64, 1,
-	}), shfl, shfl)
-
-	VPMADDWD(ConstArray16("b64_dec_madd",
-		4096, 1, 4096, 1, 4096, 1, 4096, 1,
-		4096, 1, 4096, 1, 4096, 1, 4096, 1,
-	), shfl, shfl)
+	VPMADDUBSW(madd1, shfl, shfl)
+	VPMADDWD(madd2, shfl, shfl)
 
 	VEXTRACTI128(Imm(1), shfl, rdst.AsX())
-	VPSHUFB(ConstBytes("b64_dec_shuf_lo", []byte{
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 6,
-	}), rdst.AsX(), rdst.AsX())
-
-	VPSHUFB(ConstBytes("b64_dec_shuf", []byte{
-		2, 1, 0, 6, 5, 4, 10, 9, 8, 14, 13, 12, 0, 0, 0, 0,
-		5, 4, 10, 9, 8, 14, 13, 12, 0, 0, 0, 0, 0, 0, 0, 0,
-	}), shfl, shfl)
+	VPSHUFB(shufLo, rdst.AsX(), rdst.AsX())
+	VPSHUFB(shuf, shfl, shfl)
 
 	VPBLENDD(Imm(8), rdst, shfl, rdst)
 	VPBLENDD(Imm(192), zero, rdst, rdst)
@@ -112,6 +135,4 @@ func main() {
 	Store(dst.Index, ReturnIndex(0))
 	Store(src.Index, ReturnIndex(1))
 	RET()
-
-	Generate()
 }
