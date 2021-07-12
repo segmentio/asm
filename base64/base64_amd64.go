@@ -2,19 +2,21 @@ package base64
 
 import (
 	"encoding/base64"
+	"unsafe"
 
 	"github.com/segmentio/asm/cpu"
 )
 
-type encoder func(dst []byte, src []byte, lut [16]int8) (int, int)
-type decoder func(dst []byte, src []byte, lut [32]int8) (int, int)
-
+// An Encoding is a radix 64 encoding/decoding scheme, defined by a
+// 64-character alphabet.
 type Encoding struct {
-	enc    encoder
+	enc    func(dst []byte, src []byte, lut [16]int8) (int, int)
 	enclut [16]int8
-	dec    decoder
+
+	dec    func(dst []byte, src []byte, lut [32]int8) (int, int)
 	declut [32]int8
-	base   *base64.Encoding
+
+	base *base64.Encoding
 }
 
 const (
@@ -82,16 +84,24 @@ func (e *Encoding) enableDecodeAVX2(encoder string) {
 	e.declut = tab
 }
 
+// WithPadding creates a duplicate Encoding updated with a specified padding
+// character, or NoPadding to disable padding. The padding character must not
+// be contained in the encoding alphabet, must not be '\r' or '\n', and must
+// be no greater than '\xFF'.
 func (enc Encoding) WithPadding(padding rune) *Encoding {
 	enc.base = enc.base.WithPadding(padding)
 	return &enc
 }
 
+// Strict creates a duplicate encoding updated with strict decoding enabled.
+// This requires that trailing padding bits are zero.
 func (enc Encoding) Strict() *Encoding {
 	enc.base = enc.base.Strict()
 	return &enc
 }
 
+// Encode encodes src using the defined encoding alphabet.
+// This will write EncodedLen(len(src)) bytes to dst.
 func (enc *Encoding) Encode(dst, src []byte) {
 	if len(src) >= minEncodeLen && enc.enc != nil {
 		d, s := enc.enc(dst, src, enc.enclut)
@@ -101,16 +111,23 @@ func (enc *Encoding) Encode(dst, src []byte) {
 	enc.base.Encode(dst, src)
 }
 
+// Encode encodes src using the encoding enc, writing
+// EncodedLen(len(src)) bytes to dst.
 func (enc *Encoding) EncodeToString(src []byte) string {
 	buf := make([]byte, enc.base.EncodedLen(len(src)))
 	enc.Encode(buf, src)
 	return string(buf)
 }
 
+// EncodedLen calculates the base64-encoded byte length for a message
+// of length n.
 func (enc *Encoding) EncodedLen(n int) int {
 	return enc.base.EncodedLen(n)
 }
 
+// Decode decodes src using the defined encoding alphabet.
+// This will write DecodedLen(len(src)) bytes to dst and return the number of
+// bytes written.
 func (enc *Encoding) Decode(dst, src []byte) (n int, err error) {
 	var d, s int
 	if len(src) >= minDecodeLen && enc.dec != nil {
@@ -123,12 +140,17 @@ func (enc *Encoding) Decode(dst, src []byte) (n int, err error) {
 	return
 }
 
+// DecodeString decodes the base64 encoded string s, returns the decoded
+// value as bytes.
 func (enc *Encoding) DecodeString(s string) ([]byte, error) {
-	buf := make([]byte, enc.base.DecodedLen(len(s)))
-	n, err := enc.Decode(buf, []byte(s))
-	return buf[:n], err
+	src := *(*[]byte)(unsafe.Pointer(&s))
+	dst := make([]byte, enc.base.DecodedLen(len(s)))
+	n, err := enc.Decode(dst, src)
+	return dst[:n], err
 }
 
+// DecodedLen calculates the decoded byte length for a base64-encoded message
+// of length n.
 func (enc *Encoding) DecodedLen(n int) int {
 	return enc.base.DecodedLen(n)
 }
