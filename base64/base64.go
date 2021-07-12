@@ -13,7 +13,6 @@ const (
 	encodeIMAP = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+,"
 
 	letterRange = int8('Z' - 'A' + 1)
-	prefixRange = 2*letterRange + 10
 )
 
 // StdEncoding is the standard base64 encoding, as defined in RFC 4648.
@@ -53,8 +52,16 @@ func NewEncoding(encoder string) *Encoding {
 	if len(encoder) != 64 {
 		panic("encoding alphabet is not 64-bytes long")
 	}
-	if encoder[:prefixRange] != encodeStd[:prefixRange] {
-		panic("encoding alphabet ranges [0,62) must be standard")
+
+	if _, ok := allowedEncoding[encoder]; !ok {
+		panic("non-standard encoding alphabets are not supported")
 	}
+
 	return newEncoding(encoder)
+}
+
+var allowedEncoding = map[string]struct{}{
+	encodeStd:  {},
+	encodeURL:  {},
+	encodeIMAP: {},
 }
