@@ -3,7 +3,6 @@ package base64
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
 	"math/rand"
 	"testing"
 )
@@ -18,27 +17,23 @@ var encodings = []struct {
 		control:   base64.StdEncoding,
 		candidate: StdEncoding,
 	},
-	/*
-		{
-			name:      "url",
-			control:   base64.URLEncoding,
-			candidate: URLEncoding,
-		},
-	*/
+	{
+		name:      "url",
+		control:   base64.URLEncoding,
+		candidate: URLEncoding,
+	},
 	{
 		name:      "raw-std",
 		control:   base64.RawStdEncoding,
 		candidate: RawStdEncoding,
 	},
-	/*
-		{
-			name:      "raw-url",
-			control:   base64.RawURLEncoding,
-			candidate: RawURLEncoding,
-		},
-	*/
 	{
-		name:      "IMAP",
+		name:      "raw-url",
+		control:   base64.RawURLEncoding,
+		candidate: RawURLEncoding,
+	},
+	{
+		name:      "imap",
 		control:   base64.NewEncoding(encodeIMAP).WithPadding(NoPadding),
 		candidate: NewEncoding(encodeIMAP).WithPadding(NoPadding),
 	},
@@ -46,8 +41,8 @@ var encodings = []struct {
 
 func TestEncoding(t *testing.T) {
 	for _, enc := range encodings {
-		for i := 1; i < 1024; i++ {
-			ok := t.Run(fmt.Sprintf("%s-%d", enc.name, i), func(t *testing.T) {
+		t.Run(enc.name, func(t *testing.T) {
+			for i := 1; i < 1024; i++ {
 				src := make([]byte, i)
 				rand.Read(src)
 
@@ -82,14 +77,10 @@ func TestEncoding(t *testing.T) {
 				}
 
 				if !bytes.Equal(decExpect, decActual) {
-					t.Errorf("failed decode:\n\texpect = %v\n\tactual = %v", decExpect, decActual)
+					t.Fatalf("failed decode:\n\texpect = %v\n\tactual = %v", decExpect, decActual)
 				}
-			})
-
-			if !ok {
-				break
 			}
-		}
+		})
 	}
 }
 

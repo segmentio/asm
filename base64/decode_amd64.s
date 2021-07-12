@@ -85,7 +85,7 @@ TEXT ·decodeAVX2URI(SB), NOSPLIT, $0-96
 	MOVB         $0x2f, AL
 	PINSRB       $0x00, AX, X0
 	VPBROADCASTB X0, Y0
-	MOVB         $0x2f, AL
+	MOVB         $0x5f, AL
 	PINSRB       $0x00, AX, X1
 	VPBROADCASTB X1, Y1
 	MOVQ         dst_base+0(FP), AX

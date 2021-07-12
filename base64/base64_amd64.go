@@ -6,10 +6,15 @@ import (
 	"github.com/segmentio/asm/cpu"
 )
 
+type encoder func(dst []byte, src []byte, lut [16]int8) (int, int)
+type decoder func(dst []byte, src []byte, lut [32]int8) (int, int)
+
 type Encoding struct {
-	enc  [16]int8
-	dec  [32]int8
-	base *base64.Encoding
+	enc    encoder
+	enclut [16]int8
+	dec    decoder
+	declut [32]int8
+	base   *base64.Encoding
 }
 
 const (
@@ -18,6 +23,15 @@ const (
 )
 
 func newEncoding(encoder string) *Encoding {
+	e := &Encoding{base: base64.NewEncoding(encoder)}
+	if cpu.X86.Has(cpu.AVX2) {
+		e.enableEncodeAVX2(encoder)
+		e.enableDecodeAVX2(encoder)
+	}
+	return e
+}
+
+func (e *Encoding) enableEncodeAVX2(encoder string) {
 	// Translate values 0..63 to the Base64 alphabet. There are five sets:
 	//
 	// From      To         Add    Index  Example
@@ -26,9 +40,20 @@ func newEncoding(encoder string) *Encoding {
 	// [52..61]  [48..57]    -4  [2..11]  0123456789
 	// [62]      [43]       -19       12  +
 	// [63]      [47]       -16       13  /
-	enc := [16]int8{int8(encoder[0]), int8(encoder[letterRange]) - letterRange}
+	tab := [16]int8{int8(encoder[0]), int8(encoder[letterRange]) - letterRange}
 	for i, ch := range encoder[2*letterRange:] {
-		enc[2+i] = int8(ch) - 2*letterRange - int8(i)
+		tab[2+i] = int8(ch) - 2*letterRange - int8(i)
+	}
+
+	e.enc = encodeAVX2
+	e.enclut = tab
+}
+
+func (e *Encoding) enableDecodeAVX2(encoder string) {
+	c62, c63 := int8(encoder[62]), int8(encoder[63])
+	url := c63 == '_'
+	if url {
+		c63 = '/'
 	}
 
 	// Translate values from the Base64 alphabet using five sets. Values outside
@@ -40,29 +65,21 @@ func newEncoding(encoder string) *Encoding {
 	// [48..57]   [52..61]   +4        3  0123456789
 	// [65..90]   [0..25]   -65      4,5  ABCDEFGHIJKLMNOPQRSTUVWXYZ
 	// [97..122]  [26..51]  -71      6,7  abcdefghijklmnopqrstuvwxyz
-	dec := [32]int8{
-		0,
-		prefixRange + 1 - int8(encoder[prefixRange+1]),
-		prefixRange - int8(encoder[prefixRange]),
-		2*letterRange - int8(encoder[2*letterRange]),
-		0 - int8(encoder[0]),
-		0 - int8(encoder[0]),
-		letterRange - int8(encoder[letterRange]),
-		letterRange - int8(encoder[letterRange]),
+	tab := [32]int8{
+		0, 63 - c63, 62 - c62, 4, -65, -65, -71, -71,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x15, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
 		0x11, 0x11, 0x13, 0x1B, 0x1B, 0x1B, 0x1B, 0x1B,
 	}
-	dec[encoder[62]&15] = 0x1A
-	dec[encoder[63]&15] = 0x1A
-	dec[(encoder[62]&15)+16] = 0x1A
-	dec[(encoder[63]&15)+16] = 0x1A
+	tab[(c62&15)+16] = 0x1A
+	tab[(c63&15)+16] = 0x1A
 
-	return &Encoding{
-		enc:  enc,
-		dec:  dec,
-		base: base64.NewEncoding(encoder),
+	if url {
+		e.dec = decodeAVX2URI
+	} else {
+		e.dec = decodeAVX2
 	}
+	e.declut = tab
 }
 
 func (enc Encoding) WithPadding(padding rune) *Encoding {
@@ -76,8 +93,8 @@ func (enc Encoding) Strict() *Encoding {
 }
 
 func (enc *Encoding) Encode(dst, src []byte) {
-	if len(src) >= minEncodeLen && cpu.X86.Has(cpu.AVX2) {
-		d, s := encodeAVX2(dst, src, enc.enc)
+	if len(src) >= minEncodeLen && enc.enc != nil {
+		d, s := enc.enc(dst, src, enc.enclut)
 		dst = dst[d:]
 		src = src[s:]
 	}
@@ -96,8 +113,8 @@ func (enc *Encoding) EncodedLen(n int) int {
 
 func (enc *Encoding) Decode(dst, src []byte) (n int, err error) {
 	var d, s int
-	if len(src) >= minDecodeLen && cpu.X86.Has(cpu.AVX2) {
-		d, s = decodeAVX2(dst, src, enc.dec)
+	if len(src) >= minDecodeLen && enc.dec != nil {
+		d, s = enc.dec(dst, src, enc.declut)
 		dst = dst[d:]
 		src = src[s:]
 	}

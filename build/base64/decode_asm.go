@@ -50,7 +50,7 @@ func main() {
 
 	TEXT("decodeAVX2URI", NOSPLIT, "func(dst, src []byte, lut [32]int8) (int, int)")
 	slash := VecBroadcast(U8('/'), YMM())
-	underscore := VecBroadcast(U8('/'), YMM())
+	underscore := VecBroadcast(U8('_'), YMM())
 	createDecode(Param("dst"), Param("src"), Param("lut"), func(m Mem, r VecVirtual) {
 		eq := YMM()
 		VMOVDQU(m, r)
