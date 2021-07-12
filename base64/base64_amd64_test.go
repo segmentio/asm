@@ -4,7 +4,6 @@ package base64
 
 import (
 	"fmt"
-	"math/rand"
 	"testing"
 
 	"github.com/segmentio/asm/internal/buffer"
@@ -17,13 +16,8 @@ func fillBuffers(b *buffer.Buffer, size int) map[string][]byte {
 	}
 
 	for _, buf := range bufs {
-		if true {
-			rand.Seed(0)
-			rand.Read(buf)
-		} else {
-			for i := 0; i < size; i++ {
-				buf[i] = (255 - byte(i&15)*16) - byte(i&255)/16
-			}
+		for i := 0; i < size; i++ {
+			buf[i] = (255 - byte(i&15)*16) - byte(i&255)/16
 		}
 	}
 
