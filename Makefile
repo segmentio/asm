@@ -19,5 +19,6 @@ $(dstdir)/%_amd64.s $(dstdir)/%_amd64.go: $(srcdir)/%_asm.go $(internal)
 		-pkg   $(notdir $(realpath $(dir $<))) \
 		-out   ../$(patsubst $(CURDIR)/%,%,$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.s,$<)) \
 		-stubs ../$(patsubst $(CURDIR)/%,%,$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.go,$<))
+	go fmt $(dstdir)/$(*)_amd64.go
 
 .PHONY: build
