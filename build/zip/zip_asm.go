@@ -20,21 +20,20 @@ func main() {
 	// 64bit uints so len * 8 from our original ptr address
 	idx := GP64()
 	XORQ(idx, idx)
-	xPtr := Mem{Base: Load(Param("x").Base(), GP64()), Index: idx, Scale: 1}
-	yPtr := Mem{Base: Load(Param("y").Base(), GP64()), Index: idx, Scale: 1}
+	xPtr := Mem{Base: Load(Param("x").Base(), GP64()), Index: idx, Scale: 8}
+	yPtr := Mem{Base: Load(Param("y").Base(), GP64()), Index: idx, Scale: 8}
 	len := Load(Param("x").Len(), GP64())
 	yLen := Load(Param("y").Len(), GP64())
 	// len = min(len(x), len(y))
 	CMPQ(yLen, len)
 	CMOVQLT(yLen, len)
-	SHLQ(Imm(3), len)
 
 	JumpUnlessFeature("x86_loop", cpu.AVX2)
 
 	Label("avx2_loop")
 	next := GP64()
 	MOVQ(idx, next)
-	ADDQ(Imm(unroll*16), next)
+	ADDQ(Imm(unroll*2), next)
 	CMPQ(next, len)
 	JAE(LabelRef("x86_loop"))
 
@@ -83,7 +82,7 @@ func main() {
 	MOVQ(yPtr, qword)
 	ADDQ(qword, xPtr)
 	// Increment ptrs and loop.
-	ADDQ(Imm(8), idx)
+	ADDQ(Imm(1), idx)
 	JMP(LabelRef("x86_loop"))
 
 	Label("return")
