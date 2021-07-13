@@ -3,61 +3,49 @@
 #include "textflag.h"
 
 // func sumUint64(x []uint64, y []uint64)
-// Requires: AVX, AVX2
+// Requires: AVX, AVX2, CMOV
 TEXT ·sumUint64(SB), NOSPLIT, $0-48
-	MOVQ x_base+0(FP), CX
-	MOVQ y_base+24(FP), DX
-	MOVQ x_len+8(FP), AX
-	MOVQ y_len+32(FP), BX
-	MOVQ CX, SI
-	MOVQ DX, DI
-	SHLQ $0x03, AX
-	ADDQ AX, SI
-	MOVQ BX, AX
-	SHLQ $0x03, AX
-	ADDQ AX, DI
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCC  x86_loop
+	XORQ    AX, AX
+	MOVQ    x_base+0(FP), CX
+	MOVQ    y_base+24(FP), DX
+	MOVQ    x_len+8(FP), BX
+	MOVQ    y_len+32(FP), SI
+	CMPQ    SI, BX
+	CMOVQLT SI, BX
+	SHLQ    $0x03, BX
+	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCC     x86_loop
 
 avx2_loop:
-	MOVQ    CX, AX
-	MOVQ    DX, BX
-	ADDQ    $0x80, AX
-	ADDQ    $0x80, BX
-	CMPQ    AX, SI
+	MOVQ    AX, SI
+	ADDQ    $0x80, SI
+	CMPQ    SI, BX
 	JAE     x86_loop
-	CMPQ    BX, DI
-	JAE     x86_loop
-	VMOVDQU (CX), Y0
-	VMOVDQU (DX), Y1
-	VMOVDQU 32(CX), Y2
-	VMOVDQU 32(DX), Y3
-	VMOVDQU 64(CX), Y4
-	VMOVDQU 64(DX), Y5
-	VMOVDQU 96(CX), Y6
-	VMOVDQU 96(DX), Y7
+	VMOVDQU (CX)(AX*1), Y0
+	VMOVDQU (DX)(AX*1), Y1
+	VMOVDQU 32(CX)(AX*1), Y2
+	VMOVDQU 32(DX)(AX*1), Y3
+	VMOVDQU 64(CX)(AX*1), Y4
+	VMOVDQU 64(DX)(AX*1), Y5
+	VMOVDQU 96(CX)(AX*1), Y6
+	VMOVDQU 96(DX)(AX*1), Y7
 	VPADDQ  Y0, Y1, Y0
 	VPADDQ  Y2, Y3, Y2
 	VPADDQ  Y4, Y5, Y4
 	VPADDQ  Y6, Y7, Y6
-	VMOVDQU Y0, (CX)
-	VMOVDQU Y2, 32(CX)
-	VMOVDQU Y4, 64(CX)
-	VMOVDQU Y6, 96(CX)
-	MOVQ    AX, CX
-	MOVQ    BX, DX
+	VMOVDQU Y0, (CX)(AX*1)
+	VMOVDQU Y2, 32(CX)(AX*1)
+	VMOVDQU Y4, 64(CX)(AX*1)
+	VMOVDQU Y6, 96(CX)(AX*1)
+	MOVQ    SI, AX
 	JMP     avx2_loop
 
 x86_loop:
-	CMPQ CX, SI
+	CMPQ AX, BX
 	JAE  return
-	CMPQ DX, DI
-	JAE  return
-	MOVQ (CX), AX
-	ADDQ (DX), AX
-	MOVQ AX, (CX)
-	ADDQ $0x08, CX
-	ADDQ $0x08, DX
+	MOVQ (DX)(AX*1), SI
+	ADDQ SI, (CX)(AX*1)
+	ADDQ $0x08, AX
 	JMP  x86_loop
 
 return:

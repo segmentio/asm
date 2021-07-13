@@ -16,37 +16,26 @@ const unroll = 8
 func main() {
 	TEXT("sumUint64", NOSPLIT, "func(x, y []uint64)")
 	Doc("Sum uint64s using avx2 instructions, results stored in x")
-	xPtr := Load(Param("x").Base(), GP64())
-	yPtr := Load(Param("y").Base(), GP64())
-	xLen := Load(Param("x").Len(), GP64())
-	yLen := Load(Param("y").Len(), GP64())
-	xEnd := GP64()
-	yEnd := GP64()
-	MOVQ(xPtr, xEnd)
-	MOVQ(yPtr, yEnd)
-
 	// Little math here to calculate the memory address of our last value
-	// 64bit uints so lex * 8 from our original ptr address
-	MOVQ(xLen, reg.RAX)
-	SHLQ(Imm(3), reg.RAX)
-	ADDQ(reg.RAX, xEnd)
-
-	MOVQ(yLen, reg.RAX)
-	SHLQ(Imm(3), reg.RAX)
-	ADDQ(reg.RAX, yEnd)
+	// 64bit uints so len * 8 from our original ptr address
+	idx := GP64()
+	XORQ(idx, idx)
+	xPtr := Mem{Base: Load(Param("x").Base(), GP64()), Index: idx, Scale: 1}
+	yPtr := Mem{Base: Load(Param("y").Base(), GP64()), Index: idx, Scale: 1}
+	len := Load(Param("x").Len(), GP64())
+	yLen := Load(Param("y").Len(), GP64())
+	// len = min(len(x), len(y))
+	CMPQ(yLen, len)
+	CMOVQLT(yLen, len)
+	SHLQ(Imm(3), len)
 
 	JumpUnlessFeature("x86_loop", cpu.AVX2)
 
 	Label("avx2_loop")
-	xNext := GP64()
-	yNext := GP64()
-	MOVQ(xPtr, xNext)
-	MOVQ(yPtr, yNext)
-	ADDQ(Imm(unroll*16), xNext)
-	ADDQ(Imm(unroll*16), yNext)
-	CMPQ(xNext, xEnd)
-	JAE(LabelRef("x86_loop"))
-	CMPQ(yNext, yEnd)
+	next := GP64()
+	MOVQ(idx, next)
+	ADDQ(Imm(unroll*16), next)
+	CMPQ(next, len)
 	JAE(LabelRef("x86_loop"))
 
 	// Create unroll num vector registers
@@ -66,8 +55,8 @@ func main() {
 	// on the pairs and the result is stored in even register (0,2,4...).
 	// Finally we copy the results back out to the slice pointed to by x
 	for offset, i := 0, 0; i < unroll/2; i++ {
-		VMOVDQU(Mem{Base: xPtr}.Offset(i*32), vectors[offset])
-		VMOVDQU(Mem{Base: yPtr}.Offset(i*32), vectors[offset+1])
+		VMOVDQU(xPtr.Offset(i*32), vectors[offset])
+		VMOVDQU(yPtr.Offset(i*32), vectors[offset+1])
 		offset += 2
 	}
 
@@ -77,29 +66,24 @@ func main() {
 	}
 
 	for offset, i := 0, 0; i < unroll/2; i++ {
-		VMOVDQU(vectors[offset], Mem{Base: xPtr}.Offset(i*32))
+		VMOVDQU(vectors[offset], xPtr.Offset(i*32))
 		offset += 2
 	}
 	// Increment ptrs and loop.
-	MOVQ(xNext, xPtr)
-	MOVQ(yNext, yPtr)
+	MOVQ(next, idx)
 	JMP(LabelRef("avx2_loop"))
 
 	// Here's we're just going to manually bump our pointers
 	// and do a the addition on the remaining integers (if any)
 	Label("x86_loop")
-	CMPQ(xPtr, xEnd)
-	JAE(LabelRef("return"))
-	CMPQ(yPtr, yEnd)
+	CMPQ(idx, len)
 	JAE(LabelRef("return"))
 
 	qword := GP64()
-	MOVQ(Mem{Base: xPtr}, qword)
-	ADDQ(Mem{Base: yPtr}, qword)
-	MOVQ(qword, Mem{Base: xPtr})
+	MOVQ(yPtr, qword)
+	ADDQ(qword, xPtr)
 	// Increment ptrs and loop.
-	ADDQ(Imm(8), xPtr)
-	ADDQ(Imm(8), yPtr)
+	ADDQ(Imm(8), idx)
 	JMP(LabelRef("x86_loop"))
 
 	Label("return")
