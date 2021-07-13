@@ -50,6 +50,7 @@ loop:
 done:
 	MOVQ CX, ret+64(FP)
 	MOVQ BX, ret1+72(FP)
+	VZEROUPPER
 	RET
 
 DATA b64_enc_load<>+0(SB)/8, $0x8000000000000000

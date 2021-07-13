@@ -134,5 +134,6 @@ func createDecode(pdst, psrc, plut Component, load func(m Mem, r VecVirtual)) {
 	Label("done")
 	Store(dst.Index, ReturnIndex(0))
 	Store(src.Index, ReturnIndex(1))
+	VZEROUPPER()
 	RET()
 }

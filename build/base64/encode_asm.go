@@ -98,6 +98,7 @@ func main() {
 	Label("done")
 	Store(dst.Index, ReturnIndex(0))
 	Store(src.Index, ReturnIndex(1))
+	VZEROUPPER()
 	RET()
 
 	Generate()

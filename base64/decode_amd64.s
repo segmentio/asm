@@ -77,6 +77,7 @@ loop:
 done:
 	MOVQ CX, ret+80(FP)
 	MOVQ BX, ret1+88(FP)
+	VZEROUPPER
 	RET
 
 // func decodeAVX2URI(dst []byte, src []byte, lut [32]int8) (int, int)
@@ -134,4 +135,5 @@ loop:
 done:
 	MOVQ CX, ret+80(FP)
 	MOVQ BX, ret1+88(FP)
+	VZEROUPPER
 	RET
