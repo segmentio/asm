@@ -1,4 +1,4 @@
-package zip
+package slices
 
 import _ "github.com/segmentio/asm/cpu"
 
