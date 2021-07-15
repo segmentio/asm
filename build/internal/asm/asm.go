@@ -26,6 +26,14 @@ func ConstBytes(name string, data []byte) operand.Mem {
 	return m
 }
 
+func ConstArray16(name string, elems ...uint16) operand.Mem {
+	data := make([]byte, 2*len(elems))
+	for i, elem := range elems {
+		binary.LittleEndian.PutUint16(data[i*2:], elem)
+	}
+	return ConstBytes(name, data)
+}
+
 func ConstArray32(name string, elems ...uint32) operand.Mem {
 	data := make([]byte, 4*len(elems))
 	for i, elem := range elems {
