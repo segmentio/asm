@@ -13,3 +13,7 @@ func sumUint32(x []uint32, y []uint32) {
 func sumUint16(x []uint16, y []uint16) {
 	sumUint16Generic(x, y)
 }
+
+func sumUint8(x []uint16, y []uint16) {
+	sumUint8Generic(x, y)
+}

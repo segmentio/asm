@@ -14,11 +14,11 @@ import (
 const unroll = 8
 
 type Processor struct {
-	xPtr Mem
-	yPtr Mem
-	len reg.Register
-	idx reg.Register
-	next reg.Register
+	xPtr    Mem
+	yPtr    Mem
+	len     reg.Register
+	idx     reg.Register
+	next    reg.Register
 	vectors [unroll]reg.VecVirtual
 }
 
