@@ -53,6 +53,7 @@ groups of functions sharing similar properties:
 | `github.com/segmentio/asm/cpu` | definition of the ABI used to detect CPU features |
 | `github.com/segmentio/asm/mem` | functions operating on byte arrays |
 | `github.com/segmentio/asm/qsort` | quick-sort implementations for arrays of fixed-size items |
+| `github.com/segmentio/asm/slices` | functions performing computations on pairs of slices |
 | `github.com/segmentio/asm/sortedset` | functions working on sorted arrays of fixed-size items |
 
 When no assembly version of a function is available for the target platform,

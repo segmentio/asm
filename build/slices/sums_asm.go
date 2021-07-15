@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/segmentio/asm/build/internal/x86"
@@ -13,15 +14,70 @@ import (
 
 const unroll = 8
 
+type Processor struct {
+	name string
+	typ string
+	scale uint8
+	avxOffset uint64
+	avxAdd func(mxy, xy, xy1 Op)
+	x86Mov func(imr, mr Op)
+	x86Add func(imr, amr Op)
+	x86Reg reg.GPVirtual
+}
+
 func main() {
-	TEXT("sumUint64", NOSPLIT, "func(x, y []uint64)")
-	Doc("Sum uint64s using avx2 instructions, results stored in x")
-	// Little math here to calculate the memory address of our last value
-	// 64bit uints so len * 8 from our original ptr address
+	generate(Processor{
+		name: "sumUint64",
+		typ: "uint64",
+		scale: 8,
+		avxOffset: 2,
+		avxAdd: VPADDQ,
+		x86Mov: MOVQ,
+		x86Add: ADDQ,
+		x86Reg: GP64(),
+	})
+
+	generate(Processor{
+		name: "sumUint32",
+		typ: "uint32",
+		scale : 4,
+		avxOffset: 4,
+		avxAdd: VPADDD,
+		x86Mov: MOVL,
+		x86Add: ADDL,
+		x86Reg: GP32(),
+	})
+
+	generate(Processor{
+		name: "sumUint16",
+		typ: "uint16",
+		scale: 2,
+		avxOffset: 8,
+		avxAdd: VPADDW,
+		x86Mov: MOVW,
+		x86Add: ADDW,
+		x86Reg: GP16(),
+	})
+
+	generate(Processor{
+		name: "sumUint8",
+		typ: "uint8",
+		scale: 1,
+		avxOffset: 16,
+		avxAdd: VPADDB,
+		x86Mov: MOVB,
+		x86Add: ADDB,
+		x86Reg: GP8(),
+	})
+}
+
+func generate(p Processor) {
+	TEXT(p.name, NOSPLIT, fmt.Sprintf("func(x, y []%s)", p.typ))
+	Doc(fmt.Sprintf("Sum %ss using avx2 instructions, results stored in x", p.typ))
 	idx := GP64()
 	XORQ(idx, idx)
-	xPtr := Mem{Base: Load(Param("x").Base(), GP64()), Index: idx, Scale: 8}
-	yPtr := Mem{Base: Load(Param("y").Base(), GP64()), Index: idx, Scale: 8}
+	xPtr := Mem{Base: Load(Param("x").Base(), GP64()), Index: idx, Scale: p.scale}
+	yPtr := Mem{Base: Load(Param("y").Base(), GP64()), Index: idx, Scale: p.scale}
 	len := Load(Param("x").Len(), GP64())
 	yLen := Load(Param("y").Len(), GP64())
 	// len = min(len(x), len(y))
@@ -33,7 +89,7 @@ func main() {
 	Label("avx2_loop")
 	next := GP64()
 	MOVQ(idx, next)
-	ADDQ(Imm(unroll*2), next)
+	ADDQ(Imm(unroll*p.avxOffset), next)
 	CMPQ(next, len)
 	JAE(LabelRef("x86_loop"))
 
@@ -42,9 +98,9 @@ func main() {
 	for i := 0; i < unroll; i++ {
 		vectors[i] = YMM()
 	}
-
 	// So here essentially what we're doing is populating pairs
-	// of vector registers with 4, 64 bit uints, like...
+	// of vector registers with 256 bits of integer data, so as an example
+	// for uint64s, it would look like...
 	// YMM0 [ x0, x1, x2, x3 ]
 	// YMM1 [ y0, y1, y2, y3 ]
 	// ...
@@ -59,8 +115,9 @@ func main() {
 		offset += 2
 	}
 
+	// AVX intrinsics to sum 64 bit integers/quad words
 	for offset, i := 0, 0; i < unroll/2; i++ {
-		VPADDQ(vectors[offset], vectors[offset+1], vectors[offset])
+		p.avxAdd(vectors[offset], vectors[offset+1], vectors[offset])
 		offset += 2
 	}
 
@@ -78,14 +135,16 @@ func main() {
 	CMPQ(idx, len)
 	JAE(LabelRef("return"))
 
-	qword := GP64()
-	MOVQ(yPtr, qword)
-	ADDQ(qword, xPtr)
+	// Delegate to specific computation
+	//calc()
+	p.x86Mov(yPtr, p.x86Reg)
+	p.x86Add(p.x86Reg, xPtr)
+
 	// Increment ptrs and loop.
 	ADDQ(Imm(1), idx)
 	JMP(LabelRef("x86_loop"))
 
 	Label("return")
 	RET()
-	Generate()
+
 }
