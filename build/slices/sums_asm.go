@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/segmentio/asm/build/internal/x86"
@@ -14,133 +15,69 @@ import (
 const unroll = 8
 
 type Processor struct {
-	xPtr    Mem
-	yPtr    Mem
-	len     reg.Register
-	idx     reg.Register
-	next    reg.Register
-	vectors [unroll]reg.VecVirtual
+	name string
+	typ string
+	scale uint8
+	avxOffset uint64
+	avxAdd func(mxy, xy, xy1 Op)
+	x86Mov func(imr, mr Op)
+	x86Add func(imr, amr Op)
+	x86Reg reg.GPVirtual
 }
 
 func main() {
-	generateSumUint64()
-	generateSumUint32()
-	generateSumUint16()
-	generateSumUint8()
-	Generate()
-}
+	generate(Processor{
+		name: "sumUint64",
+		typ: "uint64",
+		scale: 8,
+		avxOffset: 2,
+		avxAdd: VPADDQ,
+		x86Mov: MOVQ,
+		x86Add: ADDQ,
+		x86Reg: GP64(),
+	})
 
-func generateSumUint64() {
-	TEXT("sumUint64", NOSPLIT, "func(x, y []uint64)")
-	Doc("Sum uint64s using avx2 instructions, results stored in x")
-	p := genAvxTop(8, 2)
+	generate(Processor{
+		name: "sumUint32",
+		typ: "uint32",
+		scale : 4,
+		avxOffset: 4,
+		avxAdd: VPADDD,
+		x86Mov: MOVL,
+		x86Add: ADDL,
+		x86Reg: GP32(),
+	})
 
-	// AVX intrinsics to sum 64 bit integers/quad words
-	for offset, i := 0, 0; i < unroll/2; i++ {
-		VPADDQ(p.vectors[offset], p.vectors[offset+1], p.vectors[offset])
-		offset += 2
-	}
+	generate(Processor{
+		name: "sumUint16",
+		typ: "uint16",
+		scale: 2,
+		avxOffset: 8,
+		avxAdd: VPADDW,
+		x86Mov: MOVW,
+		x86Add: ADDW,
+		x86Reg: GP16(),
+	})
 
-	genAVXBottom(p)
-	genX86Loop(p, func() {
-		qword := GP64()
-		MOVQ(p.yPtr, qword)
-		ADDQ(qword, p.xPtr)
+	generate(Processor{
+		name: "sumUint8",
+		typ: "uint8",
+		scale: 1,
+		avxOffset: 16,
+		avxAdd: VPADDB,
+		x86Mov: MOVB,
+		x86Add: ADDB,
+		x86Reg: GP8(),
 	})
 }
 
-func generateSumUint32() {
-	TEXT("sumUint32", NOSPLIT, "func(x, y []uint32)")
-	Doc("Sum uint32s using avx2 instructions, results stored in x")
-	p := genAvxTop(4, 4)
-
-	// AVX intrinsics to sum 32 bit integers/double words
-	for offset, i := 0, 0; i < unroll/2; i++ {
-		VPADDD(p.vectors[offset], p.vectors[offset+1], p.vectors[offset])
-		offset += 2
-	}
-
-	genAVXBottom(p)
-	genX86Loop(p, func() {
-		dword := GP32()
-		MOVL(p.yPtr, dword)
-		ADDL(dword, p.xPtr)
-	})
-}
-
-func generateSumUint16() {
-	TEXT("sumUint16", NOSPLIT, "func(x, y []uint16)")
-	Doc("Sum uint16s using avx2 instructions, results stored in x")
-	p := genAvxTop(2, 8)
-
-	// AVX intrinsics to sum 32 bit integers/double words
-	for offset, i := 0, 0; i < unroll/2; i++ {
-		VPADDW(p.vectors[offset], p.vectors[offset+1], p.vectors[offset])
-		offset += 2
-	}
-
-	genAVXBottom(p)
-	genX86Loop(p, func() {
-		word := GP16()
-		MOVW(p.yPtr, word)
-		ADDW(word, p.xPtr)
-	})
-}
-
-func generateSumUint8() {
-	TEXT("sumUint8", NOSPLIT, "func(x, y []uint8)")
-	Doc("Sum uint8s using avx2 instructions, results stored in x")
-	p := genAvxTop(1, 16)
-
-	// AVX intrinsics to sum 32 bit integers/double words
-	for offset, i := 0, 0; i < unroll/2; i++ {
-		VPADDB(p.vectors[offset], p.vectors[offset+1], p.vectors[offset])
-		offset += 2
-	}
-
-	genAVXBottom(p)
-	genX86Loop(p, func() {
-		byter := GP8()
-		MOVB(p.yPtr, byter)
-		ADDB(byter, p.xPtr)
-	})
-}
-
-func genAVXBottom(p *Processor) {
-	for offset, i := 0, 0; i < unroll/2; i++ {
-		VMOVDQU(p.vectors[offset], p.xPtr.Offset(i*32))
-		offset += 2
-	}
-	// Increment ptrs and loop.
-	MOVQ(p.next, p.idx)
-	JMP(LabelRef("avx2_loop"))
-}
-
-func genX86Loop(p *Processor, calc func()) {
-	// Here's we're just going to manually bump our pointers
-	// and do a the addition on the remaining integers (if any)
-	Label("x86_loop")
-	CMPQ(p.idx, p.len)
-	JAE(LabelRef("return"))
-
-	// Delegate to specific computation
-	calc()
-
-	// Increment ptrs and loop.
-	ADDQ(Imm(1), p.idx)
-	JMP(LabelRef("x86_loop"))
-
-	Label("return")
-	RET()
-}
-
-func genAvxTop(scale uint8, avxOffset uint64) *Processor {
-	// Little math here to calculate the memory address of our last value
-	// 64bit uints so len * 8 from our original ptr address
+func generate(p Processor) {
+	TEXT(p.name, NOSPLIT, fmt.Sprintf("func(x, y []%s)", p.typ))
+	Doc(fmt.Sprintf("Sum %ss using avx2 instructions, results stored in x", p.typ))
 	idx := GP64()
 	XORQ(idx, idx)
-	xPtr := Mem{Base: Load(Param("x").Base(), GP64()), Index: idx, Scale: scale}
-	yPtr := Mem{Base: Load(Param("y").Base(), GP64()), Index: idx, Scale: scale}
+	xPtr := Mem{Base: Load(Param("x").Base(), GP64()), Index: idx, Scale: p.scale}
+	yPtr := Mem{Base: Load(Param("y").Base(), GP64()), Index: idx, Scale: p.scale}
 	len := Load(Param("x").Len(), GP64())
 	yLen := Load(Param("y").Len(), GP64())
 	// len = min(len(x), len(y))
@@ -152,7 +89,7 @@ func genAvxTop(scale uint8, avxOffset uint64) *Processor {
 	Label("avx2_loop")
 	next := GP64()
 	MOVQ(idx, next)
-	ADDQ(Imm(unroll*avxOffset), next)
+	ADDQ(Imm(unroll*p.avxOffset), next)
 	CMPQ(next, len)
 	JAE(LabelRef("x86_loop"))
 
@@ -178,12 +115,36 @@ func genAvxTop(scale uint8, avxOffset uint64) *Processor {
 		offset += 2
 	}
 
-	return &Processor{
-		xPtr:    xPtr,
-		yPtr:    yPtr,
-		len:     len,
-		idx:     idx,
-		next:    next,
-		vectors: vectors,
+	// AVX intrinsics to sum 64 bit integers/quad words
+	for offset, i := 0, 0; i < unroll/2; i++ {
+		p.avxAdd(vectors[offset], vectors[offset+1], vectors[offset])
+		offset += 2
 	}
+
+	for offset, i := 0, 0; i < unroll/2; i++ {
+		VMOVDQU(vectors[offset], xPtr.Offset(i*32))
+		offset += 2
+	}
+	// Increment ptrs and loop.
+	MOVQ(next, idx)
+	JMP(LabelRef("avx2_loop"))
+
+	// Here's we're just going to manually bump our pointers
+	// and do a the addition on the remaining integers (if any)
+	Label("x86_loop")
+	CMPQ(idx, len)
+	JAE(LabelRef("return"))
+
+	// Delegate to specific computation
+	//calc()
+	p.x86Mov(yPtr, p.x86Reg)
+	p.x86Add(p.x86Reg, xPtr)
+
+	// Increment ptrs and loop.
+	ADDQ(Imm(1), idx)
+	JMP(LabelRef("x86_loop"))
+
+	Label("return")
+	RET()
+
 }
