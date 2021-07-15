@@ -2,6 +2,54 @@
 
 #include "textflag.h"
 
+// func sumUint32(x []uint32, y []uint32)
+// Requires: AVX, AVX2, CMOV
+TEXT ·sumUint32(SB), NOSPLIT, $0-48
+	XORQ    AX, AX
+	MOVQ    x_base+0(FP), CX
+	MOVQ    y_base+24(FP), DX
+	MOVQ    x_len+8(FP), BX
+	MOVQ    y_len+32(FP), SI
+	CMPQ    SI, BX
+	CMOVQLT SI, BX
+	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCC     x86_loop
+
+avx2_loop:
+	MOVQ    AX, SI
+	ADDQ    $0x20, SI
+	CMPQ    SI, BX
+	JAE     x86_loop
+	VMOVDQU (CX)(AX*4), Y0
+	VMOVDQU (DX)(AX*4), Y1
+	VMOVDQU 32(CX)(AX*4), Y2
+	VMOVDQU 32(DX)(AX*4), Y3
+	VMOVDQU 64(CX)(AX*4), Y4
+	VMOVDQU 64(DX)(AX*4), Y5
+	VMOVDQU 96(CX)(AX*4), Y6
+	VMOVDQU 96(DX)(AX*4), Y7
+	VPADDD  Y0, Y1, Y0
+	VPADDD  Y2, Y3, Y2
+	VPADDD  Y4, Y5, Y4
+	VPADDD  Y6, Y7, Y6
+	VMOVDQU Y0, (CX)(AX*4)
+	VMOVDQU Y2, 32(CX)(AX*4)
+	VMOVDQU Y4, 64(CX)(AX*4)
+	VMOVDQU Y6, 96(CX)(AX*4)
+	MOVQ    SI, AX
+	JMP     avx2_loop
+
+x86_loop:
+	CMPQ AX, BX
+	JAE  return
+	MOVL (DX)(AX*4), SI
+	ADDL SI, (CX)(AX*4)
+	ADDQ $0x01, AX
+	JMP  x86_loop
+
+return:
+	RET
+
 // func sumUint64(x []uint64, y []uint64)
 // Requires: AVX, AVX2, CMOV
 TEXT ·sumUint64(SB), NOSPLIT, $0-48

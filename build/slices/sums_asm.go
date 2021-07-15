@@ -13,15 +13,96 @@ import (
 
 const unroll = 8
 
+type Processor struct {
+	xPtr Mem
+	yPtr Mem
+	len reg.Register
+	idx reg.Register
+	next reg.Register
+	vectors [unroll]reg.VecVirtual
+}
+
 func main() {
+	generateSumUint32()
+	generateSumUint64()
+	Generate()
+}
+
+func generateSumUint64() {
 	TEXT("sumUint64", NOSPLIT, "func(x, y []uint64)")
 	Doc("Sum uint64s using avx2 instructions, results stored in x")
 	// Little math here to calculate the memory address of our last value
 	// 64bit uints so len * 8 from our original ptr address
+	p := genAvxTop(8, 2)
+
+	// AVX intrinsics to sum 64 bit integers/quad words
+	for offset, i := 0, 0; i < unroll/2; i++ {
+		VPADDQ(p.vectors[offset], p.vectors[offset+1], p.vectors[offset])
+		offset += 2
+	}
+
+	genAVXBottom(p)
+	genX86Loop(p, func() {
+		qword := GP64()
+		MOVQ(p.yPtr, qword)
+		ADDQ(qword, p.xPtr)
+	})
+}
+
+func generateSumUint32() {
+	TEXT("sumUint32", NOSPLIT, "func(x, y []uint32)")
+	Doc("Sum uint32s using avx2 instructions, results stored in x")
+	p := genAvxTop(4, 4)
+
+	// AVX intrinsics to sum 32 bit integers/double words
+	for offset, i := 0, 0; i < unroll/2; i++ {
+		VPADDD(p.vectors[offset], p.vectors[offset+1], p.vectors[offset])
+		offset += 2
+	}
+
+	genAVXBottom(p)
+	genX86Loop(p, func() {
+		dword := GP32()
+		MOVL(p.yPtr, dword)
+		ADDL(dword, p.xPtr)
+	})
+}
+
+func genAVXBottom(p *Processor) {
+	for offset, i := 0, 0; i < unroll/2; i++ {
+		VMOVDQU(p.vectors[offset], p.xPtr.Offset(i*32))
+		offset += 2
+	}
+	// Increment ptrs and loop.
+	MOVQ(p.next, p.idx)
+	JMP(LabelRef("avx2_loop"))
+}
+
+func genX86Loop(p *Processor, calc func()) {
+	// Here's we're just going to manually bump our pointers
+	// and do a the addition on the remaining integers (if any)
+	Label("x86_loop")
+	CMPQ(p.idx, p.len)
+	JAE(LabelRef("return"))
+
+	// Delegate to specific computation
+	calc()
+
+	// Increment ptrs and loop.
+	ADDQ(Imm(1), p.idx)
+	JMP(LabelRef("x86_loop"))
+
+	Label("return")
+	RET()
+}
+
+func genAvxTop(scale uint8, avxOffset uint64) *Processor {
+	// Little math here to calculate the memory address of our last value
+	// 64bit uints so len * 8 from our original ptr address
 	idx := GP64()
 	XORQ(idx, idx)
-	xPtr := Mem{Base: Load(Param("x").Base(), GP64()), Index: idx, Scale: 8}
-	yPtr := Mem{Base: Load(Param("y").Base(), GP64()), Index: idx, Scale: 8}
+	xPtr := Mem{Base: Load(Param("x").Base(), GP64()), Index: idx, Scale: scale}
+	yPtr := Mem{Base: Load(Param("y").Base(), GP64()), Index: idx, Scale: scale}
 	len := Load(Param("x").Len(), GP64())
 	yLen := Load(Param("y").Len(), GP64())
 	// len = min(len(x), len(y))
@@ -33,7 +114,7 @@ func main() {
 	Label("avx2_loop")
 	next := GP64()
 	MOVQ(idx, next)
-	ADDQ(Imm(unroll*2), next)
+	ADDQ(Imm(unroll*avxOffset), next)
 	CMPQ(next, len)
 	JAE(LabelRef("x86_loop"))
 
@@ -42,7 +123,6 @@ func main() {
 	for i := 0; i < unroll; i++ {
 		vectors[i] = YMM()
 	}
-
 	// So here essentially what we're doing is populating pairs
 	// of vector registers with 4, 64 bit uints, like...
 	// YMM0 [ x0, x1, x2, x3 ]
@@ -59,33 +139,12 @@ func main() {
 		offset += 2
 	}
 
-	for offset, i := 0, 0; i < unroll/2; i++ {
-		VPADDQ(vectors[offset], vectors[offset+1], vectors[offset])
-		offset += 2
+	return &Processor{
+		xPtr:    xPtr,
+		yPtr:    yPtr,
+		len:     len,
+		idx:     idx,
+		next:    next,
+		vectors: vectors,
 	}
-
-	for offset, i := 0, 0; i < unroll/2; i++ {
-		VMOVDQU(vectors[offset], xPtr.Offset(i*32))
-		offset += 2
-	}
-	// Increment ptrs and loop.
-	MOVQ(next, idx)
-	JMP(LabelRef("avx2_loop"))
-
-	// Here's we're just going to manually bump our pointers
-	// and do a the addition on the remaining integers (if any)
-	Label("x86_loop")
-	CMPQ(idx, len)
-	JAE(LabelRef("return"))
-
-	qword := GP64()
-	MOVQ(yPtr, qword)
-	ADDQ(qword, xPtr)
-	// Increment ptrs and loop.
-	ADDQ(Imm(1), idx)
-	JMP(LabelRef("x86_loop"))
-
-	Label("return")
-	RET()
-	Generate()
 }

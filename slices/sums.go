@@ -16,3 +16,18 @@ func sumUint64Generic(x, y []uint64) {
 		x[i] = x[i] + y[i]
 	}
 }
+
+// SumUint64 sums pairs of by index from x and y, similar to python's zip routine.
+// If available AVX instructions will be used to operate on many uint64s simultaneously.
+//
+// Results are returned in the x slice and y is left unaltered. If x and y differ in size
+// only len(x) elements will be processed.
+func SumUint32(x []uint32, y []uint32) {
+	sumUint32(x, y)
+}
+
+func sumUint32Generic(x, y []uint32) {
+	for i := 0; i < len(x) && i < len(y); i++ {
+		x[i] = x[i] + y[i]
+	}
+}

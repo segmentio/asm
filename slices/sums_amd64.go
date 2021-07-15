@@ -2,5 +2,8 @@
 
 package slices
 
+// Sum uint32s using avx2 instructions, results stored in x
+func sumUint32(x []uint32, y []uint32)
+
 // Sum uint64s using avx2 instructions, results stored in x
 func sumUint64(x []uint64, y []uint64)
