@@ -124,7 +124,8 @@ func genAvxTop(scale uint8, avxOffset uint64) *Processor {
 		vectors[i] = YMM()
 	}
 	// So here essentially what we're doing is populating pairs
-	// of vector registers with 4, 64 bit uints, like...
+	// of vector registers with 256 bits of integer data, so as an example
+	// for uint64s, it would look like...
 	// YMM0 [ x0, x1, x2, x3 ]
 	// YMM1 [ y0, y1, y2, y3 ]
 	// ...
