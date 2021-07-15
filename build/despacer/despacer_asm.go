@@ -24,7 +24,8 @@ func main() {
 	next := GP64()
 	MOVQ(idx, next)
 	ahead := GP64()
-	MOVQ(U64(256), ahead)
+	Comment("just created ahead")
+	MOVQ(U64(32), ahead)
 	ADDQ(ahead, next)
 	CMPQ(next, len)
 	JAE(LabelRef("x86_loop"))
@@ -42,24 +43,18 @@ func main() {
 	VPOR(ycarriages, results, results)
 	zero := YMM()
 	VPOR(zero, zero, zero)
-	VPTEST(results, zero)
-	// Increment ptrs and loop.
-	MOVQ(next, idx)
-	JCC(LabelRef("avx2_loop"))
-	//__m256i x = _mm256_loadu_si256((const __m256i *)(bytes + i));
-	//// we do it the naive way, could be smarter?
-	//__m256i xspaces = _mm256_cmpeq_epi8(x, spaces);
-	//__m256i xnewline = _mm256_cmpeq_epi8(x, newline);
-	//__m256i xcarriage = _mm256_cmpeq_epi8(x, carriage);
-	//__m256i anywhite =
-	//	_mm256_or_si256(_mm256_or_si256(xspaces, xnewline), xcarriage);
-	//if (_mm256_testz_si256(anywhite, anywhite) == 1) { // no white space
-	//	_mm256_storeu_si256((__m256i *)(bytes+pos), x);
-	//	pos += 32;
-	//}
+	VPTEST(results, results)
+	JNZ(LabelRef("remove_space"))
 	// Increment ptrs and loop.
 	MOVQ(next, idx)
 	JMP(LabelRef("avx2_loop"))
+
+	// Increment ptrs and loop.
+	Label("remove_space")
+	swapIdx := GP64()
+	MOVQ(next, swapIdx)
+	CMPQ(last, ahead)
+	//CMOVQLT(yLen, len)
 
 	Label("x86_loop")
 	// Do something

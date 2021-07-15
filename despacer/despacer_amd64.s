@@ -19,10 +19,10 @@ TEXT ·Despace(SB), NOSPLIT, $0-24
 	VPBROADCASTB X2, Y2
 
 avx2_loop:
-	MOVQ     DX, BX
-	MOVQ     $0x0000000000000100, DX
-	ADDQ     DX, BX
-	CMPQ     BX, CX
+	// just created ahead
+	MOVQ     $0x0000000000000020, BX
+	ADDQ     BX, DX
+	CMPQ     DX, CX
 	JAE      x86_loop
 	VLDDQU   (AX), Y3
 	VPCMPEQB Y3, Y0, Y4
@@ -31,12 +31,11 @@ avx2_loop:
 	VPOR     Y4, Y5, Y4
 	VPOR     Y3, Y4, Y4
 	VPOR     Y6, Y6, Y6
-	VPTEST   Y4, Y6
-	MOVQ     BX, DX
-	JCC      avx2_loop
-	MOVQ     BX, DX
+	VPTEST   Y4, Y4
+	JNZ      remove_space
 	JMP      avx2_loop
 
+remove_space:
 x86_loop:
 	JAE return
 
