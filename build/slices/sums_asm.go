@@ -23,16 +23,16 @@ type Processor struct {
 }
 
 func main() {
-	generateSumUint32()
 	generateSumUint64()
+	generateSumUint32()
+	generateSumUint16()
+	generateSumUint8()
 	Generate()
 }
 
 func generateSumUint64() {
 	TEXT("sumUint64", NOSPLIT, "func(x, y []uint64)")
 	Doc("Sum uint64s using avx2 instructions, results stored in x")
-	// Little math here to calculate the memory address of our last value
-	// 64bit uints so len * 8 from our original ptr address
 	p := genAvxTop(8, 2)
 
 	// AVX intrinsics to sum 64 bit integers/quad words
@@ -65,6 +65,44 @@ func generateSumUint32() {
 		dword := GP32()
 		MOVL(p.yPtr, dword)
 		ADDL(dword, p.xPtr)
+	})
+}
+
+func generateSumUint16() {
+	TEXT("sumUint16", NOSPLIT, "func(x, y []uint16)")
+	Doc("Sum uint16s using avx2 instructions, results stored in x")
+	p := genAvxTop(2, 8)
+
+	// AVX intrinsics to sum 32 bit integers/double words
+	for offset, i := 0, 0; i < unroll/2; i++ {
+		VPADDW(p.vectors[offset], p.vectors[offset+1], p.vectors[offset])
+		offset += 2
+	}
+
+	genAVXBottom(p)
+	genX86Loop(p, func() {
+		word := GP16()
+		MOVW(p.yPtr, word)
+		ADDW(word, p.xPtr)
+	})
+}
+
+func generateSumUint8() {
+	TEXT("sumUint8", NOSPLIT, "func(x, y []uint8)")
+	Doc("Sum uint8s using avx2 instructions, results stored in x")
+	p := genAvxTop(1, 16)
+
+	// AVX intrinsics to sum 32 bit integers/double words
+	for offset, i := 0, 0; i < unroll/2; i++ {
+		VPADDB(p.vectors[offset], p.vectors[offset+1], p.vectors[offset])
+		offset += 2
+	}
+
+	genAVXBottom(p)
+	genX86Loop(p, func() {
+		byter := GP8()
+		MOVB(p.yPtr, byter)
+		ADDB(byter, p.xPtr)
 	})
 }
 

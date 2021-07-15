@@ -2,6 +2,54 @@
 
 #include "textflag.h"
 
+// func sumUint64(x []uint64, y []uint64)
+// Requires: AVX, AVX2, CMOV
+TEXT ·sumUint64(SB), NOSPLIT, $0-48
+	XORQ    AX, AX
+	MOVQ    x_base+0(FP), CX
+	MOVQ    y_base+24(FP), DX
+	MOVQ    x_len+8(FP), BX
+	MOVQ    y_len+32(FP), SI
+	CMPQ    SI, BX
+	CMOVQLT SI, BX
+	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCC     x86_loop
+
+avx2_loop:
+	MOVQ    AX, SI
+	ADDQ    $0x10, SI
+	CMPQ    SI, BX
+	JAE     x86_loop
+	VMOVDQU (CX)(AX*8), Y0
+	VMOVDQU (DX)(AX*8), Y1
+	VMOVDQU 32(CX)(AX*8), Y2
+	VMOVDQU 32(DX)(AX*8), Y3
+	VMOVDQU 64(CX)(AX*8), Y4
+	VMOVDQU 64(DX)(AX*8), Y5
+	VMOVDQU 96(CX)(AX*8), Y6
+	VMOVDQU 96(DX)(AX*8), Y7
+	VPADDQ  Y0, Y1, Y0
+	VPADDQ  Y2, Y3, Y2
+	VPADDQ  Y4, Y5, Y4
+	VPADDQ  Y6, Y7, Y6
+	VMOVDQU Y0, (CX)(AX*8)
+	VMOVDQU Y2, 32(CX)(AX*8)
+	VMOVDQU Y4, 64(CX)(AX*8)
+	VMOVDQU Y6, 96(CX)(AX*8)
+	MOVQ    SI, AX
+	JMP     avx2_loop
+
+x86_loop:
+	CMPQ AX, BX
+	JAE  return
+	MOVQ (DX)(AX*8), SI
+	ADDQ SI, (CX)(AX*8)
+	ADDQ $0x01, AX
+	JMP  x86_loop
+
+return:
+	RET
+
 // func sumUint32(x []uint32, y []uint32)
 // Requires: AVX, AVX2, CMOV
 TEXT ·sumUint32(SB), NOSPLIT, $0-48
@@ -50,9 +98,9 @@ x86_loop:
 return:
 	RET
 
-// func sumUint64(x []uint64, y []uint64)
+// func sumUint16(x []uint16, y []uint16)
 // Requires: AVX, AVX2, CMOV
-TEXT ·sumUint64(SB), NOSPLIT, $0-48
+TEXT ·sumUint16(SB), NOSPLIT, $0-48
 	XORQ    AX, AX
 	MOVQ    x_base+0(FP), CX
 	MOVQ    y_base+24(FP), DX
@@ -65,33 +113,81 @@ TEXT ·sumUint64(SB), NOSPLIT, $0-48
 
 avx2_loop:
 	MOVQ    AX, SI
-	ADDQ    $0x10, SI
+	ADDQ    $0x40, SI
 	CMPQ    SI, BX
 	JAE     x86_loop
-	VMOVDQU (CX)(AX*8), Y0
-	VMOVDQU (DX)(AX*8), Y1
-	VMOVDQU 32(CX)(AX*8), Y2
-	VMOVDQU 32(DX)(AX*8), Y3
-	VMOVDQU 64(CX)(AX*8), Y4
-	VMOVDQU 64(DX)(AX*8), Y5
-	VMOVDQU 96(CX)(AX*8), Y6
-	VMOVDQU 96(DX)(AX*8), Y7
-	VPADDQ  Y0, Y1, Y0
-	VPADDQ  Y2, Y3, Y2
-	VPADDQ  Y4, Y5, Y4
-	VPADDQ  Y6, Y7, Y6
-	VMOVDQU Y0, (CX)(AX*8)
-	VMOVDQU Y2, 32(CX)(AX*8)
-	VMOVDQU Y4, 64(CX)(AX*8)
-	VMOVDQU Y6, 96(CX)(AX*8)
+	VMOVDQU (CX)(AX*2), Y0
+	VMOVDQU (DX)(AX*2), Y1
+	VMOVDQU 32(CX)(AX*2), Y2
+	VMOVDQU 32(DX)(AX*2), Y3
+	VMOVDQU 64(CX)(AX*2), Y4
+	VMOVDQU 64(DX)(AX*2), Y5
+	VMOVDQU 96(CX)(AX*2), Y6
+	VMOVDQU 96(DX)(AX*2), Y7
+	VPADDW  Y0, Y1, Y0
+	VPADDW  Y2, Y3, Y2
+	VPADDW  Y4, Y5, Y4
+	VPADDW  Y6, Y7, Y6
+	VMOVDQU Y0, (CX)(AX*2)
+	VMOVDQU Y2, 32(CX)(AX*2)
+	VMOVDQU Y4, 64(CX)(AX*2)
+	VMOVDQU Y6, 96(CX)(AX*2)
 	MOVQ    SI, AX
 	JMP     avx2_loop
 
 x86_loop:
 	CMPQ AX, BX
 	JAE  return
-	MOVQ (DX)(AX*8), SI
-	ADDQ SI, (CX)(AX*8)
+	MOVW (DX)(AX*2), SI
+	ADDW SI, (CX)(AX*2)
+	ADDQ $0x01, AX
+	JMP  x86_loop
+
+return:
+	RET
+
+// func sumUint8(x []uint8, y []uint8)
+// Requires: AVX, AVX2, CMOV
+TEXT ·sumUint8(SB), NOSPLIT, $0-48
+	XORQ    AX, AX
+	MOVQ    x_base+0(FP), CX
+	MOVQ    y_base+24(FP), DX
+	MOVQ    x_len+8(FP), BX
+	MOVQ    y_len+32(FP), SI
+	CMPQ    SI, BX
+	CMOVQLT SI, BX
+	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	JCC     x86_loop
+
+avx2_loop:
+	MOVQ    AX, SI
+	ADDQ    $0x80, SI
+	CMPQ    SI, BX
+	JAE     x86_loop
+	VMOVDQU (CX)(AX*1), Y0
+	VMOVDQU (DX)(AX*1), Y1
+	VMOVDQU 32(CX)(AX*1), Y2
+	VMOVDQU 32(DX)(AX*1), Y3
+	VMOVDQU 64(CX)(AX*1), Y4
+	VMOVDQU 64(DX)(AX*1), Y5
+	VMOVDQU 96(CX)(AX*1), Y6
+	VMOVDQU 96(DX)(AX*1), Y7
+	VPADDB  Y0, Y1, Y0
+	VPADDB  Y2, Y3, Y2
+	VPADDB  Y4, Y5, Y4
+	VPADDB  Y6, Y7, Y6
+	VMOVDQU Y0, (CX)(AX*1)
+	VMOVDQU Y2, 32(CX)(AX*1)
+	VMOVDQU Y4, 64(CX)(AX*1)
+	VMOVDQU Y6, 96(CX)(AX*1)
+	MOVQ    SI, AX
+	JMP     avx2_loop
+
+x86_loop:
+	CMPQ AX, BX
+	JAE  return
+	MOVB (DX)(AX*1), SI
+	ADDB SI, (CX)(AX*1)
 	ADDQ $0x01, AX
 	JMP  x86_loop
 
