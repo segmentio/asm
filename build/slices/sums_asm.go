@@ -69,6 +69,8 @@ func main() {
 		x86Add: ADDB,
 		x86Reg: GP8(),
 	})
+
+	Generate()
 }
 
 func generate(p Processor) {
@@ -146,5 +148,4 @@ func generate(p Processor) {
 
 	Label("return")
 	RET()
-
 }
