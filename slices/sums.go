@@ -33,7 +33,7 @@ func sumUint32Generic(x, y []uint32) {
 }
 
 // SumUint16 sums pairs of by index from x and y, similar to python's zip routine.
-// If available AVX instructions will be used to operate on many uint64s simultaneously.
+// If available AVX instructions will be used to operate on many uint16s simultaneously.
 //
 // Results are returned in the x slice and y is left unaltered. If x and y differ in size
 // only len(x) elements will be processed.
@@ -47,8 +47,8 @@ func sumUint16Generic(x, y []uint16) {
 	}
 }
 
-// SumUint16 sums pairs of by index from x and y, similar to python's zip routine.
-// If available AVX instructions will be used to operate on many uint64s simultaneously.
+// SumUint8 sums pairs of by index from x and y, similar to python's zip routine.
+// If available AVX instructions will be used to operate on many uint8s simultaneously.
 //
 // Results are returned in the x slice and y is left unaltered. If x and y differ in size
 // only len(x) elements will be processed.
