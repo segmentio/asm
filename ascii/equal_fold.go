@@ -17,14 +17,14 @@ func HasPrefixFold(s, prefix []byte) bool {
 	return len(s) >= len(prefix) && EqualFold(s[:len(prefix)], prefix)
 }
 
-func HasSuffixFold(s, prefix []byte) bool {
-	return len(s) >= len(prefix) && EqualFold(s[len(s)-len(prefix):], prefix)
+func HasSuffixFold(s, suffix []byte) bool {
+	return len(s) >= len(suffix) && EqualFold(s[len(s)-len(suffix):], suffix)
 }
 
 func HasPrefixFoldString(s, prefix string) bool {
 	return len(s) >= len(prefix) && EqualFoldString(s[:len(prefix)], prefix)
 }
 
-func HasSuffixFoldString(s, prefix string) bool {
-	return len(s) >= len(prefix) && EqualFoldString(s[len(s)-len(prefix):], prefix)
+func HasSuffixFoldString(s, suffix string) bool {
+	return len(s) >= len(suffix) && EqualFoldString(s[len(s)-len(suffix):], suffix)
 }
