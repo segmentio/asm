@@ -1,4 +1,4 @@
-# asm ![build status](https://github.com/segmentio/asm/actions/workflows/go.yml/badge.svg)
+# asm ![build status](https://github.com/segmentio/asm/actions/workflows/go.yml/badge.svg) [![GoDoc](https://godoc.org/github.com/segmentio/asm?status.svg)](https://godoc.org/github.com/segmentio/asm)
 
 Go library providing algorithms optimized to leverage the characteristics of
 modern CPUs.
