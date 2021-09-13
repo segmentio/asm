@@ -33,8 +33,8 @@ therefore paying for features they do not use.
 This package aims to provide such algorithms, optimized to leverage advanced
 instruction sets of modern CPUs to maximize throughput and take the best
 advantage of the available compute power. Users of the package will find
-functions that have often been designed to work on **array of values**, which is
-where SIMD and branchless algorithms shine.
+functions that have often been designed to work on **arrays of values**,
+which is where SIMD and branchless algorithms shine.
 
 The functions in this library have been used in high throughput production
 environments at Segment, we hope that they will be useful to other developers
