@@ -1,6 +1,6 @@
 # asm
 
-Go library providing algorithms optimized to leverage characteristics of
+Go library providing algorithms optimized to leverage the characteristics of
 modern CPUs.
 
 ## Motivation
@@ -18,28 +18,27 @@ Modern CPUs are complex machines with performance characteristic that may
 vary by orders of magnitude depending on how they are used. Features like
 branch prediction, instruction reordering, pipelining, or caching are all
 input variables that determine the compute throughput that a CPU can achieve.
-While compilers are constantly being improved, and often employ
-micro-optimizations that would be counter-productive for human developers to be
-responsible for, there are limitations to what they can do, and Assembly still
-has a role to play in optimizing algorithms on hot code paths of large scale
-applications.
+While compilers keep being improved, and often employ micro-optimizations that
+would be counter-productive for human developers to be responsible for, there
+are limitations to what they can do, and Assembly still has a role to play in
+optimizing algorithms on hot code paths of large scale applications.
 
-SIMD instruction sets offer particularly interesting opportunities for software
-engineers. Taking advantage of these instructions often requires rethinking how
-the program represents and manipulates data, which is beyond the realm of
-optimizations that can be implemented by a compiler. When renting CPU time from
-a Cloud provider, programs that fail to leverage the full sets of instructions
-available are effectively paying for features they do not use.
+SIMD instruction sets offer interesting opportunities for software engineers.
+Taking advantage of these instructions often requires rethinking how the program
+represents and manipulates data, which is beyond the realm of optimizations that
+can be implemented by a compiler. When renting CPU time from a Cloud provider,
+programs that fail to leverage the full sets of instructions available are
+therefore paying for features they do not use.
 
 This package aims to provide such algorithms, optimized to leverage advanced
 instruction sets of modern CPUs to maximize throughput and take the best
 advantage of the available compute power. Users of the package will find
 functions that have often been designed to work on _array or values_, which is
-where SIMD and branchless algorithms really shine.
+where SIMD and branchless algorithms shine.
 
 The functions in this library have been used in high throughput production
 environments at Segment, we hope that they will be useful to other developers
-using Go in similar setups.
+using Go in performance-sensitive software.
 
 ## Usage
 
@@ -75,9 +74,9 @@ The `build` module is used to isolate build dependencies from programs that
 import the main module. Through this mechanism, AVO does not become a
 dependency of programs using `github.com/segmentio/asm`, keeping the
 dependency management overhead minimal for the users, and allowing
-maintainers to freely make modifications to the `build` package.
+maintainers to make modifications to the `build` package.
 
 Versioning of the two modules is managed independently; while we aim to provide
-stable APIs on the main package, we may introduce breaking changes on the build
-package more frequently as it is intended to be ground for more experimental
+stable APIs on the main package, breaking changes may be introduced on the
+`build` package more often, as it is intended to be ground for more experimental
 constructs in the project.
