@@ -47,7 +47,7 @@ groups of functions sharing similar properties:
 
 | Package | Purpose |
 | ------- | ------- |
-| [ascii](github.com/segmentio/asm/tree/main/ascii) | library of functions designed to work on ASCII inputs |
+| [ascii](ascii) | library of functions designed to work on ASCII inputs |
 | [base64](github.com/segmentio/asm/tree/main/base64) | standard library compatible base64 encodings |
 | [bswap](github.com/segmentio/asm/tree/main/bswap) | byte swapping algorithms working on arrays of fixed-size items |
 | [cpu](github.com/segmentio/asm/tree/main/cpu) | definition of the ABI used to detect CPU features |
