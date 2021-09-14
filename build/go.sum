@@ -2,8 +2,10 @@ github.com/klauspost/cpuid/v2 v2.0.6 h1:dQ5ueTiftKxp0gyjKSx5+8BtPWkyQbd95m8Gys/R
 github.com/klauspost/cpuid/v2 v2.0.6/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa0213Md/qVLRg=
 github.com/mmcloughlin/avo v0.2.0 h1:6vhoSaKtxb6f4RiH+LK2qL6GSMpFzhEwJYTTSZNy09w=
 github.com/mmcloughlin/avo v0.2.0/go.mod h1:5tidO2Z9Z7N6X7UMcGg+1KTj51O8OxYDCMHxCZTVpEA=
-github.com/segmentio/asm v1.0.0 h1:GMF7/2eLkte13LERSOmPI766AJXJDRlsqqiN8T7Mfmk=
-github.com/segmentio/asm v1.0.0/go.mod h1:4EUJGaKsB8ImLUwOGORVsNd9vTRDeh44JGsY4aKp5I4=
+github.com/segmentio/asm v0.0.3-0.20210423204306-fdac5aeb83a3 h1:FKj9moO1rymChwuV0E4vG7+SJWBCwm12Zthd75CIDjc=
+github.com/segmentio/asm v0.0.3-0.20210423204306-fdac5aeb83a3/go.mod h1:4EUJGaKsB8ImLUwOGORVsNd9vTRDeh44JGsY4aKp5I4=
+github.com/segmentio/asm v0.0.3 h1:ciVBxfM3cIEuGR1VDXPCxdz+Qo+wxlrrt7AkycMJcts=
+github.com/segmentio/asm v0.0.3/go.mod h1:4EUJGaKsB8ImLUwOGORVsNd9vTRDeh44JGsY4aKp5I4=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 golang.org/x/arch v0.0.0-20210405154355-08b684f594a5/go.mod h1:flIaEI6LNU6xOCD5PaJvn9wGP0agmIOqjrtsKGRguv4=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=

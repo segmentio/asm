@@ -21,7 +21,7 @@ benchcmp:
 	go test -v -run _ -count $(count) -bench $(bench) ./$(pkg)              | tee /tmp/bench-$(pkg)-asm.txt
 	benchstat /tmp/bench-$(pkg)-{purego,asm}.txt
 
-$(dstdir)/%_amd64.s $(dstdir)/%_amd64.go: $(srcdir)/%_asm.go $(internal) go.mod ./build/go.mod
+$(dstdir)/%_amd64.s $(dstdir)/%_amd64.go: $(srcdir)/%_asm.go $(internal)
 	cd build && go run $(patsubst $(CURDIR)/build/%,%,$<) \
 		-pkg   $(notdir $(realpath $(dir $<))) \
 		-out   ../$(patsubst $(CURDIR)/%,%,$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.s,$<)) \
