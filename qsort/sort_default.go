@@ -2,6 +2,8 @@
 
 package qsort
 
+const purego = true
+
 func distributeForward64(data []uint64, scratch []uint64, limit int, lo int, hi int) int {
 	panic("not implemented")
 }
