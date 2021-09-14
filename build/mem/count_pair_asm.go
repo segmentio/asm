@@ -13,6 +13,10 @@ import (
 	"github.com/segmentio/asm/cpu"
 )
 
+func init() {
+	ConstraintExpr("!purego")
+}
+
 func main() {
 	generateCountPair(countPair1{})
 	generateCountPair(countPair2{})

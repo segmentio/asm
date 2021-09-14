@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/segmentio/asm/build/internal/x86"
@@ -15,59 +16,63 @@ import (
 const unroll = 8
 
 type Processor struct {
-	name string
-	typ string
-	scale uint8
+	name      string
+	typ       string
+	scale     uint8
 	avxOffset uint64
-	avxAdd func(mxy, xy, xy1 Op)
-	x86Mov func(imr, mr Op)
-	x86Add func(imr, amr Op)
-	x86Reg reg.GPVirtual
+	avxAdd    func(mxy, xy, xy1 Op)
+	x86Mov    func(imr, mr Op)
+	x86Add    func(imr, amr Op)
+	x86Reg    reg.GPVirtual
+}
+
+func init() {
+	ConstraintExpr("!purego")
 }
 
 func main() {
 	generate(Processor{
-		name: "sumUint64",
-		typ: "uint64",
-		scale: 8,
+		name:      "sumUint64",
+		typ:       "uint64",
+		scale:     8,
 		avxOffset: 2,
-		avxAdd: VPADDQ,
-		x86Mov: MOVQ,
-		x86Add: ADDQ,
-		x86Reg: GP64(),
+		avxAdd:    VPADDQ,
+		x86Mov:    MOVQ,
+		x86Add:    ADDQ,
+		x86Reg:    GP64(),
 	})
 
 	generate(Processor{
-		name: "sumUint32",
-		typ: "uint32",
-		scale : 4,
+		name:      "sumUint32",
+		typ:       "uint32",
+		scale:     4,
 		avxOffset: 4,
-		avxAdd: VPADDD,
-		x86Mov: MOVL,
-		x86Add: ADDL,
-		x86Reg: GP32(),
+		avxAdd:    VPADDD,
+		x86Mov:    MOVL,
+		x86Add:    ADDL,
+		x86Reg:    GP32(),
 	})
 
 	generate(Processor{
-		name: "sumUint16",
-		typ: "uint16",
-		scale: 2,
+		name:      "sumUint16",
+		typ:       "uint16",
+		scale:     2,
 		avxOffset: 8,
-		avxAdd: VPADDW,
-		x86Mov: MOVW,
-		x86Add: ADDW,
-		x86Reg: GP16(),
+		avxAdd:    VPADDW,
+		x86Mov:    MOVW,
+		x86Add:    ADDW,
+		x86Reg:    GP16(),
 	})
 
 	generate(Processor{
-		name: "sumUint8",
-		typ: "uint8",
-		scale: 1,
+		name:      "sumUint8",
+		typ:       "uint8",
+		scale:     1,
 		avxOffset: 16,
-		avxAdd: VPADDB,
-		x86Mov: MOVB,
-		x86Add: ADDB,
-		x86Reg: GP8(),
+		avxAdd:    VPADDB,
+		x86Mov:    MOVB,
+		x86Add:    ADDB,
+		x86Reg:    GP8(),
 	})
 
 	Generate()

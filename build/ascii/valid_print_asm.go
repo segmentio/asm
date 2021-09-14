@@ -11,7 +11,9 @@ import (
 	"github.com/segmentio/asm/cpu"
 )
 
-const x = false
+func init() {
+	ConstraintExpr("!purego")
+}
 
 func main() {
 	TEXT("ValidPrintString", NOSPLIT, "func(s string) bool")

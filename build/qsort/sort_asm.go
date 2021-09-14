@@ -11,6 +11,10 @@ import (
 	. "github.com/mmcloughlin/avo/reg"
 )
 
+func init() {
+	ConstraintExpr("!purego")
+}
+
 func main() {
 	distributeForward(&SortableScalar{reg: GP64, size: 8, mov: MOVQ, cmp: CMPQ})
 	distributeBackward(&SortableScalar{reg: GP64, size: 8, mov: MOVQ, cmp: CMPQ})

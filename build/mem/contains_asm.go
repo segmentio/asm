@@ -9,6 +9,10 @@ import (
 	. "github.com/segmentio/asm/build/internal/x86"
 )
 
+func init() {
+	ConstraintExpr("!purego")
+}
+
 func main() {
 	TEXT("ContainsByte", NOSPLIT, "func(haystack []byte, needle byte) bool")
 
@@ -49,7 +53,7 @@ func main() {
 	JMP(LabelRef("avx2_done"))
 
 	VariableLengthBytes{
-		Unroll:   256,
+		Unroll: 256,
 		SetupXMM: func() {
 			PXOR(zero.AsX(), zero.AsX())
 			PINSRQ(Imm(0), needle, needleVec.AsX())

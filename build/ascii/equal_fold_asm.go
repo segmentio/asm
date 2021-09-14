@@ -13,6 +13,10 @@ import (
 	"github.com/segmentio/asm/cpu"
 )
 
+func init() {
+	ConstraintExpr("!purego")
+}
+
 func main() {
 	TEXT("EqualFoldString", NOSPLIT, "func(a, b string) bool")
 	Doc(

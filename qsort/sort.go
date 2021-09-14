@@ -19,7 +19,7 @@ func Sort(data []byte, size int, swap func(int, int)) {
 	}
 
 	// No specialization available. Use the slower generic sorting routine.
-	if size%8 != 0 || size > 32 {
+	if purego || size%8 != 0 || size > 32 {
 		sort.Sort(newGeneric(data, size, swap))
 		return
 	}

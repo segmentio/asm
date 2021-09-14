@@ -14,6 +14,10 @@ import (
 
 const unroll = 4
 
+func init() {
+	ConstraintExpr("!purego")
+}
+
 func main() {
 	TEXT("swap64", NOSPLIT, "func(b []byte)")
 	Doc("swap64 performs an in-place byte swap on each qword of the input buffer.")
