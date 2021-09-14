@@ -42,6 +42,10 @@ var shuf = ConstBytes("b64_dec_shuf", []byte{
 	5, 4, 10, 9, 8, 14, 13, 12, 0, 0, 0, 0, 0, 0, 0, 0,
 })
 
+func init() {
+	ConstraintExpr("!purego")
+}
+
 func main() {
 	TEXT("decodeAVX2", NOSPLIT, "func(dst, src []byte, lut [32]int8) (int, int)")
 	createDecode(Param("dst"), Param("src"), Param("lut"), func(m Mem, r VecVirtual) {

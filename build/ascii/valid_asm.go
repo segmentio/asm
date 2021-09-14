@@ -11,6 +11,10 @@ import (
 	"github.com/segmentio/asm/cpu"
 )
 
+func init() {
+	ConstraintExpr("!purego")
+}
+
 func main() {
 	TEXT("ValidString", NOSPLIT, "func(s string) bool")
 	Doc("ValidString returns true if s contains only ASCII characters.")

@@ -80,3 +80,25 @@ Versioning of the two modules is managed independently; while we aim to provide
 stable APIs on the main package, breaking changes may be introduced on the
 `build` package more often, as it is intended to be ground for more experimental
 constructs in the project.
+
+### purego
+
+Programs in the `build` module should add the following declaration:
+
+```go
+func init() {
+	ConstraintExpr("!purego")
+}
+```
+
+It instructs AVO to inject the `!purego` tag in the generated files, allowing
+compilation of the libraries without any assembly optimizations with a build
+command such as:
+
+```
+go build -tags purego ...
+```
+
+This is mainly useful to compare the impact of using the assembly optimized
+versions instead of the simpler Go-only implementations.
+

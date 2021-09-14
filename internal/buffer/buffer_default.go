@@ -1,4 +1,4 @@
-// +build !aix,!android,!darwin,!dragonfly,!freebsd,!illumos,!ios,!linux,!netbsd,!openbsd,!plan9,!solaris
+// +build purego !aix,!android,!darwin,!dragonfly,!freebsd,!illumos,!ios,!linux,!netbsd,!openbsd,!plan9,!solaris
 
 package buffer
 

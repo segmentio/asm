@@ -7,6 +7,10 @@ import (
 	. "github.com/mmcloughlin/avo/operand"
 )
 
+func init() {
+	ConstraintExpr("!purego")
+}
+
 func main() {
 	TEXT("union16", NOSPLIT, "func(dst, a, b []byte) (i, j, k int)")
 

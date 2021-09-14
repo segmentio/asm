@@ -14,6 +14,10 @@ import (
 	"github.com/segmentio/asm/cpu"
 )
 
+func init() {
+	ConstraintExpr("!purego")
+}
+
 func main() {
 	generateDedupe(new(dedupe1))
 	generateDedupe(new(dedupe2))

@@ -16,6 +16,10 @@ import (
 	. "github.com/segmentio/asm/build/internal/x86"
 )
 
+func init() {
+	ConstraintExpr("!purego")
+}
+
 func main() {
 	TEXT("encodeAVX2", NOSPLIT, "func(dst, src []byte, lut [16]int8) (int, int)")
 
