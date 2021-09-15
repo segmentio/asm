@@ -47,14 +47,14 @@ groups of functions sharing similar properties:
 
 | Package | Purpose |
 | ------- | ------- |
-| `github.com/segmentio/asm/ascii` | library of functions designed to work on ASCII inputs |
-| `github.com/segmentio/asm/base64` | standard library compatible base64 encodings |
-| `github.com/segmentio/asm/bswap` | byte swapping algorithms working on arrays of fixed-size items |
-| `github.com/segmentio/asm/cpu` | definition of the ABI used to detect CPU features |
-| `github.com/segmentio/asm/mem` | functions operating on byte arrays |
-| `github.com/segmentio/asm/qsort` | quick-sort implementations for arrays of fixed-size items |
-| `github.com/segmentio/asm/slices` | functions performing computations on pairs of slices |
-| `github.com/segmentio/asm/sortedset` | functions working on sorted arrays of fixed-size items |
+| [ascii](ascii) | library of functions designed to work on ASCII inputs |
+| [base64](base64) | standard library compatible base64 encodings |
+| [bswap](bswap) | byte swapping algorithms working on arrays of fixed-size items |
+| [cpu](cpu) | definition of the ABI used to detect CPU features |
+| [mem](mem) | functions operating on byte arrays |
+| [qsort](qsort) | quick-sort implementations for arrays of fixed-size items |
+| [slices](slices) | functions performing computations on pairs of slices |
+| [sortedset](sortedset) | functions working on sorted arrays of fixed-size items |
 
 When no assembly version of a function is available for the target platform,
 the package provides a generic implementation in Go which is automatically
