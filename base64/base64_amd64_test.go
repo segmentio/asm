@@ -46,7 +46,7 @@ func TestEncodeAVX2(t *testing.T) {
 				}
 				defer dst.Release()
 
-				_, ns := enc.candidate.enc(dst.ProtectTail(), buf, enc.candidate.enclut)
+				_, ns := enc.candidate.enc(dst.ProtectTail(), buf, enc.candidate.enclut[:])
 
 				if len(buf)-ns >= 32 {
 					t.Errorf("encode remain should be less than 32, but is %d", len(buf)-ns)
@@ -86,7 +86,7 @@ func TestDecodeAVX2(t *testing.T) {
 
 				enc.candidate.Encode(src, buf)
 
-				_, ns := enc.candidate.dec(dst.ProtectTail(), src, enc.candidate.declut)
+				_, ns := enc.candidate.dec(dst.ProtectTail(), src, enc.candidate.declut[:])
 
 				if len(buf)-ns >= 45 {
 					t.Errorf("decode remain should be less than 45, but is %d", len(buf)-ns)

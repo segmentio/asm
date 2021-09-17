@@ -21,12 +21,12 @@ func init() {
 }
 
 func main() {
-	TEXT("encodeAVX2", NOSPLIT, "func(dst, src []byte, lut [16]int8) (int, int)")
+	TEXT("encodeAVX2", NOSPLIT, "func(dst, src []byte, lut []int8) (int, int)")
 
 	dst := Mem{Base: Load(Param("dst").Base(), GP64()), Index: GP64(), Scale: 1}
 	src := Mem{Base: Load(Param("src").Base(), GP64()), Index: GP64(), Scale: 1}
+	lut := Mem{Base: Load(Param("lut").Base(), GP64())}
 	rem := Load(Param("src").Len(), GP64())
-	lut, _ := Param("lut").Index(0).Resolve()
 
 	rsrc := YMM()
 	rdst := YMM()
@@ -47,7 +47,7 @@ func main() {
 	XORQ(src.Index, src.Index)
 
 	Comment("Load the 16-byte LUT into both lanes of the register")
-	VPERMQ(Imm(1<<6|1<<2), lut.Addr, xtab)
+	VPERMQ(Imm(1<<6|1<<2), lut, xtab)
 
 	Comment("Load the first block using a mask to avoid potential fault")
 	VMOVDQU(ConstLoadMask32("b64_enc_load",

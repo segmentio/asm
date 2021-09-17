@@ -10,11 +10,11 @@ import (
 // An Encoding is a radix 64 encoding/decoding scheme, defined by a
 // 64-character alphabet.
 type Encoding struct {
-	enc    func(dst []byte, src []byte, lut [16]int8) (int, int)
-	enclut [16]int8
+	enc    func(dst []byte, src []byte, lut []int8) (int, int)
+	enclut [32]int8
 
-	dec    func(dst []byte, src []byte, lut [32]int8) (int, int)
-	declut [32]int8
+	dec    func(dst []byte, src []byte, lut []int8) (int, int)
+	declut [48]int8
 
 	base *base64.Encoding
 }
@@ -42,7 +42,7 @@ func (e *Encoding) enableEncodeAVX2(encoder string) {
 	// [52..61]  [48..57]    -4  [2..11]  0123456789
 	// [62]      [43]       -19       12  +
 	// [63]      [47]       -16       13  /
-	tab := [16]int8{int8(encoder[0]), int8(encoder[letterRange]) - letterRange}
+	tab := [32]int8{int8(encoder[0]), int8(encoder[letterRange]) - letterRange}
 	for i, ch := range encoder[2*letterRange:] {
 		tab[2+i] = int8(ch) - 2*letterRange - int8(i)
 	}
@@ -67,7 +67,7 @@ func (e *Encoding) enableDecodeAVX2(encoder string) {
 	// [48..57]   [52..61]   +4        3  0123456789
 	// [65..90]   [0..25]   -65      4,5  ABCDEFGHIJKLMNOPQRSTUVWXYZ
 	// [97..122]  [26..51]  -71      6,7  abcdefghijklmnopqrstuvwxyz
-	tab := [32]int8{
+	tab := [48]int8{
 		0, 63 - c63, 62 - c62, 4, -65, -65, -71, -71,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x15, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
@@ -104,7 +104,7 @@ func (enc Encoding) Strict() *Encoding {
 // This will write EncodedLen(len(src)) bytes to dst.
 func (enc *Encoding) Encode(dst, src []byte) {
 	if len(src) >= minEncodeLen && enc.enc != nil {
-		d, s := enc.enc(dst, src, enc.enclut)
+		d, s := enc.enc(dst, src, enc.enclut[:])
 		dst = dst[d:]
 		src = src[s:]
 	}
@@ -131,7 +131,7 @@ func (enc *Encoding) EncodedLen(n int) int {
 func (enc *Encoding) Decode(dst, src []byte) (n int, err error) {
 	var d, s int
 	if len(src) >= minDecodeLen && enc.dec != nil {
-		d, s = enc.dec(dst, src, enc.declut)
+		d, s = enc.dec(dst, src, enc.declut[:])
 		dst = dst[d:]
 		src = src[s:]
 	}

@@ -4,12 +4,13 @@
 
 #include "textflag.h"
 
-// func encodeAVX2(dst []byte, src []byte, lut [16]int8) (int, int)
+// func encodeAVX2(dst []byte, src []byte, lut []int8) (int, int)
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·encodeAVX2(SB), NOSPLIT, $0-80
+TEXT ·encodeAVX2(SB), NOSPLIT, $0-88
 	MOVQ         dst_base+0(FP), AX
 	MOVQ         src_base+24(FP), DX
-	MOVQ         src_len+32(FP), SI
+	MOVQ         lut_base+48(FP), SI
+	MOVQ         src_len+32(FP), DI
 	MOVB         $0x33, CL
 	PINSRB       $0x00, CX, X4
 	VPBROADCASTB X4, Y4
@@ -20,7 +21,7 @@ TEXT ·encodeAVX2(SB), NOSPLIT, $0-80
 	XORQ         BX, BX
 
 	// Load the 16-byte LUT into both lanes of the register
-	VPERMQ $0x44, lut_0+48(FP), Y3
+	VPERMQ $0x44, (SI), Y3
 
 	// Load the first block using a mask to avoid potential fault
 	VMOVDQU    b64_enc_load<>+0(SB), Y0
@@ -43,15 +44,15 @@ loop:
 	VMOVDQU  Y0, (AX)(CX*1)
 	ADDQ     $0x20, CX
 	ADDQ     $0x18, BX
-	SUBQ     $0x18, SI
-	CMPQ     SI, $0x20
+	SUBQ     $0x18, DI
+	CMPQ     DI, $0x20
 	JB       done
 	VMOVDQU  -4(DX)(BX*1), Y0
 	JMP      loop
 
 done:
-	MOVQ CX, ret+64(FP)
-	MOVQ BX, ret1+72(FP)
+	MOVQ CX, ret+72(FP)
+	MOVQ BX, ret1+80(FP)
 	VZEROUPPER
 	RET
 
