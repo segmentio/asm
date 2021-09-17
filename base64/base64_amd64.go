@@ -2,9 +2,9 @@ package base64
 
 import (
 	"encoding/base64"
-	"unsafe"
 
 	"github.com/segmentio/asm/cpu"
+	"github.com/segmentio/asm/internal/unsafebytes"
 )
 
 // An Encoding is a radix 64 encoding/decoding scheme, defined by a
@@ -143,7 +143,7 @@ func (enc *Encoding) Decode(dst, src []byte) (n int, err error) {
 // DecodeString decodes the base64 encoded string s, returns the decoded
 // value as bytes.
 func (enc *Encoding) DecodeString(s string) ([]byte, error) {
-	src := *(*[]byte)(unsafe.Pointer(&s))
+	src := unsafebytes.BytesOf(s)
 	dst := make([]byte, enc.base.DecodedLen(len(s)))
 	n, err := enc.Decode(dst, src)
 	return dst[:n], err
