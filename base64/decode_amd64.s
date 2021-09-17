@@ -32,20 +32,21 @@ DATA b64_dec_shuf<>+16(SB)/8, $0x0c0d0e08090a0405
 DATA b64_dec_shuf<>+24(SB)/8, $0x0000000000000000
 GLOBL b64_dec_shuf<>(SB), RODATA|NOPTR, $32
 
-// func decodeAVX2(dst []byte, src []byte, lut [32]int8) (int, int)
+// func decodeAVX2(dst []byte, src []byte, lut *int8) (int, int)
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·decodeAVX2(SB), NOSPLIT, $0-96
+TEXT ·decodeAVX2(SB), NOSPLIT, $0-72
 	MOVQ         dst_base+0(FP), AX
 	MOVQ         src_base+24(FP), DX
-	MOVQ         src_len+32(FP), SI
+	MOVQ         lut+48(FP), SI
+	MOVQ         src_len+32(FP), DI
 	MOVB         $0x2f, CL
 	PINSRB       $0x00, CX, X8
 	VPBROADCASTB X8, Y8
 	XORQ         CX, CX
 	XORQ         BX, BX
 	VPXOR        Y7, Y7, Y7
-	VPERMQ       $0x44, lut_0+48(FP), Y6
-	VPERMQ       $0x44, lut_0+64(FP), Y4
+	VPERMQ       $0x44, (SI), Y6
+	VPERMQ       $0x44, 16(SI), Y4
 	VMOVDQA      b64_dec_lut_hi<>+0(SB), Y5
 
 loop:
@@ -71,20 +72,20 @@ loop:
 	VMOVDQU      Y1, (AX)(CX*1)
 	ADDQ         $0x18, CX
 	ADDQ         $0x20, BX
-	SUBQ         $0x20, SI
-	CMPQ         SI, $0x2d
+	SUBQ         $0x20, DI
+	CMPQ         DI, $0x2d
 	JB           done
 	JMP          loop
 
 done:
-	MOVQ CX, ret+80(FP)
-	MOVQ BX, ret1+88(FP)
+	MOVQ CX, ret+56(FP)
+	MOVQ BX, ret1+64(FP)
 	VZEROUPPER
 	RET
 
-// func decodeAVX2URI(dst []byte, src []byte, lut [32]int8) (int, int)
+// func decodeAVX2URI(dst []byte, src []byte, lut *int8) (int, int)
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·decodeAVX2URI(SB), NOSPLIT, $0-96
+TEXT ·decodeAVX2URI(SB), NOSPLIT, $0-72
 	MOVB         $0x2f, AL
 	PINSRB       $0x00, AX, X0
 	VPBROADCASTB X0, Y0
@@ -93,15 +94,16 @@ TEXT ·decodeAVX2URI(SB), NOSPLIT, $0-96
 	VPBROADCASTB X1, Y1
 	MOVQ         dst_base+0(FP), AX
 	MOVQ         src_base+24(FP), DX
-	MOVQ         src_len+32(FP), SI
+	MOVQ         lut+48(FP), SI
+	MOVQ         src_len+32(FP), DI
 	MOVB         $0x2f, CL
 	PINSRB       $0x00, CX, X10
 	VPBROADCASTB X10, Y10
 	XORQ         CX, CX
 	XORQ         BX, BX
 	VPXOR        Y9, Y9, Y9
-	VPERMQ       $0x44, lut_0+48(FP), Y8
-	VPERMQ       $0x44, lut_0+64(FP), Y6
+	VPERMQ       $0x44, (SI), Y8
+	VPERMQ       $0x44, 16(SI), Y6
 	VMOVDQA      b64_dec_lut_hi<>+0(SB), Y7
 
 loop:
@@ -129,13 +131,13 @@ loop:
 	VMOVDQU      Y3, (AX)(CX*1)
 	ADDQ         $0x18, CX
 	ADDQ         $0x20, BX
-	SUBQ         $0x20, SI
-	CMPQ         SI, $0x2d
+	SUBQ         $0x20, DI
+	CMPQ         DI, $0x2d
 	JB           done
 	JMP          loop
 
 done:
-	MOVQ CX, ret+80(FP)
-	MOVQ BX, ret1+88(FP)
+	MOVQ CX, ret+56(FP)
+	MOVQ BX, ret1+64(FP)
 	VZEROUPPER
 	RET

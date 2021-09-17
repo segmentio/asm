@@ -5,4 +5,4 @@
 
 package base64
 
-func encodeAVX2(dst []byte, src []byte, lut [16]int8) (int, int)
+func encodeAVX2(dst []byte, src []byte, lut *int8) (int, int)

@@ -79,6 +79,22 @@ func TestEncoding(t *testing.T) {
 				if !bytes.Equal(decExpect, decActual) {
 					t.Fatalf("failed decode:\n\texpect = %v\n\tactual = %v", decExpect, decActual)
 				}
+
+				encString := enc.control.EncodeToString(src)
+				decExpect, errControl = enc.control.DecodeString(encString)
+				decActual, errCandidate = enc.candidate.DecodeString(encString)
+
+				if errControl != nil {
+					t.Fatalf("control decode error: %v", errControl)
+				}
+
+				if errCandidate != nil {
+					t.Fatalf("candidate decode error: %v", errCandidate)
+				}
+
+				if !bytes.Equal(decExpect, decActual) {
+					t.Fatalf("failed decode:\n\texpect = %v\n\tactual = %v", decExpect, decActual)
+				}
 			}
 		})
 	}
