@@ -47,12 +47,12 @@ func init() {
 }
 
 func main() {
-	TEXT("decodeAVX2", NOSPLIT, "func(dst, src []byte, lut []int8) (int, int)")
+	TEXT("decodeAVX2", NOSPLIT, "func(dst, src []byte, lut *int8) (int, int)")
 	createDecode(Param("dst"), Param("src"), Param("lut"), func(m Mem, r VecVirtual) {
 		VMOVDQU(m, r)
 	})
 
-	TEXT("decodeAVX2URI", NOSPLIT, "func(dst, src []byte, lut []int8) (int, int)")
+	TEXT("decodeAVX2URI", NOSPLIT, "func(dst, src []byte, lut *int8) (int, int)")
 	slash := VecBroadcast(U8('/'), YMM())
 	underscore := VecBroadcast(U8('_'), YMM())
 	createDecode(Param("dst"), Param("src"), Param("lut"), func(m Mem, r VecVirtual) {
@@ -68,7 +68,7 @@ func main() {
 func createDecode(pdst, psrc, plut Component, load func(m Mem, r VecVirtual)) {
 	dst := Mem{Base: Load(pdst.Base(), GP64()), Index: GP64(), Scale: 1}
 	src := Mem{Base: Load(psrc.Base(), GP64()), Index: GP64(), Scale: 1}
-	lut := Mem{Base: Load(plut.Base(), GP64())}
+	lut := Mem{Base: Load(plut, GP64())}
 	rem := Load(psrc.Len(), GP64())
 
 	rsrc := YMM()

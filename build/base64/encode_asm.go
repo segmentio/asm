@@ -21,11 +21,11 @@ func init() {
 }
 
 func main() {
-	TEXT("encodeAVX2", NOSPLIT, "func(dst, src []byte, lut []int8) (int, int)")
+	TEXT("encodeAVX2", NOSPLIT, "func(dst, src []byte, lut *int8) (int, int)")
 
 	dst := Mem{Base: Load(Param("dst").Base(), GP64()), Index: GP64(), Scale: 1}
 	src := Mem{Base: Load(Param("src").Base(), GP64()), Index: GP64(), Scale: 1}
-	lut := Mem{Base: Load(Param("lut").Base(), GP64())}
+	lut := Mem{Base: Load(Param("lut"), GP64())}
 	rem := Load(Param("src").Len(), GP64())
 
 	rsrc := YMM()

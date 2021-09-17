@@ -32,12 +32,12 @@ DATA b64_dec_shuf<>+16(SB)/8, $0x0c0d0e08090a0405
 DATA b64_dec_shuf<>+24(SB)/8, $0x0000000000000000
 GLOBL b64_dec_shuf<>(SB), RODATA|NOPTR, $32
 
-// func decodeAVX2(dst []byte, src []byte, lut []int8) (int, int)
+// func decodeAVX2(dst []byte, src []byte, lut *int8) (int, int)
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·decodeAVX2(SB), NOSPLIT, $0-88
+TEXT ·decodeAVX2(SB), NOSPLIT, $0-72
 	MOVQ         dst_base+0(FP), AX
 	MOVQ         src_base+24(FP), DX
-	MOVQ         lut_base+48(FP), SI
+	MOVQ         lut+48(FP), SI
 	MOVQ         src_len+32(FP), DI
 	MOVB         $0x2f, CL
 	PINSRB       $0x00, CX, X8
@@ -78,14 +78,14 @@ loop:
 	JMP          loop
 
 done:
-	MOVQ CX, ret+72(FP)
-	MOVQ BX, ret1+80(FP)
+	MOVQ CX, ret+56(FP)
+	MOVQ BX, ret1+64(FP)
 	VZEROUPPER
 	RET
 
-// func decodeAVX2URI(dst []byte, src []byte, lut []int8) (int, int)
+// func decodeAVX2URI(dst []byte, src []byte, lut *int8) (int, int)
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·decodeAVX2URI(SB), NOSPLIT, $0-88
+TEXT ·decodeAVX2URI(SB), NOSPLIT, $0-72
 	MOVB         $0x2f, AL
 	PINSRB       $0x00, AX, X0
 	VPBROADCASTB X0, Y0
@@ -94,7 +94,7 @@ TEXT ·decodeAVX2URI(SB), NOSPLIT, $0-88
 	VPBROADCASTB X1, Y1
 	MOVQ         dst_base+0(FP), AX
 	MOVQ         src_base+24(FP), DX
-	MOVQ         lut_base+48(FP), SI
+	MOVQ         lut+48(FP), SI
 	MOVQ         src_len+32(FP), DI
 	MOVB         $0x2f, CL
 	PINSRB       $0x00, CX, X10
@@ -137,7 +137,7 @@ loop:
 	JMP          loop
 
 done:
-	MOVQ CX, ret+72(FP)
-	MOVQ BX, ret1+80(FP)
+	MOVQ CX, ret+56(FP)
+	MOVQ BX, ret1+64(FP)
 	VZEROUPPER
 	RET

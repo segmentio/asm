@@ -4,12 +4,12 @@
 
 #include "textflag.h"
 
-// func encodeAVX2(dst []byte, src []byte, lut []int8) (int, int)
+// func encodeAVX2(dst []byte, src []byte, lut *int8) (int, int)
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·encodeAVX2(SB), NOSPLIT, $0-88
+TEXT ·encodeAVX2(SB), NOSPLIT, $0-72
 	MOVQ         dst_base+0(FP), AX
 	MOVQ         src_base+24(FP), DX
-	MOVQ         lut_base+48(FP), SI
+	MOVQ         lut+48(FP), SI
 	MOVQ         src_len+32(FP), DI
 	MOVB         $0x33, CL
 	PINSRB       $0x00, CX, X4
@@ -51,8 +51,8 @@ loop:
 	JMP      loop
 
 done:
-	MOVQ CX, ret+72(FP)
-	MOVQ BX, ret1+80(FP)
+	MOVQ CX, ret+56(FP)
+	MOVQ BX, ret1+64(FP)
 	VZEROUPPER
 	RET
 

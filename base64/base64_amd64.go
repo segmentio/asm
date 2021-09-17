@@ -10,10 +10,10 @@ import (
 // An Encoding is a radix 64 encoding/decoding scheme, defined by a
 // 64-character alphabet.
 type Encoding struct {
-	enc    func(dst []byte, src []byte, lut []int8) (int, int)
+	enc    func(dst []byte, src []byte, lut *int8) (int, int)
 	enclut [32]int8
 
-	dec    func(dst []byte, src []byte, lut []int8) (int, int)
+	dec    func(dst []byte, src []byte, lut *int8) (int, int)
 	declut [48]int8
 
 	base *base64.Encoding
@@ -104,7 +104,7 @@ func (enc Encoding) Strict() *Encoding {
 // This will write EncodedLen(len(src)) bytes to dst.
 func (enc *Encoding) Encode(dst, src []byte) {
 	if len(src) >= minEncodeLen && enc.enc != nil {
-		d, s := enc.enc(dst, src, enc.enclut[:])
+		d, s := enc.enc(dst, src, &enc.enclut[0])
 		dst = dst[d:]
 		src = src[s:]
 	}
@@ -131,7 +131,7 @@ func (enc *Encoding) EncodedLen(n int) int {
 func (enc *Encoding) Decode(dst, src []byte) (n int, err error) {
 	var d, s int
 	if len(src) >= minDecodeLen && enc.dec != nil {
-		d, s = enc.dec(dst, src, enc.declut[:])
+		d, s = enc.dec(dst, src, &enc.declut[0])
 		dst = dst[d:]
 		src = src[s:]
 	}
