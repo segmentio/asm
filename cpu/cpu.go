@@ -1,7 +1,7 @@
 package cpu
 
 import (
-	"github.com/klauspost/cpuid/v2"
+	cpuid "github.com/klauspost/cpuid/v2"
 )
 
 type X86CPU uint64
@@ -48,6 +48,7 @@ const (
 	AVX512DQ                                  // AVX-512 Doubleword and Quadword Instructions
 	AVX512ER                                  // AVX-512 Exponential and Reciprocal Instructions
 	AVX512F                                   // AVX-512 Foundation
+	AVX512FP16                                // AVX-512 FP16 Instructions
 	AVX512IFMA                                // AVX-512 Integer Fused Multiply-Add Instructions
 	AVX512PF                                  // AVX-512 Prefetch Instructions
 	AVX512VBMI                                // AVX-512 Vector Bit Manipulation Instructions
@@ -83,6 +84,7 @@ func init() {
 	X86.Set(AVX512DQ, cpuid.CPU.Has(cpuid.AVX512DQ))
 	X86.Set(AVX512ER, cpuid.CPU.Has(cpuid.AVX512ER))
 	X86.Set(AVX512F, cpuid.CPU.Has(cpuid.AVX512F))
+	X86.Set(AVX512FP16, cpuid.CPU.Has(cpuid.AVX512FP16))
 	X86.Set(AVX512IFMA, cpuid.CPU.Has(cpuid.AVX512IFMA))
 	X86.Set(AVX512PF, cpuid.CPU.Has(cpuid.AVX512PF))
 	X86.Set(AVX512VBMI, cpuid.CPU.Has(cpuid.AVX512VBMI))

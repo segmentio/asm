@@ -21,6 +21,7 @@ var x86 = map[string]X86Feature{
 	"AVX512DQ":           AVX512DQ,
 	"AVX512ER":           AVX512ER,
 	"AVX512F":            AVX512F,
+	"AVX512FP16":         AVX512FP16,
 	"AVX512IFMA":         AVX512IFMA,
 	"AVX512PF":           AVX512PF,
 	"AVX512VBMI":         AVX512VBMI,
