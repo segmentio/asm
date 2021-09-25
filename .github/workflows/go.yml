@@ -1,6 +1,6 @@
 name: Go
 
-on: [pull_request, push]
+on: [pull_request]
 
 jobs:
   test:
@@ -11,16 +11,17 @@ jobs:
         - 1.17
         os:
         - ubuntu-latest
+        - [self-hosted, ARM64]
 
-    runs-on: {{ matrix.os }}
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup Go {{ matrix.go }}
+    - name: Setup Go ${{ matrix.go }}
       uses: actions/setup-go@v2
       with:
-        go-version: {{ matrix.go }}
+        go-version: ${{ matrix.go }}
 
     - name: Download Dependencies
       run: go mod download
