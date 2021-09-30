@@ -13,7 +13,7 @@ TEXT ·indexPair1(SB), NOSPLIT, $0-32
 	CMPQ CX, $0x00
 	JLE  fail
 	SUBQ $0x01, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:
@@ -266,7 +266,7 @@ TEXT ·indexPair2(SB), NOSPLIT, $0-32
 	CMPQ CX, $0x00
 	JLE  fail
 	SUBQ $0x02, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:
@@ -519,7 +519,7 @@ TEXT ·indexPair4(SB), NOSPLIT, $0-32
 	CMPQ CX, $0x00
 	JLE  fail
 	SUBQ $0x04, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:
@@ -772,7 +772,7 @@ TEXT ·indexPair8(SB), NOSPLIT, $0-32
 	CMPQ CX, $0x00
 	JLE  fail
 	SUBQ $0x08, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:
@@ -1025,7 +1025,7 @@ TEXT ·indexPair16(SB), NOSPLIT, $0-32
 	CMPQ CX, $0x00
 	JLE  fail
 	SUBQ $0x10, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:
@@ -1299,7 +1299,7 @@ TEXT ·indexPair32(SB), NOSPLIT, $0-32
 	CMPQ CX, $0x00
 	JLE  fail
 	SUBQ $0x20, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:

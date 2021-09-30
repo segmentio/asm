@@ -8,51 +8,51 @@
 // Requires: AVX, AVX2, SSE4.1
 TEXT ·validString(SB), NOSPLIT, $0-25
 	MOVQ abi+16(FP), AX
-	MOVQ s_base+0(FP), AX
-	MOVQ s_len+8(FP), CX
-	MOVQ $0x8080808080808080, DX
-	CMPQ CX, $0x10
+	MOVQ s_base+0(FP), CX
+	MOVQ s_len+8(FP), DX
+	MOVQ $0x8080808080808080, BX
+	CMPQ DX, $0x10
 	JB   cmp8
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, AX
 	JCS  init_avx
 
 cmp8:
-	CMPQ  CX, $0x08
+	CMPQ  DX, $0x08
 	JB    cmp4
-	TESTQ DX, (AX)
+	TESTQ BX, (CX)
 	JNZ   invalid
-	ADDQ  $0x08, AX
-	SUBQ  $0x08, CX
+	ADDQ  $0x08, CX
+	SUBQ  $0x08, DX
 	JMP   cmp8
 
 cmp4:
-	CMPQ  CX, $0x04
+	CMPQ  DX, $0x04
 	JB    cmp3
-	TESTL $0x80808080, (AX)
+	TESTL $0x80808080, (CX)
 	JNZ   invalid
-	ADDQ  $0x04, AX
-	SUBQ  $0x04, CX
+	ADDQ  $0x04, CX
+	SUBQ  $0x04, DX
 
 cmp3:
-	CMPQ    CX, $0x03
+	CMPQ    DX, $0x03
 	JB      cmp2
-	MOVWLZX (AX), CX
-	MOVBLZX 2(AX), AX
-	SHLL    $0x10, AX
-	ORL     CX, AX
-	TESTL   $0x80808080, AX
+	MOVWLZX (CX), AX
+	MOVBLZX 2(CX), CX
+	SHLL    $0x10, CX
+	ORL     AX, CX
+	TESTL   $0x80808080, CX
 	JMP     done
 
 cmp2:
-	CMPQ  CX, $0x02
+	CMPQ  DX, $0x02
 	JB    cmp1
-	TESTW $0x8080, (AX)
+	TESTW $0x8080, (CX)
 	JMP   done
 
 cmp1:
-	CMPQ  CX, $0x00
+	CMPQ  DX, $0x00
 	JE    done
-	TESTB $0x80, (AX)
+	TESTB $0x80, (CX)
 
 done:
 	SETEQ ret+24(FP)
@@ -63,70 +63,70 @@ invalid:
 	RET
 
 init_avx:
-	PINSRQ       $0x00, DX, X4
+	PINSRQ       $0x00, BX, X4
 	VPBROADCASTQ X4, Y4
 
 cmp256:
-	CMPQ    CX, $0x00000100
+	CMPQ    DX, $0x00000100
 	JB      cmp128
-	VMOVDQU (AX), Y0
-	VPOR    32(AX), Y0, Y0
-	VMOVDQU 64(AX), Y1
-	VPOR    96(AX), Y1, Y1
-	VMOVDQU 128(AX), Y2
-	VPOR    160(AX), Y2, Y2
-	VMOVDQU 192(AX), Y3
-	VPOR    224(AX), Y3, Y3
+	VMOVDQU (CX), Y0
+	VPOR    32(CX), Y0, Y0
+	VMOVDQU 64(CX), Y1
+	VPOR    96(CX), Y1, Y1
+	VMOVDQU 128(CX), Y2
+	VPOR    160(CX), Y2, Y2
+	VMOVDQU 192(CX), Y3
+	VPOR    224(CX), Y3, Y3
 	VPOR    Y1, Y0, Y0
 	VPOR    Y3, Y2, Y2
 	VPOR    Y2, Y0, Y0
 	VPTEST  Y0, Y4
 	JNZ     invalid
-	ADDQ    $0x00000100, AX
-	SUBQ    $0x00000100, CX
+	ADDQ    $0x00000100, CX
+	SUBQ    $0x00000100, DX
 	JMP     cmp256
 
 cmp128:
-	CMPQ    CX, $0x80
+	CMPQ    DX, $0x80
 	JB      cmp64
-	VMOVDQU (AX), Y0
-	VPOR    32(AX), Y0, Y0
-	VMOVDQU 64(AX), Y1
-	VPOR    96(AX), Y1, Y1
+	VMOVDQU (CX), Y0
+	VPOR    32(CX), Y0, Y0
+	VMOVDQU 64(CX), Y1
+	VPOR    96(CX), Y1, Y1
 	VPOR    Y1, Y0, Y0
 	VPTEST  Y0, Y4
 	JNZ     invalid
-	ADDQ    $0x80, AX
-	SUBQ    $0x80, CX
+	ADDQ    $0x80, CX
+	SUBQ    $0x80, DX
 
 cmp64:
-	CMPQ    CX, $0x40
+	CMPQ    DX, $0x40
 	JB      cmp32
-	VMOVDQU (AX), Y0
-	VPOR    32(AX), Y0, Y0
+	VMOVDQU (CX), Y0
+	VPOR    32(CX), Y0, Y0
 	VPTEST  Y0, Y4
 	JNZ     invalid
-	ADDQ    $0x40, AX
-	SUBQ    $0x40, CX
+	ADDQ    $0x40, CX
+	SUBQ    $0x40, DX
 
 cmp32:
-	CMPQ   CX, $0x20
+	CMPQ   DX, $0x20
 	JB     cmp16
-	VPTEST (AX), Y4
+	VPTEST (CX), Y4
 	JNZ    invalid
-	ADDQ   $0x20, AX
-	SUBQ   $0x20, CX
+	ADDQ   $0x20, CX
+	SUBQ   $0x20, DX
 
 cmp16:
-	CMPQ   CX, $0x10
+	CMPQ   DX, $0x10
 	JLE    cmp_tail
-	VPTEST (AX), X4
+	VPTEST (CX), X4
 	JNZ    invalid
-	ADDQ   $0x10, AX
-	SUBQ   $0x10, CX
+	ADDQ   $0x10, CX
+	SUBQ   $0x10, DX
 
 cmp_tail:
-	SUBQ   $0x10, CX
-	ADDQ   CX, AX
-	VPTEST (AX), X4
+	SUBQ   $0x10, DX
+	ADDQ   DX, CX
+	VPTEST (CX), X4
 	JMP    done

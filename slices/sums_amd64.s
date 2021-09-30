@@ -14,7 +14,7 @@ TEXT ·sumUint64(SB), NOSPLIT, $0-48
 	MOVQ    y_len+32(FP), AX
 	CMPQ    AX, SI
 	CMOVQLT AX, SI
-	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC     x86_loop
 
 avx2_loop:
@@ -62,7 +62,7 @@ TEXT ·sumUint32(SB), NOSPLIT, $0-48
 	MOVQ    y_len+32(FP), AX
 	CMPQ    AX, SI
 	CMOVQLT AX, SI
-	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC     x86_loop
 
 avx2_loop:
@@ -110,7 +110,7 @@ TEXT ·sumUint16(SB), NOSPLIT, $0-48
 	MOVQ    y_len+32(FP), AX
 	CMPQ    AX, SI
 	CMOVQLT AX, SI
-	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC     x86_loop
 
 avx2_loop:
@@ -158,7 +158,7 @@ TEXT ·sumUint8(SB), NOSPLIT, $0-48
 	MOVQ    y_len+32(FP), AX
 	CMPQ    AX, SI
 	CMOVQLT AX, SI
-	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC     x86_loop
 
 avx2_loop:

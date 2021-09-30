@@ -92,7 +92,7 @@ TEXT ·dedupe4(SB), NOSPLIT, $0-56
 	SUBQ $0x04, AX
 	CMPQ AX, $0x10
 	JL   init
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 init:
@@ -354,7 +354,7 @@ TEXT ·dedupe8(SB), NOSPLIT, $0-56
 	SUBQ $0x08, AX
 	CMPQ AX, $0x10
 	JL   init
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 init:
@@ -570,7 +570,7 @@ TEXT ·dedupe16(SB), NOSPLIT, $0-56
 	SUBQ $0x10, AX
 	CMPQ AX, $0x10
 	JL   init
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 init:
@@ -790,7 +790,7 @@ TEXT ·dedupe32(SB), NOSPLIT, $0-56
 	SUBQ $0x20, AX
 	CMPQ AX, $0x20
 	JL   init
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 init:

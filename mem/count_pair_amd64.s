@@ -11,7 +11,7 @@ TEXT ·countPair1(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	XORQ DX, DX
 	SUBQ $0x01, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:
@@ -182,7 +182,7 @@ TEXT ·countPair2(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	XORQ DX, DX
 	SUBQ $0x02, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:
@@ -354,7 +354,7 @@ TEXT ·countPair4(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	XORQ DX, DX
 	SUBQ $0x04, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:
@@ -526,7 +526,7 @@ TEXT ·countPair8(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	XORQ DX, DX
 	SUBQ $0x08, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:
@@ -698,7 +698,7 @@ TEXT ·countPair16(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	XORQ DX, DX
 	SUBQ $0x10, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:
@@ -891,7 +891,7 @@ TEXT ·countPair32(SB), NOSPLIT, $0-32
 	MOVQ b_len+8(FP), CX
 	XORQ DX, DX
 	SUBQ $0x20, CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
+	BTQ  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  avx2
 
 tail:
