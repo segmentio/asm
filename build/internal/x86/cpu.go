@@ -13,20 +13,24 @@ import (
 // JumpIfFeature constructs a jump sequence that tests for one or more feature flags.
 // If all flags are matched, jump to the target label.
 func JumpIfFeature(jmp string, f cpu.X86Feature) {
-	jump(LabelRef(jmp), f, false)
+	JumpIfFeatureABI(jmp, f, cpuAddr)
+}
+
+func JumpIfFeatureABI(jmp string, f cpu.X86Feature, abi Op) {
+	jump(abi, LabelRef(jmp), f, false)
 }
 
 // JumpUnlessFeature constructs a jump sequence that tests for one or more feature flags.
 // Unless all flags are matched, jump to the target label.
 func JumpUnlessFeature(jmp string, f cpu.X86Feature) {
-	jump(LabelRef(jmp), f, true)
+	jump(cpuAddr, LabelRef(jmp), f, true)
 }
 
 // cpuAddr is a Mem operand containing the global symbolic reference to the
 // X86 cpu feature flags.
 var cpuAddr = NewDataAddr(Symbol{Name: "github·com∕segmentio∕asm∕cpu·X86"}, 0)
 
-func jump(jmp Op, f cpu.X86Feature, invert bool) {
+func jump(abi, jmp Op, f cpu.X86Feature, invert bool) {
 	if bits.OnesCount64(uint64(f)) == 1 {
 		// If the feature test is for a single flag, optimize the test using BTQ
 		jumpSingleFlag(jmp, f, invert)

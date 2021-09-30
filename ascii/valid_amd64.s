@@ -4,9 +4,10 @@
 
 #include "textflag.h"
 
-// func ValidString(s string) bool
+// func validString(s string, abi uint64) bool
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·ValidString(SB), NOSPLIT, $0-17
+TEXT ·validString(SB), NOSPLIT, $0-25
+	MOVQ abi+16(FP), AX
 	MOVQ s_base+0(FP), AX
 	MOVQ s_len+8(FP), CX
 	MOVQ $0x8080808080808080, DX
@@ -54,11 +55,11 @@ cmp1:
 	TESTB $0x80, (AX)
 
 done:
-	SETEQ ret+16(FP)
+	SETEQ ret+24(FP)
 	RET
 
 invalid:
-	MOVB $0x00, ret+16(FP)
+	MOVB $0x00, ret+24(FP)
 	RET
 
 init_avx:

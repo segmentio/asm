@@ -4,168 +4,169 @@
 
 #include "textflag.h"
 
-// func EqualFoldString(a string, b string) bool
+// func equalFoldString(a string, b string, abi uint64) bool
 // Requires: AVX, AVX2, SSE4.1
-TEXT ·EqualFoldString(SB), NOSPLIT, $0-33
-	MOVQ a_base+0(FP), CX
-	MOVQ a_len+8(FP), DX
-	MOVQ b_base+16(FP), BX
-	CMPQ DX, b_len+24(FP)
+TEXT ·equalFoldString(SB), NOSPLIT, $0-41
+	MOVQ abi+32(FP), AX
+	MOVQ a_base+0(FP), DX
+	MOVQ a_len+8(FP), BX
+	MOVQ b_base+16(FP), SI
+	CMPQ BX, b_len+24(FP)
 	JNE  done
 	XORQ AX, AX
-	CMPQ DX, $0x10
+	CMPQ BX, $0x10
 	JB   init_x86
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  init_avx
 
 init_x86:
 	LEAQ github·com∕segmentio∕asm∕ascii·lowerCase+0(SB), R9
-	XORL SI, SI
+	XORL CX, CX
 
 cmp8:
-	CMPQ    DX, $0x08
+	CMPQ    BX, $0x08
 	JB      cmp7
-	MOVBLZX (CX)(AX*1), DI
-	MOVBLZX (BX)(AX*1), R8
+	MOVBLZX (DX)(AX*1), DI
+	MOVBLZX (SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
-	MOVBLZX 1(CX)(AX*1), DI
-	MOVBLZX 1(BX)(AX*1), R8
+	ORB     DI, CL
+	MOVBLZX 1(DX)(AX*1), DI
+	MOVBLZX 1(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
-	MOVBLZX 2(CX)(AX*1), DI
-	MOVBLZX 2(BX)(AX*1), R8
+	ORB     DI, CL
+	MOVBLZX 2(DX)(AX*1), DI
+	MOVBLZX 2(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
-	MOVBLZX 3(CX)(AX*1), DI
-	MOVBLZX 3(BX)(AX*1), R8
+	ORB     DI, CL
+	MOVBLZX 3(DX)(AX*1), DI
+	MOVBLZX 3(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
-	MOVBLZX 4(CX)(AX*1), DI
-	MOVBLZX 4(BX)(AX*1), R8
+	ORB     DI, CL
+	MOVBLZX 4(DX)(AX*1), DI
+	MOVBLZX 4(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
-	MOVBLZX 5(CX)(AX*1), DI
-	MOVBLZX 5(BX)(AX*1), R8
+	ORB     DI, CL
+	MOVBLZX 5(DX)(AX*1), DI
+	MOVBLZX 5(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
-	MOVBLZX 6(CX)(AX*1), DI
-	MOVBLZX 6(BX)(AX*1), R8
+	ORB     DI, CL
+	MOVBLZX 6(DX)(AX*1), DI
+	MOVBLZX 6(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
-	MOVBLZX 7(CX)(AX*1), DI
-	MOVBLZX 7(BX)(AX*1), R8
+	ORB     DI, CL
+	MOVBLZX 7(DX)(AX*1), DI
+	MOVBLZX 7(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
+	ORB     DI, CL
 	JNE     done
 	ADDQ    $0x08, AX
-	SUBQ    $0x08, DX
+	SUBQ    $0x08, BX
 	JMP     cmp8
 
 cmp7:
-	CMPQ    DX, $0x07
+	CMPQ    BX, $0x07
 	JB      cmp6
-	MOVBLZX 6(CX)(AX*1), DI
-	MOVBLZX 6(BX)(AX*1), R8
+	MOVBLZX 6(DX)(AX*1), DI
+	MOVBLZX 6(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
+	ORB     DI, CL
 
 cmp6:
-	CMPQ    DX, $0x06
+	CMPQ    BX, $0x06
 	JB      cmp5
-	MOVBLZX 5(CX)(AX*1), DI
-	MOVBLZX 5(BX)(AX*1), R8
+	MOVBLZX 5(DX)(AX*1), DI
+	MOVBLZX 5(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
+	ORB     DI, CL
 
 cmp5:
-	CMPQ    DX, $0x05
+	CMPQ    BX, $0x05
 	JB      cmp4
-	MOVBLZX 4(CX)(AX*1), DI
-	MOVBLZX 4(BX)(AX*1), R8
+	MOVBLZX 4(DX)(AX*1), DI
+	MOVBLZX 4(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
+	ORB     DI, CL
 
 cmp4:
-	CMPQ    DX, $0x04
+	CMPQ    BX, $0x04
 	JB      cmp3
-	MOVBLZX 3(CX)(AX*1), DI
-	MOVBLZX 3(BX)(AX*1), R8
+	MOVBLZX 3(DX)(AX*1), DI
+	MOVBLZX 3(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
+	ORB     DI, CL
 
 cmp3:
-	CMPQ    DX, $0x03
+	CMPQ    BX, $0x03
 	JB      cmp2
-	MOVBLZX 2(CX)(AX*1), DI
-	MOVBLZX 2(BX)(AX*1), R8
+	MOVBLZX 2(DX)(AX*1), DI
+	MOVBLZX 2(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
+	ORB     DI, CL
 
 cmp2:
-	CMPQ    DX, $0x02
+	CMPQ    BX, $0x02
 	JB      cmp1
-	MOVBLZX 1(CX)(AX*1), DI
-	MOVBLZX 1(BX)(AX*1), R8
+	MOVBLZX 1(DX)(AX*1), DI
+	MOVBLZX 1(SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
+	ORB     DI, CL
 
 cmp1:
-	CMPQ    DX, $0x01
+	CMPQ    BX, $0x01
 	JB      success
-	MOVBLZX (CX)(AX*1), DI
-	MOVBLZX (BX)(AX*1), R8
+	MOVBLZX (DX)(AX*1), DI
+	MOVBLZX (SI)(AX*1), R8
 	MOVB    (R9)(DI*1), DI
 	XORB    (R9)(R8*1), DI
-	ORB     DI, SI
+	ORB     DI, CL
 
 done:
-	SETEQ ret+32(FP)
+	SETEQ ret+40(FP)
 	RET
 
 success:
-	MOVB $0x01, ret+32(FP)
+	MOVB $0x01, ret+40(FP)
 	RET
 
 init_avx:
-	MOVB         $0x20, SI
-	PINSRB       $0x00, SI, X12
+	MOVB         $0x20, CL
+	PINSRB       $0x00, CX, X12
 	VPBROADCASTB X12, Y12
-	MOVB         $0x1f, SI
-	PINSRB       $0x00, SI, X13
+	MOVB         $0x1f, CL
+	PINSRB       $0x00, CX, X13
 	VPBROADCASTB X13, Y13
-	MOVB         $0x9a, SI
-	PINSRB       $0x00, SI, X14
+	MOVB         $0x9a, CL
+	PINSRB       $0x00, CX, X14
 	VPBROADCASTB X14, Y14
-	MOVB         $0x01, SI
-	PINSRB       $0x00, SI, X15
+	MOVB         $0x01, CL
+	PINSRB       $0x00, CX, X15
 	VPBROADCASTB X15, Y15
 
 cmp128:
-	CMPQ      DX, $0x80
+	CMPQ      BX, $0x80
 	JB        cmp64
-	VMOVDQU   (CX)(AX*1), Y0
-	VMOVDQU   32(CX)(AX*1), Y1
-	VMOVDQU   64(CX)(AX*1), Y2
-	VMOVDQU   96(CX)(AX*1), Y3
-	VMOVDQU   (BX)(AX*1), Y4
-	VMOVDQU   32(BX)(AX*1), Y5
-	VMOVDQU   64(BX)(AX*1), Y6
-	VMOVDQU   96(BX)(AX*1), Y7
+	VMOVDQU   (DX)(AX*1), Y0
+	VMOVDQU   32(DX)(AX*1), Y1
+	VMOVDQU   64(DX)(AX*1), Y2
+	VMOVDQU   96(DX)(AX*1), Y3
+	VMOVDQU   (SI)(AX*1), Y4
+	VMOVDQU   32(SI)(AX*1), Y5
+	VMOVDQU   64(SI)(AX*1), Y6
+	VMOVDQU   96(SI)(AX*1), Y7
 	VXORPD    Y0, Y4, Y4
 	VPCMPEQB  Y12, Y4, Y8
 	VORPD     Y12, Y0, Y0
@@ -206,19 +207,19 @@ cmp128:
 	VPAND     Y3, Y2, Y2
 	VPAND     Y2, Y0, Y0
 	ADDQ      $0x80, AX
-	SUBQ      $0x80, DX
-	VPMOVMSKB Y0, SI
-	XORL      $0xffffffff, SI
+	SUBQ      $0x80, BX
+	VPMOVMSKB Y0, CX
+	XORL      $0xffffffff, CX
 	JNE       done
 	JMP       cmp128
 
 cmp64:
-	CMPQ      DX, $0x40
+	CMPQ      BX, $0x40
 	JB        cmp32
-	VMOVDQU   (CX)(AX*1), Y0
-	VMOVDQU   32(CX)(AX*1), Y1
-	VMOVDQU   (BX)(AX*1), Y2
-	VMOVDQU   32(BX)(AX*1), Y3
+	VMOVDQU   (DX)(AX*1), Y0
+	VMOVDQU   32(DX)(AX*1), Y1
+	VMOVDQU   (SI)(AX*1), Y2
+	VMOVDQU   32(SI)(AX*1), Y3
 	VXORPD    Y0, Y2, Y2
 	VPCMPEQB  Y12, Y2, Y4
 	VORPD     Y12, Y0, Y0
@@ -239,16 +240,16 @@ cmp64:
 	VPCMPEQB  Y3, Y1, Y1
 	VPAND     Y1, Y0, Y0
 	ADDQ      $0x40, AX
-	SUBQ      $0x40, DX
-	VPMOVMSKB Y0, SI
-	XORL      $0xffffffff, SI
+	SUBQ      $0x40, BX
+	VPMOVMSKB Y0, CX
+	XORL      $0xffffffff, CX
 	JNE       done
 
 cmp32:
-	CMPQ      DX, $0x20
+	CMPQ      BX, $0x20
 	JB        cmp16
-	VMOVDQU   (CX)(AX*1), Y0
-	VMOVDQU   (BX)(AX*1), Y1
+	VMOVDQU   (DX)(AX*1), Y0
+	VMOVDQU   (SI)(AX*1), Y1
 	VXORPD    Y0, Y1, Y1
 	VPCMPEQB  Y12, Y1, Y2
 	VORPD     Y12, Y0, Y0
@@ -259,16 +260,16 @@ cmp32:
 	VPSLLW    $0x05, Y0, Y0
 	VPCMPEQB  Y1, Y0, Y0
 	ADDQ      $0x20, AX
-	SUBQ      $0x20, DX
-	VPMOVMSKB Y0, SI
-	XORL      $0xffffffff, SI
+	SUBQ      $0x20, BX
+	VPMOVMSKB Y0, CX
+	XORL      $0xffffffff, CX
 	JNE       done
 
 cmp16:
-	CMPQ      DX, $0x10
+	CMPQ      BX, $0x10
 	JLE       cmp_tail
-	VMOVDQU   (CX)(AX*1), X0
-	VMOVDQU   (BX)(AX*1), X1
+	VMOVDQU   (DX)(AX*1), X0
+	VMOVDQU   (SI)(AX*1), X1
 	VXORPD    X0, X1, X1
 	VPCMPEQB  X12, X1, X2
 	VORPD     X12, X0, X0
@@ -279,16 +280,16 @@ cmp16:
 	VPSLLW    $0x05, X0, X0
 	VPCMPEQB  X1, X0, X0
 	ADDQ      $0x10, AX
-	SUBQ      $0x10, DX
-	VPMOVMSKB X0, SI
-	XORL      $0x0000ffff, SI
+	SUBQ      $0x10, BX
+	VPMOVMSKB X0, CX
+	XORL      $0x0000ffff, CX
 	JNE       done
 
 cmp_tail:
-	SUBQ      $0x10, DX
-	ADDQ      DX, AX
-	VMOVDQU   (CX)(AX*1), X0
-	VMOVDQU   (BX)(AX*1), X1
+	SUBQ      $0x10, BX
+	ADDQ      BX, AX
+	VMOVDQU   (DX)(AX*1), X0
+	VMOVDQU   (SI)(AX*1), X1
 	VXORPD    X0, X1, X1
 	VPCMPEQB  X12, X1, X2
 	VORPD     X12, X0, X0

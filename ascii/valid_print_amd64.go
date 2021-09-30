@@ -5,5 +5,5 @@
 
 package ascii
 
-// ValidPrintString returns true if s contains only printable ASCII characters.
-func ValidPrintString(s string) bool
+// validPrintString returns true if s contains only printable ASCII characters.
+func validPrintString(s string, abi uint64) bool

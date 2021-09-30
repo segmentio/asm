@@ -1,3 +1,4 @@
+//go:build ignore
 // +build ignore
 
 package main
@@ -18,15 +19,16 @@ func init() {
 }
 
 func main() {
-	TEXT("EqualFoldString", NOSPLIT, "func(a, b string) bool")
+	TEXT("equalFoldString", NOSPLIT, "func(a, b string, abi uint64) bool")
 	Doc(
-		"EqualFoldString is a version of strings.EqualFold designed to work on ASCII",
+		"equalFoldString is a version of strings.EqualFold designed to work on ASCII",
 		"input instead of UTF-8.",
 		"",
 		"When the program has guarantees that the input is composed of ASCII",
 		"characters only, it allows for greater optimizations.",
 	)
 
+	abi := Load(Param("abi"), GP64())
 	// Use index for byte position. We have plenty of registers, and it saves an
 	// ADD operation as the memory index is the same for both a and b.
 	i := GP64()
@@ -40,9 +42,9 @@ func main() {
 	JNE(LabelRef("done")) //   return false
 	XORQ(i, i)            // i = 0
 
-	CMPQ(n, U8(16))                     // if n < 16:
-	JB(LabelRef("init_x86"))            //   goto init_x86
-	JumpIfFeature("init_avx", cpu.AVX2) // goto init_avx if supported
+	CMPQ(n, U8(16))                             // if n < 16:
+	JB(LabelRef("init_x86"))                    //   goto init_x86
+	JumpIfFeatureABI("init_avx", cpu.AVX2, abi) // goto init_avx if supported
 
 	Label("init_x86")
 

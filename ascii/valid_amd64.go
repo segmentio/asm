@@ -5,5 +5,5 @@
 
 package ascii
 
-// ValidString returns true if s contains only ASCII characters.
-func ValidString(s string) bool
+// validString returns true if s contains only ASCII characters.
+func validString(s string, abi uint64) bool

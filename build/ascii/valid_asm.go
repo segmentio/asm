@@ -1,3 +1,4 @@
+//go:build ignore
 // +build ignore
 
 package main
@@ -16,9 +17,10 @@ func init() {
 }
 
 func main() {
-	TEXT("ValidString", NOSPLIT, "func(s string) bool")
-	Doc("ValidString returns true if s contains only ASCII characters.")
+	TEXT("validString", NOSPLIT, "func(s string, abi uint64) bool")
+	Doc("validString returns true if s contains only ASCII characters.")
 
+	abi := Load(Param("abi"), GP64())
 	p := Mem{Base: Load(Param("s").Base(), GP64())}
 	n := Load(Param("s").Len(), GP64())
 	ret, _ := ReturnIndex(0).Resolve()
@@ -31,7 +33,7 @@ func main() {
 
 	CMPQ(n, U8(16))      // if n < 16:
 	JB(LabelRef("cmp8")) //   goto cmp8
-	JumpIfFeature("init_avx", cpu.AVX2)
+	JumpIfFeatureABI("init_avx", cpu.AVX2, abi)
 
 	Label("cmp8")
 	CMPQ(n, U8(8))           // if n < 8:

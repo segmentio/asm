@@ -5,9 +5,9 @@
 
 package ascii
 
-// EqualFoldString is a version of strings.EqualFold designed to work on ASCII
+// equalFoldString is a version of strings.EqualFold designed to work on ASCII
 // input instead of UTF-8.
 //
 // When the program has guarantees that the input is composed of ASCII
 // characters only, it allows for greater optimizations.
-func EqualFoldString(a string, b string) bool
+func equalFoldString(a string, b string, abi uint64) bool

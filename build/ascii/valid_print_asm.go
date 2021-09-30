@@ -1,3 +1,4 @@
+//go:build ignore
 // +build ignore
 
 package main
@@ -16,9 +17,10 @@ func init() {
 }
 
 func main() {
-	TEXT("ValidPrintString", NOSPLIT, "func(s string) bool")
-	Doc("ValidPrintString returns true if s contains only printable ASCII characters.")
+	TEXT("validPrintString", NOSPLIT, "func(s string, abi uint64) bool")
+	Doc("validPrintString returns true if s contains only printable ASCII characters.")
 
+	abi := Load(Param("abi"), GP64())
 	p := Mem{Base: Load(Param("s").Base(), GP64())}
 	n := Load(Param("s").Len(), GP64())
 	ret, _ := ReturnIndex(0).Resolve()
@@ -29,9 +31,9 @@ func main() {
 	val := GP32()
 	tmp := GP32()
 
-	CMPQ(n, U8(16))                     // if n < 16:
-	JB(LabelRef("init_x86"))            //   goto init_x86
-	JumpIfFeature("init_avx", cpu.AVX2) // goto init_avx if supported
+	CMPQ(n, U8(16))                             // if n < 16:
+	JB(LabelRef("init_x86"))                    //   goto init_x86
+	JumpIfFeatureABI("init_avx", cpu.AVX2, abi) // goto init_avx if supported
 
 	Label("init_x86")
 	CMPQ(n, U8(8))       // if n < 8:
