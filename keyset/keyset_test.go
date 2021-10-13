@@ -37,6 +37,8 @@ func BenchmarkIteration(b *testing.B) {
 		m[k] = i
 	}
 
+	prng := rand.New(rand.NewSource(0))
+
 	const permutations = 1000
 	r := make([]int, len(keys)*permutations)
 	for i := 0; i < permutations; i++ {
@@ -44,7 +46,7 @@ func BenchmarkIteration(b *testing.B) {
 		for j := range x {
 			x[j] = j
 		}
-		rand.Shuffle(len(keys), func(a, b int) {
+		prng.Shuffle(len(keys), func(a, b int) {
 			x[a], x[b] = x[b], x[a]
 		})
 	}
@@ -70,9 +72,10 @@ func BenchmarkIteration(b *testing.B) {
 	})
 
 	b.Run("map-random", func(b *testing.B) {
+		prng := rand.New(rand.NewSource(0))
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			p := rand.Intn(permutations)
+			p := prng.Intn(permutations)
 			permutation := r[p*len(keys):][:len(keys)]
 			for _, i := range permutation {
 				_ = m[string(keys[i])]
