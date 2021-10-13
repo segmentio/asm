@@ -3,6 +3,8 @@ package keyset
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -13,7 +15,7 @@ func TestKeySet(t *testing.T) {
 	for i := 0; i < max; i++ {
 		keys = keys[:i]
 		for j := range keys {
-			keys[j] = []byte(fmt.Sprintf("key-%d", i-j))
+			keys[j] = []byte(strconv.Itoa(i-j))
 		}
 		lookup := New(keys)
 
@@ -32,7 +34,7 @@ func BenchmarkIteration(b *testing.B) {
 	keys := make([][]byte, 8)
 	m := map[string]int{}
 	for i := range keys {
-		k := fmt.Sprintf("keys-%d", i)
+		k := strings.Repeat("x", i)
 		keys[i] = []byte(k)
 		m[k] = i
 	}

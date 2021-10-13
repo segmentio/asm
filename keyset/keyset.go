@@ -33,7 +33,7 @@ func New(keys [][]byte) Lookup {
 		}
 
 		return func(k []byte) int {
-			return search16(&buffer[0], lengths, k)
+			return searchAVX(&buffer[0], lengths, k)
 		}
 	}
 

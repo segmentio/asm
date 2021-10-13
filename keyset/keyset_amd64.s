@@ -4,44 +4,95 @@
 
 #include "textflag.h"
 
-// func search16(buffer *byte, lengths []uint32, key []byte) int
+// func searchAVX(buffer *byte, lengths []uint32, key []byte) int
 // Requires: AVX
-TEXT ·search16(SB), NOSPLIT, $0-64
-	MOVQ    key_base+32(FP), AX
+TEXT ·searchAVX(SB), NOSPLIT, $0-64
+	MOVQ    key_base+32(FP), SI
 	MOVQ    key_len+40(FP), CX
 	CMPQ    CX, $0x10
 	JA      notfound
-	MOVQ    buffer+0(FP), DX
-	MOVQ    lengths_base+8(FP), BX
-	MOVQ    lengths_len+16(FP), SI
-	VMOVUPS (AX), X0
-	MOVQ    $0x00000001, AX
-	SHLQ    CL, AX
-	DECQ    AX
+	MOVQ    buffer+0(FP), AX
+	MOVQ    lengths_base+8(FP), DX
+	MOVQ    lengths_len+16(FP), BX
+	VMOVUPS (SI), X0
+	MOVL    $0x00000001, SI
+	SHLL    CL, SI
+	DECL    SI
 	XORQ    DI, DI
-	XORQ    R8, R8
+	MOVQ    BX, R12
+	SHRQ    $0x02, R12
+	SHLQ    $0x02, R12
+
+bigloop:
+	CMPQ      DI, R12
+	JE        loop
+	CMPL      CX, (DX)(DI*4)
+	JNE       try1
+	VPCMPEQB  (AX), X0, X8
+	VPMOVMSKB X8, R8
+	ANDL      SI, R8
+	CMPL      SI, R8
+	JNE       try1
+	JMP       done
+
+try1:
+	CMPL      CX, 4(DX)(DI*4)
+	JNE       try2
+	VPCMPEQB  16(AX), X0, X9
+	VPMOVMSKB X9, R9
+	ANDL      SI, R9
+	CMPL      SI, R9
+	JNE       try2
+	ADDQ      $0x01, DI
+	JMP       done
+
+try2:
+	CMPL      CX, 8(DX)(DI*4)
+	JNE       try3
+	VPCMPEQB  32(AX), X0, X10
+	VPMOVMSKB X10, R10
+	ANDL      SI, R10
+	CMPL      SI, R10
+	JNE       try3
+	ADDQ      $0x02, DI
+	JMP       done
+
+try3:
+	CMPL      CX, 12(DX)(DI*4)
+	JNE       try4
+	VPCMPEQB  48(AX), X0, X11
+	VPMOVMSKB X11, R11
+	ANDL      SI, R11
+	CMPL      SI, R11
+	JNE       try4
+	ADDQ      $0x03, DI
+	JMP       done
+
+try4:
+	ADDQ $0x04, DI
+	ADDQ $0x40, AX
+	JMP  bigloop
 
 loop:
-	CMPQ      R8, SI
+	CMPQ      DI, BX
 	JE        done
-	CMPL      CX, (BX)(R8*4)
+	CMPL      CX, (DX)(DI*4)
 	JNE       next
-	VMOVUPS   (DX), X1
-	VPCMPEQB  X1, X0, X1
-	VPMOVMSKB X1, DI
-	ANDQ      AX, DI
-	CMPQ      AX, DI
+	VPCMPEQB  (AX), X0, X1
+	VPMOVMSKB X1, R8
+	ANDL      SI, R8
+	CMPL      SI, R8
 	JE        done
 
 next:
-	INCQ R8
-	ADDQ $0x10, DX
+	INCQ DI
+	ADDQ $0x10, AX
 	JMP  loop
 
 done:
-	MOVQ R8, ret+56(FP)
+	MOVQ DI, ret+56(FP)
 	RET
 
 notfound:
-	MOVQ SI, ret+56(FP)
+	MOVQ BX, ret+56(FP)
 	RET

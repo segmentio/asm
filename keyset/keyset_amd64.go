@@ -5,4 +5,4 @@
 
 package keyset
 
-func search16(buffer *byte, lengths []uint32, key []byte) int
+func searchAVX(buffer *byte, lengths []uint32, key []byte) int
