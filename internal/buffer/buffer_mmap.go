@@ -39,12 +39,12 @@ func New(n int) (Buffer, error) {
 
 func (a *Buffer) ProtectHead() []byte {
 	head := a.pg
-	return a.mmap[head : head+a.n]
+	return a.mmap[head : head+a.n : head+a.n]
 }
 
 func (a *Buffer) ProtectTail() []byte {
 	tail := len(a.mmap) - a.pg - a.n
-	return a.mmap[tail : tail+a.n]
+	return a.mmap[tail : tail+a.n : tail+a.n]
 }
 
 func (a *Buffer) Release() {

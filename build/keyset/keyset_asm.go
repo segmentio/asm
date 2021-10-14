@@ -41,6 +41,7 @@ func searchAVX() {
 	keyPtr := Load(Param("key").Base(), GP64())
 	keyLen := CX
 	Load(Param("key").Len(), keyLen.As64())
+	keyCap := Load(Param("key").Cap(), GP64())
 
 	// None of the keys we're searching through have a length greater than 16,
 	// so bail early if the input is more than 16 bytes long.
@@ -53,13 +54,16 @@ func searchAVX() {
 	count := Load(Param("lengths").Len(), GP64())
 
 	// Load the input key. We're going to be unconditionally loading 16 bytes,
-	// so first we must check if we're near a page boundary. If we are, we can
-	// load+shuffle to avoid a potential fault.
+	// so first check if it's safe to do so (cap(k) >= 16). If not, and we're
+	// near a page boundary, we must load+shuffle to avoid a fault.
+	CMPQ(keyCap, Imm(16))
+	JAE(LabelRef("load"))
 	pageOffset := GP64()
 	MOVQ(keyPtr, pageOffset)
 	ANDQ(U32(pageSize-1), pageOffset)
 	CMPQ(pageOffset, U32(pageSize-16))
 	JA(LabelRef("tail_load"))
+	Label("load")
 	key := XMM()
 	VMOVUPS(Mem{Base: keyPtr}, key)
 

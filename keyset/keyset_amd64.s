@@ -7,17 +7,22 @@
 // func searchAVX(buffer *byte, lengths []uint32, key []byte) int
 // Requires: AVX
 TEXT ·searchAVX(SB), NOSPLIT, $0-64
-	MOVQ    key_base+32(FP), SI
-	MOVQ    key_len+40(FP), CX
-	CMPQ    CX, $0x10
-	JA      notfound
-	MOVQ    buffer+0(FP), AX
-	MOVQ    lengths_base+8(FP), DX
-	MOVQ    lengths_len+16(FP), BX
-	MOVQ    SI, DI
-	ANDQ    $0x00000fff, DI
-	CMPQ    DI, $0x00000ff0
-	JA      tail_load
+	MOVQ key_base+32(FP), SI
+	MOVQ key_len+40(FP), CX
+	MOVQ key_cap+48(FP), DI
+	CMPQ CX, $0x10
+	JA   notfound
+	MOVQ buffer+0(FP), AX
+	MOVQ lengths_base+8(FP), DX
+	MOVQ lengths_len+16(FP), BX
+	CMPQ DI, $0x10
+	JAE  load
+	MOVQ SI, DI
+	ANDQ $0x00000fff, DI
+	CMPQ DI, $0x00000ff0
+	JA   tail_load
+
+load:
 	VMOVUPS (SI), X0
 
 start:
