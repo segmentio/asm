@@ -61,12 +61,12 @@ func searchAVX() {
 	Label("load")
 	key := XMM()
 	VMOVUPS(Mem{Base: keyPtr}, key)
-	Label("start")
 
-	// Build a mask with popcount(mask) = keyLen, e.g. for keyLen=4 the mask
-	// is 15 (0b1111).
+	// Build a mask with keyLen bits set starting at the LSB, e.g. for keyLen=4
+	// the mask is 15 (0b1111).
 	// TODO: SHL will only accept CL for variable shifts. CL = CX = keyLen. Why
 	//  doesn't keyLen.As8L() work?
+	Label("prepare")
 	match := GP32()
 	MOVL(U32(1), match)
 	SHLL(CL, match)
@@ -147,24 +147,22 @@ func searchAVX() {
 	Store(count, ReturnIndex(0))
 	RET()
 
+	// If the input key is near a page boundary, we must change the way we load
+	// it to avoid a fault. We instead want to load the 16 bytes up to and
+	// including the key, then shuffle the key forward in the register. E.g. for
+	// key "foo" we would load the 13 bytes prior to the key along with "foo"
+	// and then move the last 3 bytes forward so the first 3 bytes are equal
+	// to "foo".
 	Label("check_input")
 	pageOffset := GP64()
 	MOVQ(keyPtr, pageOffset)
 	ANDQ(U32(pageSize-1), pageOffset)
 	CMPQ(pageOffset, U32(pageSize-16))
 	JBE(LabelRef("load"))
-
-	// If the input key is near a page boundary, we instead want to load the
-	// 16 bytes up to and including the key, then shuffle the key forward in the
-	// register. E.g. for key "foo" we would load the 13 bytes prior to the key
-	// along with "foo" and then move the last 3 bytes forward so the first 3
-	// bytes are equal to "foo".
-	Label("tail_load")
 	offset := GP64()
 	MOVQ(^U64(0)-16+1, offset)
 	ADDQ(keyLen.As64(), offset)
 	VMOVUPS(Mem{Base: keyPtr, Index: offset, Scale: 1}, key)
-
 	var shuffleBytes [16 * 2]byte
 	for j := 0; j < 16; j++ {
 		shuffleBytes[j] = byte(j)
@@ -177,6 +175,5 @@ func searchAVX() {
 	shuffle := XMM()
 	VMOVUPS(Mem{Base: shuffleMasksPtr}, shuffle)
 	VPSHUFB(shuffle, key, key)
-
-	JMP(LabelRef("start"))
+	JMP(LabelRef("prepare"))
 }

@@ -21,7 +21,7 @@ TEXT ·searchAVX(SB), NOSPLIT, $0-64
 load:
 	VMOVUPS (SI), X0
 
-start:
+prepare:
 	MOVL $0x00000001, SI
 	SHLL CL, SI
 	DECL SI
@@ -116,7 +116,7 @@ check_input:
 	SUBQ    CX, SI
 	VMOVUPS (SI), X1
 	VPSHUFB X1, X0, X0
-	JMP     start
+	JMP     prepare
 
 DATA shuffle_masks<>+0(SB)/8, $0x0706050403020100
 DATA shuffle_masks<>+8(SB)/8, $0x0f0e0d0c0b0a0908
