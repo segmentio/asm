@@ -23,56 +23,60 @@ func init() {
 }
 
 func main() {
-	searchAVX()
+	Lookup()
 
 	Generate()
 }
 
-// searchAVX searches for a key in a set of keys.
+// Lookup searches for a key in a set of keys.
 //
 // Each key in the set of keys should be padded to 16 bytes and concatenated
-// into a single buffer. The length of each key should be available in the
-// slice of lengths. len(buffer) should equal len(lengths)*16. The routine
-// searches for the input key in the set of keys and returns its index if found.
-// If not found, the routine returns the number of keys (len(lengths)).
-func searchAVX() {
-	TEXT("searchAVX", NOSPLIT, "func(buffer *byte, lengths []uint8, key []byte) int")
+// into a single buffer. The routine searches for the input key in the set of
+// keys and returns its index if found. If not found, the routine returns the
+// number of keys (len(keyset)/16).
+func Lookup() {
+	TEXT("Lookup", NOSPLIT, "func(keyset []byte, key []byte) int")
+	Doc("Lookup searches for a key in a set of keys, returning its index if ",
+		"found. If the key cannot be found, the number of keys is returned.")
 
-	// Load the input key and length. Put the length in CX so that we can use
-	// it in a variable shift below (SHL only accepts CL for variable shifts).
+	// Load inputs.
+	keyset := Load(Param("keyset").Base(), GP64())
+	count := Load(Param("keyset").Len(), GP64())
+	SHRQ(Imm(4), count)
 	keyPtr := Load(Param("key").Base(), GP64())
-	keyLen := CX
-	Load(Param("key").Len(), keyLen.As64())
+	keyLen := Load(Param("key").Len(), GP64())
 	keyCap := Load(Param("key").Cap(), GP64())
 
-	// None of the keys we're searching through have a length greater than 16,
-	// so bail early if the input is more than 16 bytes long.
-	CMPQ(keyLen.As64(), Imm(maxLength))
-	JA(LabelRef("notfound"))
+	// None of the keys are larger than maxLength.
+	CMPQ(keyLen, Imm(maxLength))
+	JA(LabelRef("not_found"))
 
-	// Load the remaining inputs.
-	buffer := Load(Param("buffer"), GP64())
-	lengths := Load(Param("lengths").Base(), GP64())
-	count := Load(Param("lengths").Len(), GP64())
-
-	// Load the input key. We're going to be unconditionally loading 16 bytes,
-	// so first check if it's safe to do so (cap(k) >= 16). If not, and we're
-	// near a page boundary, we must load+shuffle to avoid a fault.
+	// We're going to be unconditionally loading 16 bytes from the input key
+	// so first check if it's safe to do so (cap >= 16). If not, defer to
+	// safe_load for additional checks.
 	CMPQ(keyCap, Imm(maxLength))
-	JB(LabelRef("check_input"))
+	JB(LabelRef("safe_load"))
+
+	// Load the input key and pad with zeroes to 16 bytes.
 	Label("load")
 	key := XMM()
 	VMOVUPS(Mem{Base: keyPtr}, key)
-
-	// Build a mask with keyLen bits set starting at the LSB, e.g. for keyLen=4
-	// the mask is 15 (0b1111).
-	// TODO: SHL will only accept CL for variable shifts. CL = CX = keyLen. Why
-	//  doesn't keyLen.As8L() work?
 	Label("prepare")
-	match := GP32()
-	MOVL(U32(1), match)
-	SHLL(CL, match)
-	DECL(match)
+	zeroes := XMM()
+	VPXOR(zeroes, zeroes, zeroes)
+	ones := XMM()
+	VPCMPEQB(ones, ones, ones)
+	var blendBytes [maxLength * 2]byte
+	for j := 0; j < maxLength; j++ {
+		blendBytes[j] = 0xFF
+	}
+	blendMasks := ConstBytes("blend_masks", blendBytes[:])
+	blendMasksPtr := GP64()
+	LEAQ(blendMasks.Offset(maxLength), blendMasksPtr)
+	SUBQ(keyLen, blendMasksPtr)
+	blend := XMM()
+	VMOVUPS(Mem{Base: blendMasksPtr}, blend)
+	VPBLENDVB(blend, key, zeroes, key)
 
 	// Zero out i so we can use it as the loop increment.
 	i := GP64()
@@ -86,36 +90,27 @@ func searchAVX() {
 	SHRQ(Imm(shift), truncatedCount)
 	SHLQ(Imm(shift), truncatedCount)
 
-	// Loop over multiple keys.
+	// Loop over multiple keys in the big loop.
 	Label("bigloop")
 	CMPQ(i, truncatedCount)
 	JE(LabelRef("loop"))
 
 	x := []VecPhysical{X8, X9, X10, X11, X12, X13, X14, X15}
-	g := []Physical{R8L, R9L, R10L, R11L, R12L, R13L, R14L, R15L}
-
 	for n := 0; n < unroll; n++ {
-		// Try to match against the input key.
-		// Check lengths first, then if length matches check bytes match.
-		Label(fmt.Sprintf("try%d", n))
-		CMPB(keyLen.As8L(), Mem{Base: lengths, Index: i, Disp: n, Scale: 1})
-		JNE(LabelRef(fmt.Sprintf("try%d", n+1)))
-		VPCMPEQB(Mem{Base: buffer, Disp: maxLength * n}, key, x[n])
-		VPMOVMSKB(x[n], g[n])
-		ANDL(match, g[n])
-		CMPL(match, g[n])
-		JNE(LabelRef(fmt.Sprintf("try%d", n+1)))
-		if n > 0 {
-			// Correct the loop increment before returning.
-			ADDQ(Imm(uint64(n)), i)
+		VPCMPEQB(Mem{Base: keyset, Disp: maxLength * n}, key, x[n])
+		VPTEST(ones, x[n])
+		var target string
+		if n == 0 {
+			target = "done"
+		} else {
+			target = fmt.Sprintf("found%d", n)
 		}
-		JMP(LabelRef("done"))
+		JCS(LabelRef(target))
 	}
 
 	// Advance and loop again.
-	Label(fmt.Sprintf("try%d", unroll))
 	ADDQ(Imm(unroll), i)
-	ADDQ(Imm(unroll*maxLength), buffer)
+	ADDQ(Imm(unroll*maxLength), keyset)
 	JMP(LabelRef("bigloop"))
 
 	// Loop over the remaining keys.
@@ -124,28 +119,29 @@ func searchAVX() {
 	JE(LabelRef("done"))
 
 	// Try to match against the input key.
-	// Check lengths first, then if length matches check bytes match.
-	CMPB(keyLen.As8L(), Mem{Base: lengths, Index: i, Scale: 1})
-	JNE(LabelRef("next"))
-	maskX := XMM()
-	mask := GP32()
-	VPCMPEQB(Mem{Base: buffer}, key, maskX)
-	VPMOVMSKB(maskX, mask)
-	ANDL(match, mask)
-	CMPL(match, mask)
-	JE(LabelRef("done"))
+	match := XMM()
+	VPCMPEQB(Mem{Base: keyset}, key, match)
+	VPTEST(ones, match)
+	JCS(LabelRef("done"))
 
 	// Advance and loop again.
 	Label("next")
 	INCQ(i)
-	ADDQ(Imm(maxLength), buffer)
+	ADDQ(Imm(maxLength), keyset)
 	JMP(LabelRef("loop"))
+	JMP(LabelRef("done"))
 
-	// Return the loop increment, or the count if the key wasn't found.
+	// Return the loop increment, or the count if the key wasn't found. If we're
+	// here from a jump within the big loop, the loop increment needs
+	// correcting first.
+	for j := unroll - 1; j > 0; j-- {
+		Label(fmt.Sprintf("found%d", j))
+		INCQ(i)
+	}
 	Label("done")
 	Store(i, ReturnIndex(0))
 	RET()
-	Label("notfound")
+	Label("not_found")
 	Store(count, ReturnIndex(0))
 	RET()
 
@@ -155,15 +151,15 @@ func searchAVX() {
 	// key "foo" we would load the 13 bytes prior to the key along with "foo"
 	// and then move the last 3 bytes forward so the first 3 bytes are equal
 	// to "foo".
-	Label("check_input")
+	Label("safe_load")
 	pageOffset := GP64()
 	MOVQ(keyPtr, pageOffset)
 	ANDQ(U32(pageSize-1), pageOffset)
 	CMPQ(pageOffset, U32(pageSize-maxLength))
-	JBE(LabelRef("load"))
+	JBE(LabelRef("load")) // Not near a page boundary.
 	offset := GP64()
 	MOVQ(^U64(0)-maxLength+1, offset)
-	ADDQ(keyLen.As64(), offset)
+	ADDQ(keyLen, offset)
 	VMOVUPS(Mem{Base: keyPtr, Index: offset, Scale: 1}, key)
 	var shuffleBytes [maxLength * 2]byte
 	for j := 0; j < maxLength; j++ {
@@ -173,7 +169,7 @@ func searchAVX() {
 	shuffleMasks := ConstBytes("shuffle_masks", shuffleBytes[:])
 	shuffleMasksPtr := GP64()
 	LEAQ(shuffleMasks.Offset(maxLength), shuffleMasksPtr)
-	SUBQ(keyLen.As64(), shuffleMasksPtr)
+	SUBQ(keyLen, shuffleMasksPtr)
 	shuffle := XMM()
 	VMOVUPS(Mem{Base: shuffleMasksPtr}, shuffle)
 	VPSHUFB(shuffle, key, key)

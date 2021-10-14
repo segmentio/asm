@@ -4,119 +4,101 @@
 
 #include "textflag.h"
 
-// func searchAVX(buffer *byte, lengths []uint8, key []byte) int
+// func Lookup(keyset []byte, key []byte) int
 // Requires: AVX
-TEXT ·searchAVX(SB), NOSPLIT, $0-64
-	MOVQ key_base+32(FP), SI
-	MOVQ key_len+40(FP), CX
-	MOVQ key_cap+48(FP), DI
-	CMPQ CX, $0x10
-	JA   notfound
-	MOVQ buffer+0(FP), AX
-	MOVQ lengths_base+8(FP), DX
-	MOVQ lengths_len+16(FP), BX
-	CMPQ DI, $0x10
-	JB   check_input
+TEXT ·Lookup(SB), NOSPLIT, $0-56
+	MOVQ keyset_base+0(FP), AX
+	MOVQ keyset_len+8(FP), CX
+	SHRQ $0x04, CX
+	MOVQ key_base+24(FP), DX
+	MOVQ key_len+32(FP), BX
+	MOVQ key_cap+40(FP), SI
+	CMPQ BX, $0x10
+	JA   not_found
+	CMPQ SI, $0x10
+	JB   safe_load
 
 load:
-	VMOVUPS (SI), X0
+	VMOVUPS (DX), X0
 
 prepare:
-	MOVL $0x00000001, SI
-	SHLL CL, SI
-	DECL SI
-	XORQ DI, DI
-	MOVQ BX, R12
-	SHRQ $0x02, R12
-	SHLQ $0x02, R12
+	VPXOR     X2, X2, X2
+	VPCMPEQB  X1, X1, X1
+	LEAQ      blend_masks<>+16(SB), DX
+	SUBQ      BX, DX
+	VMOVUPS   (DX), X3
+	VPBLENDVB X3, X0, X2, X0
+	XORQ      DX, DX
+	MOVQ      CX, BX
+	SHRQ      $0x02, BX
+	SHLQ      $0x02, BX
 
 bigloop:
-	CMPQ      DI, R12
-	JE        loop
-	CMPB      CL, (DX)(DI*1)
-	JNE       try1
-	VPCMPEQB  (AX), X0, X8
-	VPMOVMSKB X8, R8
-	ANDL      SI, R8
-	CMPL      SI, R8
-	JNE       try1
-	JMP       done
-
-try1:
-	CMPB      CL, 1(DX)(DI*1)
-	JNE       try2
-	VPCMPEQB  16(AX), X0, X9
-	VPMOVMSKB X9, R9
-	ANDL      SI, R9
-	CMPL      SI, R9
-	JNE       try2
-	ADDQ      $0x01, DI
-	JMP       done
-
-try2:
-	CMPB      CL, 2(DX)(DI*1)
-	JNE       try3
-	VPCMPEQB  32(AX), X0, X10
-	VPMOVMSKB X10, R10
-	ANDL      SI, R10
-	CMPL      SI, R10
-	JNE       try3
-	ADDQ      $0x02, DI
-	JMP       done
-
-try3:
-	CMPB      CL, 3(DX)(DI*1)
-	JNE       try4
-	VPCMPEQB  48(AX), X0, X11
-	VPMOVMSKB X11, R11
-	ANDL      SI, R11
-	CMPL      SI, R11
-	JNE       try4
-	ADDQ      $0x03, DI
-	JMP       done
-
-try4:
-	ADDQ $0x04, DI
-	ADDQ $0x40, AX
-	JMP  bigloop
+	CMPQ     DX, BX
+	JE       loop
+	VPCMPEQB (AX), X0, X8
+	VPTEST   X1, X8
+	JCS      done
+	VPCMPEQB 16(AX), X0, X9
+	VPTEST   X1, X9
+	JCS      found1
+	VPCMPEQB 32(AX), X0, X10
+	VPTEST   X1, X10
+	JCS      found2
+	VPCMPEQB 48(AX), X0, X11
+	VPTEST   X1, X11
+	JCS      found3
+	ADDQ     $0x04, DX
+	ADDQ     $0x40, AX
+	JMP      bigloop
 
 loop:
-	CMPQ      DI, BX
-	JE        done
-	CMPB      CL, (DX)(DI*1)
-	JNE       next
-	VPCMPEQB  (AX), X0, X1
-	VPMOVMSKB X1, R8
-	ANDL      SI, R8
-	CMPL      SI, R8
-	JE        done
+	CMPQ     DX, CX
+	JE       done
+	VPCMPEQB (AX), X0, X2
+	VPTEST   X1, X2
+	JCS      done
+	INCQ     DX
+	ADDQ     $0x10, AX
+	JMP      loop
+	JMP done
 
-next:
-	INCQ DI
-	ADDQ $0x10, AX
-	JMP  loop
+found3:
+	INCQ DX
+
+found2:
+	INCQ DX
+
+found1:
+	INCQ DX
 
 done:
-	MOVQ DI, ret+56(FP)
+	MOVQ DX, ret+48(FP)
 	RET
 
-notfound:
-	MOVQ BX, ret+56(FP)
+not_found:
+	MOVQ CX, ret+48(FP)
 	RET
 
-check_input:
-	MOVQ    SI, DI
-	ANDQ    $0x00000fff, DI
-	CMPQ    DI, $0x00000ff0
+safe_load:
+	MOVQ    DX, SI
+	ANDQ    $0x00000fff, SI
+	CMPQ    SI, $0x00000ff0
 	JBE     load
-	MOVQ    $0xfffffffffffffff0, DI
-	ADDQ    CX, DI
-	VMOVUPS (SI)(DI*1), X0
-	LEAQ    shuffle_masks<>+16(SB), SI
-	SUBQ    CX, SI
-	VMOVUPS (SI), X1
+	MOVQ    $0xfffffffffffffff0, SI
+	ADDQ    BX, SI
+	VMOVUPS (DX)(SI*1), X0
+	LEAQ    shuffle_masks<>+16(SB), DX
+	SUBQ    BX, DX
+	VMOVUPS (DX), X1
 	VPSHUFB X1, X0, X0
 	JMP     prepare
+
+DATA blend_masks<>+0(SB)/8, $0xffffffffffffffff
+DATA blend_masks<>+8(SB)/8, $0xffffffffffffffff
+DATA blend_masks<>+16(SB)/8, $0x0000000000000000
+DATA blend_masks<>+24(SB)/8, $0x0000000000000000
+GLOBL blend_masks<>(SB), RODATA|NOPTR, $32
 
 DATA shuffle_masks<>+0(SB)/8, $0x0706050403020100
 DATA shuffle_masks<>+8(SB)/8, $0x0f0e0d0c0b0a0908

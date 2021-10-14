@@ -18,14 +18,17 @@ func TestKeySet(t *testing.T) {
 		for j := range keys {
 			keys[j] = []byte(strconv.Itoa(i - j))
 		}
-		lookup := New(keys)
+		keyset := New(keys)
+		if keyset == nil {
+			t.Skip("Lookup is not implemented")
+		}
 
 		for j := range keys {
-			if n := lookup(keys[j]); n != j {
+			if n := Lookup(keyset, keys[j]); n != j {
 				t.Errorf("unexpected index for known key: %d, expected %d", n, j)
 			}
 		}
-		if n := lookup([]byte(fmt.Sprintf("key-%d", i+1))); n != len(keys) {
+		if n := Lookup(keyset, []byte(fmt.Sprintf("key-%d", i+1))); n != len(keys) {
 			t.Errorf("unexpected index for unknown key: %d", n)
 		}
 	}
@@ -52,16 +55,19 @@ func TestPageBoundary(t *testing.T) {
 
 	for i := 0; i <= 16; i++ {
 		key := head[:i]
-		lookup := New([][]byte{[]byte("foo"), []byte("bar"), key})
-		if n := lookup(key); n != 2 {
+		keyset := New([][]byte{[]byte("foo"), []byte("bar"), key})
+		if keyset == nil {
+			t.Skip("Lookup is not implemented")
+		}
+		if n := Lookup(keyset, key); n != 2 {
 			t.Errorf("unexpected lookup result %d", n)
 		}
 	}
 
 	for i := 0; i <= 16; i++ {
 		key := tail[i:]
-		lookup := New([][]byte{[]byte("foo"), []byte("bar"), key})
-		if n := lookup(key); n != 2 {
+		keyset := New([][]byte{[]byte("foo"), []byte("bar"), key})
+		if n := Lookup(keyset, key); n != 2 {
 			t.Errorf("unexpected lookup result for i=%d: %d", i, n)
 		}
 	}
@@ -90,7 +96,10 @@ func BenchmarkIteration(b *testing.B) {
 		})
 	}
 
-	lookup := New(keys)
+	keyset := New(keys)
+	if keyset == nil {
+		b.Skip("Lookup is not implemented")
+	}
 
 	b.Run("map-ordered", func(b *testing.B) {
 		b.ResetTimer()
@@ -105,7 +114,7 @@ func BenchmarkIteration(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			for _, k := range keys {
-				lookup(k)
+				Lookup(keyset, k)
 			}
 		}
 	})
@@ -129,7 +138,7 @@ func BenchmarkIteration(b *testing.B) {
 			p := prng.Intn(permutations)
 			permutation := r[p*len(keys):][:len(keys)]
 			for _, i := range permutation {
-				lookup(keys[i])
+				Lookup(keyset, keys[i])
 			}
 		}
 	})
