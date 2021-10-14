@@ -16,11 +16,7 @@ TEXT ·searchAVX(SB), NOSPLIT, $0-64
 	MOVQ lengths_base+8(FP), DX
 	MOVQ lengths_len+16(FP), BX
 	CMPQ DI, $0x10
-	JAE  load
-	MOVQ SI, DI
-	ANDQ $0x00000fff, DI
-	CMPQ DI, $0x00000ff0
-	JA   tail_load
+	JB   check_input
 
 load:
 	VMOVUPS (SI), X0
@@ -108,7 +104,11 @@ notfound:
 	MOVQ BX, ret+56(FP)
 	RET
 
-tail_load:
+check_input:
+	MOVQ    SI, DI
+	ANDQ    $0x00000fff, DI
+	CMPQ    DI, $0x00000ff0
+	JBE     load
 	MOVQ    $0xfffffffffffffff0, DI
 	ADDQ    CX, DI
 	VMOVUPS (SI)(DI*1), X0

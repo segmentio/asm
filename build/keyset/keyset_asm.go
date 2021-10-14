@@ -1,4 +1,4 @@
-// +build ignore
+/// +build ignore
 
 package main
 
@@ -57,16 +57,10 @@ func searchAVX() {
 	// so first check if it's safe to do so (cap(k) >= 16). If not, and we're
 	// near a page boundary, we must load+shuffle to avoid a fault.
 	CMPQ(keyCap, Imm(16))
-	JAE(LabelRef("load"))
-	pageOffset := GP64()
-	MOVQ(keyPtr, pageOffset)
-	ANDQ(U32(pageSize-1), pageOffset)
-	CMPQ(pageOffset, U32(pageSize-16))
-	JA(LabelRef("tail_load"))
+	JB(LabelRef("check_input"))
 	Label("load")
 	key := XMM()
 	VMOVUPS(Mem{Base: keyPtr}, key)
-
 	Label("start")
 
 	// Build a mask with popcount(mask) = keyLen, e.g. for keyLen=4 the mask
@@ -152,6 +146,13 @@ func searchAVX() {
 	Label("notfound")
 	Store(count, ReturnIndex(0))
 	RET()
+
+	Label("check_input")
+	pageOffset := GP64()
+	MOVQ(keyPtr, pageOffset)
+	ANDQ(U32(pageSize-1), pageOffset)
+	CMPQ(pageOffset, U32(pageSize-16))
+	JBE(LabelRef("load"))
 
 	// If the input key is near a page boundary, we instead want to load the
 	// 16 bytes up to and including the key, then shuffle the key forward in the
