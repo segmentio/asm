@@ -6,8 +6,12 @@ import (
 	"github.com/segmentio/asm/cpu"
 )
 
-// New returns a Lookup function that returns the index
-// of a particular key in the array of input keys.
+// New returns a Lookup function that returns the index of a particular key in
+// the array of input keys.
+//
+// An optimized routine is used if the processor supports AVX instructions and
+// the maximum length of any of the keys is less than or equal to 16. Otherwise,
+// a pure go routine that uses runtime.memequal() is used.
 func New(keys [][]byte) Lookup {
 	if len(keys) == 0 {
 		return emptySetLookup
