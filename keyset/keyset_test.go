@@ -123,9 +123,10 @@ func BenchmarkIteration(b *testing.B) {
 	})
 
 	b.Run("keyset-random", func(b *testing.B) {
+		prng := rand.New(rand.NewSource(0))
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			p := rand.Intn(permutations)
+			p := prng.Intn(permutations)
 			permutation := r[p*len(keys):][:len(keys)]
 			for _, i := range permutation {
 				lookup(keys[i])
