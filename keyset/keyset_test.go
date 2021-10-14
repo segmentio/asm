@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/segmentio/asm/internal/buffer"
@@ -72,7 +71,7 @@ func BenchmarkIteration(b *testing.B) {
 	keys := make([][]byte, 8)
 	m := map[string]int{}
 	for i := range keys {
-		k := strings.Repeat("x", i)
+		k := "key-" + strconv.Itoa(i)
 		keys[i] = []byte(k)
 		m[k] = i
 	}
