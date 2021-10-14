@@ -9,9 +9,12 @@ import (
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
+	. "github.com/segmentio/asm/build/internal/asm"
 )
 
 const unroll = 4
+
+const pageSize = 4096
 
 func init() {
 	ConstraintExpr("!purego")
@@ -49,10 +52,18 @@ func searchAVX() {
 	lengths := Load(Param("lengths").Base(), GP64())
 	count := Load(Param("lengths").Len(), GP64())
 
-	// Load the input key.
-	// FIXME: check if near a page boundary and load+shuffle so it doesn't fault
+	// Load the input key. We're going to be unconditionally loading 16 bytes,
+	// so first we must check if we're near a page boundary. If we are, we can
+	// load+shuffle to avoid a potential fault.
+	pageOffset := GP64()
+	MOVQ(keyPtr, pageOffset)
+	ANDQ(U32(pageSize-1), pageOffset)
+	CMPQ(pageOffset, U32(pageSize-16))
+	JA(LabelRef("tail_load"))
 	key := XMM()
 	VMOVUPS(Mem{Base: keyPtr}, key)
+
+	Label("start")
 
 	// Build a mask with popcount(mask) = keyLen, e.g. for keyLen=4 the mask
 	// is 15 (0b1111).
@@ -137,4 +148,35 @@ func searchAVX() {
 	Label("notfound")
 	Store(count, ReturnIndex(0))
 	RET()
+
+	// If the input key is near a page boundary, we instead want to load the
+	// 16 bytes up to and including the key, then shuffle the key forward in the
+	// register. E.g. for key "foo" we would load the 13 bytes prior to the key
+	// along with "foo" and then move the last 3 bytes forward so the first 3
+	// bytes are equal to "foo".
+	Label("tail_load")
+	disp := GP64()
+	MOVQ(^U64(0)-16+1, disp)
+	ADDQ(keyLen.As64(), disp)
+	VMOVUPS(Mem{Base: keyPtr, Index: disp, Scale: 1}, key)
+
+	var shuffleBytes [16*16]byte
+	for j := 0; j < 16; j++ {
+		for k := 0; k < 16; k++ {
+			shuffleBytes[j*16+k] = byte((16-j+k) % 16)
+		}
+	}
+	shuffleMasks := ConstBytes("shuffle_masks", shuffleBytes[:])
+	shuffleMasksPtr := GP64()
+	LEAQ(shuffleMasks, shuffleMasksPtr)
+
+	shuffleOffset := GP64()
+	MOVQ(keyLen.As64(), shuffleOffset)
+	SHLQ(Imm(4), shuffleOffset)
+	ADDQ(shuffleOffset, shuffleMasksPtr)
+	shuffleMask := XMM()
+	VMOVUPS(Mem{Base: shuffleMasksPtr}, shuffleMask)
+	VPSHUFB(shuffleMask, key, key)
+
+	JMP(LabelRef("start"))
 }

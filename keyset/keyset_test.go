@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/segmentio/asm/internal/buffer"
 )
 
 func TestKeySet(t *testing.T) {
@@ -15,7 +17,7 @@ func TestKeySet(t *testing.T) {
 	for i := 0; i < max; i++ {
 		keys = keys[:i]
 		for j := range keys {
-			keys[j] = []byte(strconv.Itoa(i-j))
+			keys[j] = []byte(strconv.Itoa(i - j))
 		}
 		lookup := New(keys)
 
@@ -26,6 +28,42 @@ func TestKeySet(t *testing.T) {
 		}
 		if n := lookup([]byte(fmt.Sprintf("key-%d", i+1))); n != len(keys) {
 			t.Errorf("unexpected index for unknown key: %d", n)
+		}
+	}
+}
+
+const hex = "0123456789abcdef"
+
+func TestPageBoundary(t *testing.T) {
+	buf, err := buffer.New(16)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer buf.Release()
+
+	head := buf.ProtectHead()
+	tail := buf.ProtectTail()
+
+	var chars [16]byte
+	for i := 0; i < 16; i++ {
+		chars[i] = hex[i]
+	}
+	copy(head, chars[:])
+	copy(tail, chars[:])
+
+	for i := 0; i < 16; i++ {
+		key := head[:i]
+		lookup := New([][]byte{[]byte("foo"), []byte("bar"), key})
+		if n := lookup(key); n != 2 {
+			t.Errorf("unexpected lookup result %d", n)
+		}
+	}
+
+	for i := 0; i < 16; i++ {
+		key := tail[i:]
+		lookup := New([][]byte{[]byte("foo"), []byte("bar"), key})
+		if n := lookup(key); n != 2 {
+			t.Errorf("unexpected lookup result for i=%d: %d", i, n)
 		}
 	}
 }
