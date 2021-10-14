@@ -1,4 +1,4 @@
-/// +build ignore
+// +build ignore
 
 package main
 
@@ -99,12 +99,12 @@ func searchAVX() {
 		// Check lengths first, then if length matches check bytes match.
 		Label(fmt.Sprintf("try%d", n))
 		CMPL(keyLen.As32(), Mem{Base: lengths, Index: i, Disp: 4 * n, Scale: 4})
-		JNE(LabelRef(fmt.Sprintf("try%d", n + 1)))
+		JNE(LabelRef(fmt.Sprintf("try%d", n+1)))
 		VPCMPEQB(Mem{Base: buffer, Disp: 16 * n}, key, x[n])
 		VPMOVMSKB(x[n], g[n])
 		ANDL(match, g[n])
 		CMPL(match, g[n])
-		JNE(LabelRef(fmt.Sprintf("try%d", n + 1)))
+		JNE(LabelRef(fmt.Sprintf("try%d", n+1)))
 		if n > 0 {
 			// Correct the loop increment before returning.
 			ADDQ(Imm(uint64(n)), i)
@@ -115,7 +115,7 @@ func searchAVX() {
 	// Advance and loop again.
 	Label(fmt.Sprintf("try%d", unroll))
 	ADDQ(Imm(unroll), i)
-	ADDQ(Imm(16 * unroll), buffer)
+	ADDQ(Imm(16*unroll), buffer)
 	JMP(LabelRef("bigloop"))
 
 	// Loop over the remaining keys.
@@ -155,28 +155,23 @@ func searchAVX() {
 	// along with "foo" and then move the last 3 bytes forward so the first 3
 	// bytes are equal to "foo".
 	Label("tail_load")
-	disp := GP64()
-	MOVQ(^U64(0)-16+1, disp)
-	ADDQ(keyLen.As64(), disp)
-	VMOVUPS(Mem{Base: keyPtr, Index: disp, Scale: 1}, key)
+	offset := GP64()
+	MOVQ(^U64(0)-16+1, offset)
+	ADDQ(keyLen.As64(), offset)
+	VMOVUPS(Mem{Base: keyPtr, Index: offset, Scale: 1}, key)
 
-	var shuffleBytes [16*16]byte
+	var shuffleBytes [16 * 2]byte
 	for j := 0; j < 16; j++ {
-		for k := 0; k < 16; k++ {
-			shuffleBytes[j*16+k] = byte((16-j+k) % 16)
-		}
+		shuffleBytes[j] = byte(j)
+		shuffleBytes[j+16] = byte(j)
 	}
 	shuffleMasks := ConstBytes("shuffle_masks", shuffleBytes[:])
 	shuffleMasksPtr := GP64()
-	LEAQ(shuffleMasks, shuffleMasksPtr)
-
-	shuffleOffset := GP64()
-	MOVQ(keyLen.As64(), shuffleOffset)
-	SHLQ(Imm(4), shuffleOffset)
-	ADDQ(shuffleOffset, shuffleMasksPtr)
-	shuffleMask := XMM()
-	VMOVUPS(Mem{Base: shuffleMasksPtr}, shuffleMask)
-	VPSHUFB(shuffleMask, key, key)
+	LEAQ(shuffleMasks.Offset(16), shuffleMasksPtr)
+	SUBQ(keyLen.As64(), shuffleMasksPtr)
+	shuffle := XMM()
+	VMOVUPS(Mem{Base: shuffleMasksPtr}, shuffle)
+	VPSHUFB(shuffle, key, key)
 
 	JMP(LabelRef("start"))
 }

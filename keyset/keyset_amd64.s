@@ -107,44 +107,14 @@ tail_load:
 	MOVQ    $0xfffffffffffffff0, DI
 	ADDQ    CX, DI
 	VMOVUPS (SI)(DI*1), X0
-	LEAQ    shuffle_masks<>+0(SB), SI
-	MOVQ    CX, DI
-	SHLQ    $0x04, DI
-	ADDQ    DI, SI
+	LEAQ    shuffle_masks<>+16(SB), SI
+	SUBQ    CX, SI
 	VMOVUPS (SI), X1
 	VPSHUFB X1, X0, X0
 	JMP     start
 
 DATA shuffle_masks<>+0(SB)/8, $0x0706050403020100
 DATA shuffle_masks<>+8(SB)/8, $0x0f0e0d0c0b0a0908
-DATA shuffle_masks<>+16(SB)/8, $0x060504030201000f
-DATA shuffle_masks<>+24(SB)/8, $0x0e0d0c0b0a090807
-DATA shuffle_masks<>+32(SB)/8, $0x0504030201000f0e
-DATA shuffle_masks<>+40(SB)/8, $0x0d0c0b0a09080706
-DATA shuffle_masks<>+48(SB)/8, $0x04030201000f0e0d
-DATA shuffle_masks<>+56(SB)/8, $0x0c0b0a0908070605
-DATA shuffle_masks<>+64(SB)/8, $0x030201000f0e0d0c
-DATA shuffle_masks<>+72(SB)/8, $0x0b0a090807060504
-DATA shuffle_masks<>+80(SB)/8, $0x0201000f0e0d0c0b
-DATA shuffle_masks<>+88(SB)/8, $0x0a09080706050403
-DATA shuffle_masks<>+96(SB)/8, $0x01000f0e0d0c0b0a
-DATA shuffle_masks<>+104(SB)/8, $0x0908070605040302
-DATA shuffle_masks<>+112(SB)/8, $0x000f0e0d0c0b0a09
-DATA shuffle_masks<>+120(SB)/8, $0x0807060504030201
-DATA shuffle_masks<>+128(SB)/8, $0x0f0e0d0c0b0a0908
-DATA shuffle_masks<>+136(SB)/8, $0x0706050403020100
-DATA shuffle_masks<>+144(SB)/8, $0x0e0d0c0b0a090807
-DATA shuffle_masks<>+152(SB)/8, $0x060504030201000f
-DATA shuffle_masks<>+160(SB)/8, $0x0d0c0b0a09080706
-DATA shuffle_masks<>+168(SB)/8, $0x0504030201000f0e
-DATA shuffle_masks<>+176(SB)/8, $0x0c0b0a0908070605
-DATA shuffle_masks<>+184(SB)/8, $0x04030201000f0e0d
-DATA shuffle_masks<>+192(SB)/8, $0x0b0a090807060504
-DATA shuffle_masks<>+200(SB)/8, $0x030201000f0e0d0c
-DATA shuffle_masks<>+208(SB)/8, $0x0a09080706050403
-DATA shuffle_masks<>+216(SB)/8, $0x0201000f0e0d0c0b
-DATA shuffle_masks<>+224(SB)/8, $0x0908070605040302
-DATA shuffle_masks<>+232(SB)/8, $0x01000f0e0d0c0b0a
-DATA shuffle_masks<>+240(SB)/8, $0x0807060504030201
-DATA shuffle_masks<>+248(SB)/8, $0x000f0e0d0c0b0a09
-GLOBL shuffle_masks<>(SB), RODATA|NOPTR, $256
+DATA shuffle_masks<>+16(SB)/8, $0x0706050403020100
+DATA shuffle_masks<>+24(SB)/8, $0x0f0e0d0c0b0a0908
+GLOBL shuffle_masks<>(SB), RODATA|NOPTR, $32
