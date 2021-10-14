@@ -4,7 +4,7 @@
 
 #include "textflag.h"
 
-// func searchAVX(buffer *byte, lengths []uint32, key []byte) int
+// func searchAVX(buffer *byte, lengths []uint8, key []byte) int
 // Requires: AVX
 TEXT ·searchAVX(SB), NOSPLIT, $0-64
 	MOVQ key_base+32(FP), SI
@@ -33,7 +33,7 @@ prepare:
 bigloop:
 	CMPQ      DI, R12
 	JE        loop
-	CMPL      CX, (DX)(DI*4)
+	CMPB      CL, (DX)(DI*1)
 	JNE       try1
 	VPCMPEQB  (AX), X0, X8
 	VPMOVMSKB X8, R8
@@ -43,7 +43,7 @@ bigloop:
 	JMP       done
 
 try1:
-	CMPL      CX, 4(DX)(DI*4)
+	CMPB      CL, 1(DX)(DI*1)
 	JNE       try2
 	VPCMPEQB  16(AX), X0, X9
 	VPMOVMSKB X9, R9
@@ -54,7 +54,7 @@ try1:
 	JMP       done
 
 try2:
-	CMPL      CX, 8(DX)(DI*4)
+	CMPB      CL, 2(DX)(DI*1)
 	JNE       try3
 	VPCMPEQB  32(AX), X0, X10
 	VPMOVMSKB X10, R10
@@ -65,7 +65,7 @@ try2:
 	JMP       done
 
 try3:
-	CMPL      CX, 12(DX)(DI*4)
+	CMPB      CL, 3(DX)(DI*1)
 	JNE       try4
 	VPCMPEQB  48(AX), X0, X11
 	VPMOVMSKB X11, R11
@@ -83,7 +83,7 @@ try4:
 loop:
 	CMPQ      DI, BX
 	JE        done
-	CMPL      CX, (DX)(DI*4)
+	CMPB      CL, (DX)(DI*1)
 	JNE       next
 	VPCMPEQB  (AX), X0, X1
 	VPMOVMSKB X1, R8

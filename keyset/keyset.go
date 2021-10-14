@@ -29,10 +29,10 @@ func New(keys [][]byte) Lookup {
 		n := len(keys) * 16
 		b.Grow(n)
 		buffer := b.Bytes()[:n]
-		lengths := make([]uint32, len(keys))
+		lengths := make([]uint8, len(keys))
 
 		for i, k := range keys {
-			lengths[i] = uint32(len(k))
+			lengths[i] = uint8(len(k))
 			copy(buffer[i*16:], k)
 		}
 

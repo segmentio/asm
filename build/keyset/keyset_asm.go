@@ -36,7 +36,7 @@ func main() {
 // searches for the input key in the set of keys and returns its index if found.
 // If not found, the routine returns the number of keys (len(lengths)).
 func searchAVX() {
-	TEXT("searchAVX", NOSPLIT, "func(buffer *byte, lengths []uint32, key []byte) int")
+	TEXT("searchAVX", NOSPLIT, "func(buffer *byte, lengths []uint8, key []byte) int")
 
 	// Load the input key and length. Put the length in CX so that we can use
 	// it in a variable shift below (SHL only accepts CL for variable shifts).
@@ -98,7 +98,7 @@ func searchAVX() {
 		// Try to match against the input key.
 		// Check lengths first, then if length matches check bytes match.
 		Label(fmt.Sprintf("try%d", n))
-		CMPL(keyLen.As32(), Mem{Base: lengths, Index: i, Disp: 4 * n, Scale: 4})
+		CMPB(keyLen.As8L(), Mem{Base: lengths, Index: i, Disp: n, Scale: 1})
 		JNE(LabelRef(fmt.Sprintf("try%d", n+1)))
 		VPCMPEQB(Mem{Base: buffer, Disp: maxLength * n}, key, x[n])
 		VPMOVMSKB(x[n], g[n])
@@ -125,7 +125,7 @@ func searchAVX() {
 
 	// Try to match against the input key.
 	// Check lengths first, then if length matches check bytes match.
-	CMPL(keyLen.As32(), Mem{Base: lengths, Index: i, Scale: 4})
+	CMPB(keyLen.As8L(), Mem{Base: lengths, Index: i, Scale: 1})
 	JNE(LabelRef("next"))
 	maskX := XMM()
 	mask := GP32()
