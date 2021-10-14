@@ -1,4 +1,4 @@
-/// +build ignore
+// / +build ignore
 
 package main
 
@@ -12,9 +12,11 @@ import (
 	. "github.com/segmentio/asm/build/internal/asm"
 )
 
-const unroll = 4
-
-const pageSize = 4096
+const (
+	unroll    = 4
+	pageSize  = 4096
+	maxLength = 16
+)
 
 func init() {
 	ConstraintExpr("!purego")
@@ -45,7 +47,7 @@ func searchAVX() {
 
 	// None of the keys we're searching through have a length greater than 16,
 	// so bail early if the input is more than 16 bytes long.
-	CMPQ(keyLen.As64(), Imm(16))
+	CMPQ(keyLen.As64(), Imm(maxLength))
 	JA(LabelRef("notfound"))
 
 	// Load the remaining inputs.
@@ -56,7 +58,7 @@ func searchAVX() {
 	// Load the input key. We're going to be unconditionally loading 16 bytes,
 	// so first check if it's safe to do so (cap(k) >= 16). If not, and we're
 	// near a page boundary, we must load+shuffle to avoid a fault.
-	CMPQ(keyCap, Imm(16))
+	CMPQ(keyCap, Imm(maxLength))
 	JB(LabelRef("check_input"))
 	Label("load")
 	key := XMM()
@@ -98,7 +100,7 @@ func searchAVX() {
 		Label(fmt.Sprintf("try%d", n))
 		CMPL(keyLen.As32(), Mem{Base: lengths, Index: i, Disp: 4 * n, Scale: 4})
 		JNE(LabelRef(fmt.Sprintf("try%d", n+1)))
-		VPCMPEQB(Mem{Base: buffer, Disp: 16 * n}, key, x[n])
+		VPCMPEQB(Mem{Base: buffer, Disp: maxLength * n}, key, x[n])
 		VPMOVMSKB(x[n], g[n])
 		ANDL(match, g[n])
 		CMPL(match, g[n])
@@ -113,7 +115,7 @@ func searchAVX() {
 	// Advance and loop again.
 	Label(fmt.Sprintf("try%d", unroll))
 	ADDQ(Imm(unroll), i)
-	ADDQ(Imm(16*unroll), buffer)
+	ADDQ(Imm(unroll*maxLength), buffer)
 	JMP(LabelRef("bigloop"))
 
 	// Loop over the remaining keys.
@@ -136,7 +138,7 @@ func searchAVX() {
 	// Advance and loop again.
 	Label("next")
 	INCQ(i)
-	ADDQ(Imm(16), buffer)
+	ADDQ(Imm(maxLength), buffer)
 	JMP(LabelRef("loop"))
 
 	// Return the loop increment, or the count if the key wasn't found.
@@ -157,20 +159,20 @@ func searchAVX() {
 	pageOffset := GP64()
 	MOVQ(keyPtr, pageOffset)
 	ANDQ(U32(pageSize-1), pageOffset)
-	CMPQ(pageOffset, U32(pageSize-16))
+	CMPQ(pageOffset, U32(pageSize-maxLength))
 	JBE(LabelRef("load"))
 	offset := GP64()
-	MOVQ(^U64(0)-16+1, offset)
+	MOVQ(^U64(0)-maxLength+1, offset)
 	ADDQ(keyLen.As64(), offset)
 	VMOVUPS(Mem{Base: keyPtr, Index: offset, Scale: 1}, key)
-	var shuffleBytes [16 * 2]byte
-	for j := 0; j < 16; j++ {
+	var shuffleBytes [maxLength * 2]byte
+	for j := 0; j < maxLength; j++ {
 		shuffleBytes[j] = byte(j)
-		shuffleBytes[j+16] = byte(j)
+		shuffleBytes[j+maxLength] = byte(j)
 	}
 	shuffleMasks := ConstBytes("shuffle_masks", shuffleBytes[:])
 	shuffleMasksPtr := GP64()
-	LEAQ(shuffleMasks.Offset(16), shuffleMasksPtr)
+	LEAQ(shuffleMasks.Offset(maxLength), shuffleMasksPtr)
 	SUBQ(keyLen.As64(), shuffleMasksPtr)
 	shuffle := XMM()
 	VMOVUPS(Mem{Base: shuffleMasksPtr}, shuffle)
