@@ -50,7 +50,7 @@ func TestPageBoundary(t *testing.T) {
 	copy(head, chars[:])
 	copy(tail, chars[:])
 
-	for i := 0; i < 16; i++ {
+	for i := 0; i <= 16; i++ {
 		key := head[:i]
 		lookup := New([][]byte{[]byte("foo"), []byte("bar"), key})
 		if n := lookup(key); n != 2 {
@@ -58,7 +58,7 @@ func TestPageBoundary(t *testing.T) {
 		}
 	}
 
-	for i := 0; i < 16; i++ {
+	for i := 0; i <= 16; i++ {
 		key := tail[i:]
 		lookup := New([][]byte{[]byte("foo"), []byte("bar"), key})
 		if n := lookup(key); n != 2 {
