@@ -1,6 +1,7 @@
 package keyset
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -13,24 +14,49 @@ func TestKeySet(t *testing.T) {
 	const max = 23
 
 	keys := make([][]byte, max)
-	for i := 0; i < max; i++ {
-		keys = keys[:i]
-		for j := range keys {
-			keys[j] = []byte(strconv.Itoa(i - j))
-		}
-		keyset := New(keys)
-		if keyset == nil {
-			t.Skip("Lookup is not implemented")
-		}
+	for i := range keys {
+		keys[i] = []byte(strconv.Itoa(max - i))
+	}
 
-		for j := range keys {
-			if n := Lookup(keyset, keys[j]); n != j {
+	for i := 0; i < max; i++ {
+		subset := keys[:i]
+		keyset := New(subset)
+		if keyset == nil {
+			t.Skip("not implemented")
+		}
+		for j := range subset {
+			if n := Lookup(keyset, subset[j]); n != j {
 				t.Errorf("unexpected index for known key: %d, expected %d", n, j)
 			}
 		}
-		if n := Lookup(keyset, []byte(fmt.Sprintf("key-%d", i+1))); n != len(keys) {
+		if n := Lookup(keyset, []byte(fmt.Sprintf("key-%d", i+1))); n != len(subset) {
 			t.Errorf("unexpected index for unknown key: %d", n)
 		}
+	}
+
+	for i := 0; i < max; i++ {
+		for j := 0; j <= 16; j++ {
+			key := bytes.Repeat([]byte("x"), j)
+			keyset := New(append(keys[:i:i], key))
+			if n := Lookup(keyset, key); n != i {
+				t.Errorf("unexpected index for known key: %d", n)
+			}
+			if j > 0 {
+				if n := Lookup(keyset, key[:j-1]); n != i+1 {
+					t.Errorf("unexpected match: %d", n)
+				}
+			}
+			if n := Lookup(keyset, append(key, 'x')); n != i+1 {
+				t.Errorf("unexpected match: %d", n)
+			}
+		}
+	}
+
+	if New([][]byte{[]byte("foo\x00bar")}) != nil {
+		t.Error("keyset was created when key contained null byte")
+	}
+	if New([][]byte{bytes.Repeat([]byte{'x'}, 17)}) != nil {
+		t.Error("keyset was created when key was longer than 16 bytes")
 	}
 }
 
@@ -53,7 +79,7 @@ func TestPageBoundary(t *testing.T) {
 		key := head[:i]
 		keyset := New([][]byte{[]byte("foo"), []byte("bar"), key})
 		if keyset == nil {
-			t.Skip("Lookup is not implemented")
+			t.Skip("not implemented")
 		}
 		if n := Lookup(keyset, key); n != 2 {
 			t.Errorf("unexpected lookup result %d", n)
@@ -98,7 +124,7 @@ func BenchmarkKeySet(b *testing.B) {
 
 	keyset := New(keys)
 	if keyset == nil {
-		b.Skip("Lookup is not implemented")
+		b.Skip("not implemented")
 	}
 
 	b.Run("map-lookup-first", func(b *testing.B) {
