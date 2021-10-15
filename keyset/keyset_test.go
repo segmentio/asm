@@ -46,12 +46,8 @@ func TestPageBoundary(t *testing.T) {
 	head := buf.ProtectHead()
 	tail := buf.ProtectTail()
 
-	var chars [16]byte
-	for i := 0; i < 16; i++ {
-		chars[i] = hex[i]
-	}
-	copy(head, chars[:])
-	copy(tail, chars[:])
+	copy(head, hex)
+	copy(tail, hex)
 
 	for i := 0; i <= 16; i++ {
 		key := head[:i]
@@ -88,7 +84,7 @@ func BenchmarkKeySet(b *testing.B) {
 
 	prng := rand.New(rand.NewSource(0))
 
-	const permutations = 1000
+	const permutations = 1000 // enough to throw off the branch predictor hopeully
 	r := make([]int, len(keys)*permutations)
 	for i := 0; i < permutations; i++ {
 		x := r[i*len(keys):][:len(keys)]

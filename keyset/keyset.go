@@ -13,8 +13,19 @@ import (
 // returns nil, this indicates that an optimized routine is not available, and
 // the caller should use a fallback.
 func New(keys [][]byte) []byte {
-	maxWidth := 0
-	hasNullByte := false
+	maxWidth, hasNullByte := checkKeys(keys)
+	if hasNullByte || maxWidth > 16 || !cpu.X86.Has(cpu.AVX) {
+		return nil
+	}
+
+	set := make([]byte, len(keys)*16)
+	for i, k := range keys {
+		copy(set[i*16:], k)
+	}
+	return set
+}
+
+func checkKeys(keys [][]byte) (maxWidth int, hasNullByte bool) {
 	for _, k := range keys {
 		if len(k) > maxWidth {
 			maxWidth = len(k)
@@ -23,15 +34,5 @@ func New(keys [][]byte) []byte {
 			hasNullByte = true
 		}
 	}
-
-	if len(keys) == 0 || hasNullByte || maxWidth > 16 || !cpu.X86.Has(cpu.AVX) {
-		return nil
-	}
-
-	set := make([]byte, len(keys)*16)
-	for i, k := range keys {
-		copy(set[i*16:], k)
-	}
-
-	return set
+	return
 }
