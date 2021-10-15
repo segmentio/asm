@@ -73,11 +73,15 @@ func TestPageBoundary(t *testing.T) {
 	}
 }
 
-func BenchmarkIteration(b *testing.B) {
-	keys := make([][]byte, 8)
+func BenchmarkKeySet(b *testing.B) {
+	keys := make([][]byte, 32)
 	m := map[string]int{}
 	for i := range keys {
 		k := "key-" + strconv.Itoa(i)
+		// k := strings.Repeat(strconv.Itoa(i), i)
+		if len(k) > 16 {
+			k = k[:16]
+		}
 		keys[i] = []byte(k)
 		m[k] = i
 	}
@@ -101,7 +105,37 @@ func BenchmarkIteration(b *testing.B) {
 		b.Skip("Lookup is not implemented")
 	}
 
-	b.Run("map-ordered", func(b *testing.B) {
+	b.Run("map-lookup-first", func(b *testing.B) {
+		first := keys[0]
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = m[string(first)]
+		}
+	})
+	b.Run("keyset-lookup-first", func(b *testing.B) {
+		first := keys[0]
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			Lookup(keyset, first)
+		}
+	})
+
+	b.Run("map-lookup-last", func(b *testing.B) {
+		last := keys[len(keys)-1]
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = m[string(last)]
+		}
+	})
+	b.Run("keyset-lookup-last", func(b *testing.B) {
+		last := keys[len(keys)-1]
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			Lookup(keyset, last)
+		}
+	})
+
+	b.Run("map-ordered-iteration", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			for _, k := range keys {
@@ -109,8 +143,7 @@ func BenchmarkIteration(b *testing.B) {
 			}
 		}
 	})
-
-	b.Run("keyset-ordered", func(b *testing.B) {
+	b.Run("keyset-ordered-iteration", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			for _, k := range keys {
@@ -119,7 +152,7 @@ func BenchmarkIteration(b *testing.B) {
 		}
 	})
 
-	b.Run("map-random", func(b *testing.B) {
+	b.Run("map-random-iteration", func(b *testing.B) {
 		prng := rand.New(rand.NewSource(0))
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -130,8 +163,7 @@ func BenchmarkIteration(b *testing.B) {
 			}
 		}
 	})
-
-	b.Run("keyset-random", func(b *testing.B) {
+	b.Run("keyset-random-iteration", func(b *testing.B) {
 		prng := rand.New(rand.NewSource(0))
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
