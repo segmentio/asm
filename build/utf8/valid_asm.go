@@ -24,7 +24,7 @@ func main() {
 	d := Load(Param("p").Base(), GP64())
 	n := Load(Param("p").Len(), GP64())
 
-	scratch := AllocLocal(64)
+	scratch := AllocLocal(32)
 	scratchAddr := GP64()
 	LEAQ(scratch, scratchAddr)
 

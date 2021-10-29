@@ -6,7 +6,7 @@
 
 // func Valid(p []byte) bool
 // Requires: AVX, AVX2, SSE2
-TEXT ·Valid(SB), NOSPLIT, $64-25
+TEXT ·Valid(SB), NOSPLIT, $32-25
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
 	LEAQ (SP), DX
