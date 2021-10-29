@@ -290,7 +290,6 @@ func zeroOutVector(y VecVirtual) VecVirtual {
 // TODO: try to use x86.bytes
 func copyN(dst Register, src Register, n Register) {
 	v := x86.VariableLengthBytes{
-		Unroll: 128,
 		Process: func(regs []Register, memory ...x86.Memory) {
 			src, dst := regs[0], regs[1]
 
