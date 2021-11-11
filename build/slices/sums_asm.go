@@ -20,7 +20,7 @@ type Processor struct {
 	typ       string
 	scale     uint8
 	avxOffset uint64
-	avxAdd    func(mxy, xy, xy1 Op)
+	avxAdd    func(...Op)
 	x86Mov    func(imr, mr Op)
 	x86Add    func(imr, amr Op)
 	x86Reg    reg.GPVirtual

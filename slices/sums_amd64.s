@@ -10,17 +10,17 @@ TEXT ·sumUint64(SB), NOSPLIT, $0-48
 	XORQ    CX, CX
 	MOVQ    x_base+0(FP), DX
 	MOVQ    y_base+24(FP), BX
-	MOVQ    x_len+8(FP), SI
+	MOVQ    x_len+8(FP), BP
 	MOVQ    y_len+32(FP), AX
-	CMPQ    AX, SI
-	CMOVQLT AX, SI
+	CMPQ    AX, BP
+	CMOVQLT AX, BP
 	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC     x86_loop
 
 avx2_loop:
 	MOVQ    CX, AX
 	ADDQ    $0x10, AX
-	CMPQ    AX, SI
+	CMPQ    AX, BP
 	JAE     x86_loop
 	VMOVDQU (DX)(CX*8), Y0
 	VMOVDQU (BX)(CX*8), Y1
@@ -42,7 +42,7 @@ avx2_loop:
 	JMP     avx2_loop
 
 x86_loop:
-	CMPQ CX, SI
+	CMPQ CX, BP
 	JAE  return
 	MOVQ (BX)(CX*8), AX
 	ADDQ AX, (DX)(CX*8)
@@ -58,17 +58,17 @@ TEXT ·sumUint32(SB), NOSPLIT, $0-48
 	XORQ    CX, CX
 	MOVQ    x_base+0(FP), DX
 	MOVQ    y_base+24(FP), BX
-	MOVQ    x_len+8(FP), SI
+	MOVQ    x_len+8(FP), BP
 	MOVQ    y_len+32(FP), AX
-	CMPQ    AX, SI
-	CMOVQLT AX, SI
+	CMPQ    AX, BP
+	CMOVQLT AX, BP
 	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC     x86_loop
 
 avx2_loop:
 	MOVQ    CX, AX
 	ADDQ    $0x20, AX
-	CMPQ    AX, SI
+	CMPQ    AX, BP
 	JAE     x86_loop
 	VMOVDQU (DX)(CX*4), Y0
 	VMOVDQU (BX)(CX*4), Y1
@@ -90,7 +90,7 @@ avx2_loop:
 	JMP     avx2_loop
 
 x86_loop:
-	CMPQ CX, SI
+	CMPQ CX, BP
 	JAE  return
 	MOVL (BX)(CX*4), AX
 	ADDL AX, (DX)(CX*4)
@@ -106,17 +106,17 @@ TEXT ·sumUint16(SB), NOSPLIT, $0-48
 	XORQ    CX, CX
 	MOVQ    x_base+0(FP), DX
 	MOVQ    y_base+24(FP), BX
-	MOVQ    x_len+8(FP), SI
+	MOVQ    x_len+8(FP), BP
 	MOVQ    y_len+32(FP), AX
-	CMPQ    AX, SI
-	CMOVQLT AX, SI
+	CMPQ    AX, BP
+	CMOVQLT AX, BP
 	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC     x86_loop
 
 avx2_loop:
 	MOVQ    CX, AX
 	ADDQ    $0x40, AX
-	CMPQ    AX, SI
+	CMPQ    AX, BP
 	JAE     x86_loop
 	VMOVDQU (DX)(CX*2), Y0
 	VMOVDQU (BX)(CX*2), Y1
@@ -138,7 +138,7 @@ avx2_loop:
 	JMP     avx2_loop
 
 x86_loop:
-	CMPQ CX, SI
+	CMPQ CX, BP
 	JAE  return
 	MOVW (BX)(CX*2), AX
 	ADDW AX, (DX)(CX*2)
@@ -154,17 +154,17 @@ TEXT ·sumUint8(SB), NOSPLIT, $0-48
 	XORQ    CX, CX
 	MOVQ    x_base+0(FP), DX
 	MOVQ    y_base+24(FP), BX
-	MOVQ    x_len+8(FP), SI
+	MOVQ    x_len+8(FP), BP
 	MOVQ    y_len+32(FP), AX
-	CMPQ    AX, SI
-	CMOVQLT AX, SI
+	CMPQ    AX, BP
+	CMOVQLT AX, BP
 	BTL     $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC     x86_loop
 
 avx2_loop:
 	MOVQ    CX, AX
 	ADDQ    $0x80, AX
-	CMPQ    AX, SI
+	CMPQ    AX, BP
 	JAE     x86_loop
 	VMOVDQU (DX)(CX*1), Y0
 	VMOVDQU (BX)(CX*1), Y1
@@ -186,7 +186,7 @@ avx2_loop:
 	JMP     avx2_loop
 
 x86_loop:
-	CMPQ CX, SI
+	CMPQ CX, BP
 	JAE  return
 	MOVB (BX)(CX*1), AL
 	ADDB AL, (DX)(CX*1)
