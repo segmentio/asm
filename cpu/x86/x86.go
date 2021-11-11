@@ -72,5 +72,5 @@ func ABI() CPU {
 	cpu.set(AVX512VP2INTERSECT, false) // TODO: add upstream support in golang.org/x/sys/cpu?
 	cpu.set(AVX512VPOPCNTDQ, X86.HasAVX512VPOPCNTDQ)
 	cpu.set(CMOV, true) // TODO: golang.org/x/sys/cpu assumes all CPUs have CMOV?
-	return CPU(cpu)
+	return cpu
 }

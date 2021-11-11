@@ -70,5 +70,5 @@ func ABI() CPU {
 	cpu.set(SHA512, ARM64.HasSHA512)
 	cpu.set(SVE, ARM64.HasSVE)
 	cpu.set(ASIMDFHM, ARM64.HasASIMDFHM)
-	return CPU(cpu)
+	return cpu
 }

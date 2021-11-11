@@ -76,5 +76,5 @@ func ABI() CPU {
 	cpu.set(SHA1, ARM.HasSHA1)
 	cpu.set(SHA2, ARM.HasSHA2)
 	cpu.set(CRC32, ARM.HasCRC32)
-	return CPU(cpu)
+	return cpu
 }
