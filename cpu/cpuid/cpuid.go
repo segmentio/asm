@@ -19,14 +19,14 @@ const (
 	All Feature = 0xFFFFFFFFFFFFFFFF
 )
 
-func (c CPU) Has(f Feature) bool {
-	return (Feature(c) & f) == f
+func (cpu CPU) Has(feature Feature) bool {
+	return (Feature(cpu) & feature) == feature
 }
 
-func (c *CPU) Set(f Feature, on bool) {
-	if on {
-		*c |= CPU(f)
+func (cpu *CPU) Set(feature Feature, enabled bool) {
+	if enabled {
+		*cpu |= CPU(feature)
 	} else {
-		*c &= ^CPU(f)
+		*cpu &= ^CPU(feature)
 	}
 }
