@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/segmentio/asm/cpu"
+	"github.com/segmentio/asm/cpu/x86"
 	"github.com/segmentio/asm/internal"
 )
 
@@ -33,7 +34,7 @@ func Union(dst, a, b []byte, size int) []byte {
 
 	i, j, k := 0, 0, 0
 	switch {
-	case size == 16 && cpu.X86.Has(cpu.AVX):
+	case size == 16 && cpu.X86.Has(x86.AVX):
 		i, j, k = union16(dst, a, b)
 	default:
 		i, j, k = unionGeneric(dst, a, b, size)

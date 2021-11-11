@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 
 	"github.com/segmentio/asm/cpu"
+	"github.com/segmentio/asm/cpu/x86"
 	"github.com/segmentio/asm/internal/unsafebytes"
 )
 
@@ -26,7 +27,7 @@ const (
 
 func newEncoding(encoder string) *Encoding {
 	e := &Encoding{base: base64.NewEncoding(encoder)}
-	if cpu.X86.Has(cpu.AVX2) {
+	if cpu.X86.Has(x86.AVX2) {
 		e.enableEncodeAVX2(encoder)
 		e.enableDecodeAVX2(encoder)
 	}

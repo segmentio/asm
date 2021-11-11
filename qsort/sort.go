@@ -5,6 +5,7 @@ import (
 
 	"github.com/segmentio/asm/bswap"
 	"github.com/segmentio/asm/cpu"
+	"github.com/segmentio/asm/cpu/x86"
 	"github.com/segmentio/asm/internal"
 )
 
@@ -36,11 +37,11 @@ func Sort(data []byte, size int, swap func(int, int)) {
 	// If no indirect swapping is required, try to use the hybrid partitioning scheme from
 	// https://blog.reverberate.org/2020/05/29/hoares-rebuttal-bubble-sorts-comeback.html
 	switch {
-	case swap == nil && size == 8 && cpu.X86.Has(cpu.CMOV):
+	case swap == nil && size == 8 && cpu.X86.Has(x86.CMOV):
 		hybridQuicksort64(unsafeBytesTo64(data))
-	case swap == nil && size == 16 && cpu.X86.Has(cpu.AVX):
+	case swap == nil && size == 16 && cpu.X86.Has(x86.AVX):
 		hybridQuicksort128(unsafeBytesTo128(data))
-	case swap == nil && size == 32 && cpu.X86.Has(cpu.AVX2):
+	case swap == nil && size == 32 && cpu.X86.Has(x86.AVX2):
 		hybridQuicksort256(unsafeBytesTo256(data))
 	case size == 8:
 		quicksort64(unsafeBytesTo64(data), 0, smallCutoff, insertionsort64, hoarePartition64, swap)

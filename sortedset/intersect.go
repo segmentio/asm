@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/segmentio/asm/cpu"
+	"github.com/segmentio/asm/cpu/x86"
 	"github.com/segmentio/asm/internal"
 )
 
@@ -25,7 +26,7 @@ func Intersect(dst, a, b []byte, size int) []byte {
 
 	var pos int
 	switch {
-	case size == 16 && cpu.X86.Has(cpu.AVX):
+	case size == 16 && cpu.X86.Has(x86.AVX):
 		pos = intersect16(dst, a, b)
 	default:
 		pos = intersectGeneric(dst, a, b, size)
