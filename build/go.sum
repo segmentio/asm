@@ -6,6 +6,8 @@ github.com/mmcloughlin/avo v0.3.1 h1:1aHjz13iP9WTDmEZKiDpljBpnDarQsvEOgn4/035Avg
 github.com/mmcloughlin/avo v0.3.1/go.mod h1:RzX20dJBlNy9hVB5f87ozWfEuJbLjZG/IH/b6U1y6hk=
 github.com/mmcloughlin/avo v0.3.2-0.20211111074249-a57d9705e4e3 h1:K5uN5TCQaDVBMY9SX+53G/LOX21WGbB8ATkyd14Y+/Y=
 github.com/mmcloughlin/avo v0.3.2-0.20211111074249-a57d9705e4e3/go.mod h1:RzX20dJBlNy9hVB5f87ozWfEuJbLjZG/IH/b6U1y6hk=
+github.com/mmcloughlin/avo v0.4.0 h1:jeHDRktVD+578ULxWpQHkilor6pkdLF7u7EiTzDbfcU=
+github.com/mmcloughlin/avo v0.4.0/go.mod h1:RW9BfYA3TgO9uCdNrKU2h6J8cPD8ZLznvfgHAeszb1s=
 github.com/segmentio/asm v0.0.3 h1:ciVBxfM3cIEuGR1VDXPCxdz+Qo+wxlrrt7AkycMJcts=
 github.com/segmentio/asm v0.0.3/go.mod h1:4EUJGaKsB8ImLUwOGORVsNd9vTRDeh44JGsY4aKp5I4=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
