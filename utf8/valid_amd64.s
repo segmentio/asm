@@ -9,13 +9,11 @@
 TEXT ·Valid(SB), NOSPLIT, $32-25
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
-	JMP  stdlib
 
 	// if input < 32 bytes
 	CMPQ CX, $0x20
 	JG   init_avx
 
-stdlib:
 	// Non-vectorized implementation from the stdlib. Used for small inputs.
 	MOVQ $0x8080808080808080, DX
 	LEAQ first<>+0(SB), BX

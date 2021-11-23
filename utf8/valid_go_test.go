@@ -150,22 +150,35 @@ func BenchmarkValid(b *testing.B) {
 		"Stdlib": stdutf8.Valid,
 	}
 
-	inputs := map[string][]byte{
-		"1kValid": valid1k,
-		"1MValid": valid1M,
-		"10ASCII": []byte("0123456789"),
-		"10Japan": []byte("日本語日本語日本語日"),
+	type input struct {
+		name string
+		data []byte
+	}
+	inputs := []input{
+		{"1kValid", valid1k},
+		{"1MValid", valid1M},
+		{"10ASCII", []byte("0123456789")},
+		{"10Japan", []byte("日本語日本語日本語日")},
 	}
 
-	for inputName, input := range inputs {
+	a := []byte("\xF4\x8F\xBF\xBF")
+	for i := 0; i <= 1024/len(a); i++ {
+		d := bytes.Repeat(a, i)
+		inputs = append(inputs, input{
+			name: fmt.Sprintf("small%d", len(d)),
+			data: d,
+		})
+	}
+
+	for _, input := range inputs {
 		for implName, f := range impls {
-			testName := fmt.Sprintf("%s/%s", inputName, implName)
+			testName := fmt.Sprintf("%s/%s", input.name, implName)
 			b.Run(testName, func(b *testing.B) {
-				b.SetBytes(int64(len(input)))
+				b.SetBytes(int64(len(input.data)))
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					f(input)
+					f(input.data)
 				}
 			})
 		}

@@ -189,11 +189,12 @@ func main() {
 	n := Load(Param("p").Len(), GP64())
 
 	//	x86.JumpUnlessFeature("stdlib", cpu.AVX2) // TODO
-	JMP(LabelRef("stdlib")) // TODO:REMOVE ME
 
-	Comment("if input < 32 bytes")
-	CMPQ(n, U8(32))
-	JG(LabelRef("init_avx"))
+	// 128 has been found empirically on my machine. After that size, the
+	// AVX2 implementation is faster than the stdlib one.
+	Comment("if input < 128 bytes")
+	CMPQ(n, U8(128))
+	JGE(LabelRef("init_avx"))
 
 	Label("stdlib")
 	stdlib(d, n, ret)
@@ -203,8 +204,6 @@ func main() {
 	scratch := AllocLocal(32)
 	scratchAddr := GP64()
 	LEAQ(scratch, scratchAddr)
-
-	//stdlib(d, n, ret)
 
 	Comment("Prepare the constant masks")
 
