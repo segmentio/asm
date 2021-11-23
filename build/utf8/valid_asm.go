@@ -13,7 +13,8 @@ import (
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
 	. "github.com/segmentio/asm/build/internal/asm"
-	"github.com/segmentio/asm/build/internal/x86"
+	. "github.com/segmentio/asm/build/internal/x86"
+	"github.com/segmentio/asm/cpu"
 )
 
 func init() {
@@ -300,7 +301,7 @@ func main() {
 	d := Load(Param("p").Base(), GP64())
 	n := Load(Param("p").Len(), GP64())
 
-	//	x86.JumpUnlessFeature("stdlib", cpu.AVX2) // TODO
+	JumpUnlessFeature("stdlib", cpu.AVX2)
 
 	// 128 has been found empirically on my machine. After that size, the
 	// AVX2 implementation is faster than the stdlib one.
@@ -308,6 +309,7 @@ func main() {
 	CMPQ(n, U8(128))
 	JGE(LabelRef("init_avx"))
 
+	Label("stdlib")
 	stdlib(d, n, ret)
 
 	Label("init_avx")
@@ -532,8 +534,8 @@ func zeroOutVector(y VecVirtual) VecVirtual {
 // - 0 < len(src) < 32
 // TODO: try to use x86.bytes
 func copyN(dst Register, src Register, n Register) {
-	v := x86.VariableLengthBytes{
-		Process: func(regs []Register, memory ...x86.Memory) {
+	v := VariableLengthBytes{
+		Process: func(regs []Register, memory ...Memory) {
 			src, dst := regs[0], regs[1]
 
 			count := len(memory)
@@ -571,39 +573,39 @@ func copyN(dst Register, src Register, n Register) {
 	JBE(LabelRef("handle17to32"))
 
 	Label("handle1")
-	v.Process(inputs, x86.Memory{Size: 1})
+	v.Process(inputs, Memory{Size: 1})
 	JMP(LabelRef("after_copy"))
 
 	Label("handle2to3")
 	v.Process(inputs,
-		x86.Memory{Size: 2},
-		x86.Memory{Size: 2, Index: n, Offset: -2})
+		Memory{Size: 2},
+		Memory{Size: 2, Index: n, Offset: -2})
 	JMP(LabelRef("after_copy"))
 
 	Label("handle4")
-	v.Process(inputs, x86.Memory{Size: 4})
+	v.Process(inputs, Memory{Size: 4})
 	JMP(LabelRef("after_copy"))
 
 	Label("handle5to7")
 	v.Process(inputs,
-		x86.Memory{Size: 4},
-		x86.Memory{Size: 4, Index: n, Offset: -4})
+		Memory{Size: 4},
+		Memory{Size: 4, Index: n, Offset: -4})
 	JMP(LabelRef("after_copy"))
 
 	Label("handle8")
-	v.Process(inputs, x86.Memory{Size: 8})
+	v.Process(inputs, Memory{Size: 8})
 	JMP(LabelRef("after_copy"))
 
 	Label("handle9to16")
 	v.Process(inputs,
-		x86.Memory{Size: 8},
-		x86.Memory{Size: 8, Index: n, Offset: -8})
+		Memory{Size: 8},
+		Memory{Size: 8, Index: n, Offset: -8})
 	JMP(LabelRef("after_copy"))
 
 	Label("handle17to32")
 	v.Process(inputs,
-		x86.Memory{Size: 16},
-		x86.Memory{Size: 16, Index: n, Offset: -16})
+		Memory{Size: 16},
+		Memory{Size: 16, Index: n, Offset: -16})
 
 	Label("after_copy")
 }
