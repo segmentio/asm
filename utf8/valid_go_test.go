@@ -162,7 +162,7 @@ func BenchmarkValid(b *testing.B) {
 	}
 
 	a := []byte("\xF4\x8F\xBF\xBF")
-	for i := 0; i <= 1024/len(a); i++ {
+	for i := 0; i <= 400/len(a); i++ {
 		d := bytes.Repeat(a, i)
 		inputs = append(inputs, input{
 			name: fmt.Sprintf("small%d", len(d)),

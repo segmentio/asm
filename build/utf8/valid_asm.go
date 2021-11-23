@@ -196,7 +196,6 @@ func main() {
 	CMPQ(n, U8(128))
 	JGE(LabelRef("init_avx"))
 
-	Label("stdlib")
 	stdlib(d, n, ret)
 
 	Label("init_avx")
