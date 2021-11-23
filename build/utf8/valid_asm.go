@@ -5,8 +5,6 @@ package main
 
 import (
 	"bytes"
-	"strconv"
-	"strings"
 
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/gotypes"
@@ -210,85 +208,86 @@ func continuationMaskData(pattern byte) []byte {
 
 func nibbleMasksData() (nib1, nib2, nib3 []byte) {
 	const (
-		TooShort = 1 << iota
-		TooLong
-		Overlong3
-		Surrogate
-		Overlong2
-		TwoConts
-		TooLarge
-		TooLarge1000
-		Overlong4
+		TooShort     = 1 << 0
+		TooLong      = 1 << 1
+		Overlong3    = 1 << 2
+		Surrogate    = 1 << 4
+		Overlong2    = 1 << 5
+		TwoConts     = 1 << 7
+		TooLarge     = 1 << 3
+		TooLarge1000 = 1 << 6
+		Overlong4    = 1 << 6
+		Carry        = TooShort | TooLong | TwoConts
 	)
-	type rule struct {
-		byte1 string
-		byte2 string
-		error int
+
+	fullMask := func(b [16]byte) []byte {
+		m := make([]byte, 32)
+		copy(m, b[:])
+		copy(m[16:], b[:])
+		return m
 	}
 
-	rules := []rule{
-		{"11______", "0_______", TooShort},
-		{"11______", "11______", TooShort},
-		{"0_______", "10______", TooLong},
-		{"11100000", "100_____", Overlong3},
-		{"11101101", "101_____", Surrogate},
-		{"1100000_", "10______", Overlong2},
-		{"10______", "10______", TwoConts},
-		{"11110100", "1001____", TooLarge},
-		{"11110100", "101_____", TooLarge},
-		{"11110101", "1001____", TooLarge},
-		{"11110101", "101_____", TooLarge},
-		{"1111011_", "1001____", TooLarge},
-		{"1111011_", "101_____", TooLarge},
-		{"11111___", "1001____", TooLarge},
-		{"11111___", "101_____", TooLarge},
-		{"11110101", "1000____", TooLarge1000},
-		{"1111011_", "1000____", TooLarge1000},
-		{"11111___", "1000____", TooLarge1000},
-		{"11110000", "1000____", Overlong4},
-	}
+	nib1 = fullMask([16]byte{
+		// 0_______ ________ <ASCII in byte 1>
+		TooLong, TooLong, TooLong, TooLong,
+		TooLong, TooLong, TooLong, TooLong,
+		// 10______ ________ <continuation in byte 1>
+		TwoConts, TwoConts, TwoConts, TwoConts,
+		// 1100____ ________ <two byte lead in byte 1>
+		TooShort | Overlong2,
+		// 1101____ ________ <two byte lead in byte 1>
+		TooShort,
+		// 1110____ ________ <three byte lead in byte 1>
+		TooShort | Overlong3 | Surrogate,
+		// 1111____ ________ <four+ byte lead in byte 1>
+		TooShort | TooLarge | TooLarge1000 | Overlong4,
+	})
 
-	nib1 = make([]byte, 32)
-	nib2 = make([]byte, 32)
-	nib3 = make([]byte, 32)
+	nib2 = fullMask([16]byte{
+		// ____0000 ________
+		Carry | Overlong3 | Overlong2 | Overlong4,
+		// ____0001 ________
+		Carry | Overlong2,
+		// ____001_ ________
+		Carry,
+		Carry,
 
-	bounds := func(s string) (min, max byte) {
-		minI, err := strconv.ParseUint(strings.ReplaceAll(s, "_", "0"), 2, 8)
-		if err != nil {
-			panic(err)
-		}
-		maxI, err := strconv.ParseUint(strings.ReplaceAll(s, "_", "1"), 2, 8)
-		if err != nil {
-			panic(err)
-		}
-		min = byte(minI)
-		max = byte(maxI)
-		return
-	}
+		// ____0100 ________
+		Carry | TooLarge,
+		// ____0101 ________
+		Carry | TooLarge | TooLarge1000,
+		// ____011_ ________
+		Carry | TooLarge | TooLarge1000,
+		Carry | TooLarge | TooLarge1000,
 
-	for _, rule := range rules {
-		min, max := bounds(rule.byte1)
-		for x := min; x <= max; x++ {
-			idx := (x & 0xF0) >> 4
-			nib1[idx] |= byte(rule.error)
-			nib1[idx+16] = nib1[idx]
-			idx = x & 0x0F
-			nib2[idx] |= byte(rule.error)
-			nib2[idx+16] = nib2[idx]
-			if x == max {
-				break
-			}
-		}
-		min, max = bounds(rule.byte2)
-		for x := min; x <= max; x++ {
-			idx := (x & 0xF0) >> 4
-			nib3[idx] |= byte(rule.error)
-			nib3[idx+16] = nib3[idx]
-			if x == max {
-				break
-			}
-		}
-	}
+		// ____1___ ________
+		Carry | TooLarge | TooLarge1000,
+		Carry | TooLarge | TooLarge1000,
+		Carry | TooLarge | TooLarge1000,
+		Carry | TooLarge | TooLarge1000,
+		Carry | TooLarge | TooLarge1000,
+		// ____1101 ________
+		Carry | TooLarge | TooLarge1000 | Surrogate,
+		Carry | TooLarge | TooLarge1000,
+		Carry | TooLarge | TooLarge1000,
+	})
+
+	nib3 = fullMask([16]byte{
+		// ________ 0_______ <ASCII in byte 2>
+		TooShort, TooShort, TooShort, TooShort,
+		TooShort, TooShort, TooShort, TooShort,
+
+		// ________ 1000____
+		TooLong | Overlong2 | TwoConts | Overlong3 | TooLarge1000 | Overlong4,
+		// ________ 1001____
+		TooLong | Overlong2 | TwoConts | Overlong3 | TooLarge,
+		// ________ 101_____
+		TooLong | Overlong2 | TwoConts | Surrogate | TooLarge,
+		TooLong | Overlong2 | TwoConts | Surrogate | TooLarge,
+
+		// ________ 11______
+		TooShort, TooShort, TooShort, TooShort,
+	})
 
 	return
 }
@@ -333,50 +332,20 @@ func main() {
 	continuation3BytesY := YMM()
 	VMOVDQU(continuation3Bytes, continuation3BytesY)
 
-	//	nib1Data, nib2Data, nib3Data := nibbleMasksData()
+	nib1Data, nib2Data, nib3Data := nibbleMasksData()
 
 	Comment("High nibble of current byte")
-	//	nibble1Errors := ConstBytes("nibble1_errors", nib1Data)
-	nibble1Errors := ConstArray32("nibble1_errors",
-		0x02020202,
-		0x02020202,
-		0x80808080,
-		0x49150121,
-		0x02020202,
-		0x02020202,
-		0x80808080,
-		0x49150121,
-	)
+	nibble1Errors := ConstBytes("nibble1_errors", nib1Data)
 	nibble1Y := YMM()
 	VMOVDQU(nibble1Errors, nibble1Y)
 
 	Comment("Low nibble of current byte")
-	//	nibble2Errors := ConstBytes("nibble2_errors", nib2Data)
-	nibble2Errors := ConstArray32("nibble2_errors",
-		0x8383A3E7,
-		0xCBCBCB8B,
-		0xCBCBCBCB,
-		0xCBCBDBCB,
-		0x8383A3E7,
-		0xCBCBCB8B,
-		0xCBCBCBCB,
-		0xCBCBDBCB,
-	)
+	nibble2Errors := ConstBytes("nibble2_errors", nib2Data)
 	nibble2Y := YMM()
 	VMOVDQU(nibble2Errors, nibble2Y)
 
 	Comment("High nibble of the next byte")
-	//	nibble3Errors := ConstBytes("nibble3_errors", nib3Data)
-	nibble3Errors := ConstArray32("nibble3_errors",
-		0x01010101,
-		0x01010101,
-		0xBABAAEE6,
-		0x01010101,
-		0x01010101,
-		0x01010101,
-		0xBABAAEE6,
-		0x01010101,
-	)
+	nibble3Errors := ConstBytes("nibble3_errors", nib3Data)
 	nibble3Y := YMM()
 	VMOVDQU(nibble3Errors, nibble3Y)
 
