@@ -3,6 +3,7 @@ package utf8
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 	stdutf8 "unicode/utf8"
 )
@@ -70,6 +71,34 @@ func TestValid(t *testing.T) {
 	for _, tt := range examples {
 		t.Run(tt, func(t *testing.T) {
 			b := []byte(tt)
+			expected := stdutf8.Valid(b)
+			if Valid(b) != expected {
+				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
+			}
+		})
+		t.Run("vec-padded-"+tt, func(t *testing.T) {
+			prefix := strings.Repeat("a", 128)
+			padding := strings.Repeat("b", 32-len(tt))
+			input := prefix + padding + tt
+			b := []byte(input)
+			if len(b)%32 != 0 {
+				panic("test should generate block of 32")
+			}
+			expected := stdutf8.Valid(b)
+			if Valid(b) != expected {
+				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
+			}
+		})
+		t.Run("vec-"+tt, func(t *testing.T) {
+			prefix := strings.Repeat("a", 128)
+			input := prefix + tt
+			if len(tt)%32 == 0 {
+				input += "x"
+			}
+			b := []byte(input)
+			if len(b)%32 == 0 {
+				panic("test should not generate block of 32")
+			}
 			expected := stdutf8.Valid(b)
 			if Valid(b) != expected {
 				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
