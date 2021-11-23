@@ -4,6 +4,10 @@
 package main
 
 import (
+	"bytes"
+	"strconv"
+	"strings"
+
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/gotypes"
 	. "github.com/mmcloughlin/avo/operand"
@@ -179,6 +183,114 @@ func stdlib(d Register, n Register, ret *Basic) {
 	Comment("End of stdlib implementation")
 }
 
+func incompleteMaskData() []byte {
+	// The incomplete mask is used on every block to flag the bytes that are
+	// incomplete if this is the last block (for example a byte that starts
+	// a 4 byte character only 3 bytes before the end).
+	any := byte(0xFF)
+	needs4 := byte(0b11110000) - 1
+	needs3 := byte(0b11100000) - 1
+	needs2 := byte(0b11000000) - 1
+	b := [32]byte{
+		any, any, any, any, any, any, any, any,
+		any, any, any, any, any, any, any, any,
+		any, any, any, any, any, any, any, any,
+		any, any, any, any, any, needs4, needs3, needs2,
+	}
+	return b[:]
+}
+
+func continuationMaskData(pattern byte) []byte {
+	// Pattern is something like 0b1110000 to accept all bytes of the form
+	// 111xxxx.
+	v := pattern - 1
+	return bytes.Repeat([]byte{v}, 32)
+}
+
+func nibbleMasksData() (nib1, nib2, nib3 []byte) {
+	const (
+		TooShort = 1 << iota
+		TooLong
+		Overlong3
+		Surrogate
+		Overlong2
+		TwoConts
+		TooLarge
+		TooLarge1000
+		Overlong4
+	)
+	type rule struct {
+		byte1 string
+		byte2 string
+		error int
+	}
+
+	rules := []rule{
+		{"11______", "0_______", TooShort},
+		{"11______", "11______", TooShort},
+		{"0_______", "10______", TooLong},
+		{"11100000", "100_____", Overlong3},
+		{"11101101", "101_____", Surrogate},
+		{"1100000_", "10______", Overlong2},
+		{"10______", "10______", TwoConts},
+		{"11110100", "1001____", TooLarge},
+		{"11110100", "101_____", TooLarge},
+		{"11110101", "1001____", TooLarge},
+		{"11110101", "101_____", TooLarge},
+		{"1111011_", "1001____", TooLarge},
+		{"1111011_", "101_____", TooLarge},
+		{"11111___", "1001____", TooLarge},
+		{"11111___", "101_____", TooLarge},
+		{"11110101", "1000____", TooLarge1000},
+		{"1111011_", "1000____", TooLarge1000},
+		{"11111___", "1000____", TooLarge1000},
+		{"11110000", "1000____", Overlong4},
+	}
+
+	nib1 = make([]byte, 32)
+	nib2 = make([]byte, 32)
+	nib3 = make([]byte, 32)
+
+	bounds := func(s string) (min, max byte) {
+		minI, err := strconv.ParseUint(strings.ReplaceAll(s, "_", "0"), 2, 8)
+		if err != nil {
+			panic(err)
+		}
+		maxI, err := strconv.ParseUint(strings.ReplaceAll(s, "_", "1"), 2, 8)
+		if err != nil {
+			panic(err)
+		}
+		min = byte(minI)
+		max = byte(maxI)
+		return
+	}
+
+	for _, rule := range rules {
+		min, max := bounds(rule.byte1)
+		for x := min; x <= max; x++ {
+			idx := (x & 0xF0) >> 4
+			nib1[idx] |= byte(rule.error)
+			nib1[idx+16] = nib1[idx]
+			idx = x & 0x0F
+			nib2[idx] |= byte(rule.error)
+			nib2[idx+16] = nib2[idx]
+			if x == max {
+				break
+			}
+		}
+		min, max = bounds(rule.byte2)
+		for x := min; x <= max; x++ {
+			idx := (x & 0xF0) >> 4
+			nib3[idx] |= byte(rule.error)
+			nib3[idx+16] = nib3[idx]
+			if x == max {
+				break
+			}
+		}
+	}
+	return
+}
+
 func main() {
 	TEXT("Valid", NOSPLIT, "func(p []byte) bool")
 	Doc("Valid reports whether p consists entirely of valid UTF-8-encoded runes.")
@@ -206,77 +318,32 @@ func main() {
 
 	Comment("Prepare the constant masks")
 
-	incompleteMask := ConstArray64("incomplete_mask",
-		0xFFFFFFFFFFFFFFFF,
-		0xFFFFFFFFFFFFFFFF,
-		0xFFFFFFFFFFFFFFFF,
-		0xBFDFEFFFFFFFFFFF,
-	)
+	incompleteMask := ConstBytes("incomplete_mask", incompleteMaskData())
 	incompleteMaskY := YMM()
 	VMOVDQU(incompleteMask, incompleteMaskY)
 
-	continuation4Bytes := ConstArray64("cont4_vec",
-		0xEFEFEFEFEFEFEFEF,
-		0xEFEFEFEFEFEFEFEF,
-		0xEFEFEFEFEFEFEFEF,
-		0xEFEFEFEFEFEFEFEF,
-	)
-
+	continuation4Bytes := ConstBytes("cont4_vec", continuationMaskData(0b11110000))
 	continuation4BytesY := YMM()
 	VMOVDQU(continuation4Bytes, continuation4BytesY)
 
-	continuation3Bytes := ConstArray64("cont3_vec",
-		0xDFDFDFDFDFDFDFDF,
-		0xDFDFDFDFDFDFDFDF,
-		0xDFDFDFDFDFDFDFDF,
-		0xDFDFDFDFDFDFDFDF,
-	)
-
+	continuation3Bytes := ConstBytes("cont3_vec", continuationMaskData(0b11100000))
 	continuation3BytesY := YMM()
 	VMOVDQU(continuation3Bytes, continuation3BytesY)
 
-	Comment("High nibble of current byte")
-	nibble1Errors := ConstArray32("nibble1_errors",
-		0x02020202,
-		0x02020202,
-		0x80808080,
-		0x49150121,
-		0x02020202,
-		0x02020202,
-		0x80808080,
-		0x49150121,
-	)
+	nib1Data, nib2Data, nib3Data := nibbleMasksData()
 
+	Comment("High nibble of current byte")
+	nibble1Errors := ConstBytes("nibble1_errors", nib1Data)
 	nibble1Y := YMM()
 	VMOVDQU(nibble1Errors, nibble1Y)
 
 	Comment("Low nibble of current byte")
-	nibble2Errors := ConstArray32("nibble2_errors",
-		0x8383A3E7,
-		0xCBCBCB8B,
-		0xCBCBCBCB,
-		0xCBCBDBCB,
-		0x8383A3E7,
-		0xCBCBCB8B,
-		0xCBCBCBCB,
-		0xCBCBDBCB,
-	)
-
+	nibble2Errors := ConstBytes("nibble2_errors", nib2Data)
 	nibble2Y := YMM()
 	VMOVDQU(nibble2Errors, nibble2Y)
 
 	Comment("High nibble of the next byte")
-	nibble3Errors := ConstArray32("nibble3_errors",
-		0x01010101,
-		0x01010101,
-		0xBABAAEE6,
-		0x01010101,
-		0x01010101,
-		0x01010101,
-		0xBABAAEE6,
-		0x01010101,
-	)
-
+	nibble3Errors := ConstBytes("nibble3_errors", nib3Data)
 	nibble3Y := YMM()
 	VMOVDQU(nibble3Errors, nibble3Y)
 
@@ -346,7 +413,7 @@ func main() {
 	CMPL(tmp, Imm(0))
 	JNZ(LabelRef("non_ascii"))
 
-	Comment("If this all block is ASCII, there is nothing to do, and it is an error if any of the previous code point was incomplete.")
+	Comment("If this whole block is ASCII, there is nothing to do, and it is an error if any of the previous code point was incomplete.")
 	VPOR(errorY, incompletePreviousBlockY, errorY)
 	JMP(LabelRef("check_input"))
 
@@ -367,11 +434,11 @@ func main() {
 	VPSHUFB(highCurr, nibble3Y, highCurr)
 	VPAND(highCurr, highPrev, highPrev)
 
-	Comment("Find 2 bytes continuations")
+	Comment("Find 3 bytes continuations")
 	off2 := pushLast2BytesFromAToFrontOfB(previousBlockY, currentBlockY)
 	VPSUBUSB(continuation3BytesY, off2, off2)
 
-	Comment("Find 3 bytes continuations")
+	Comment("Find 4 bytes continuations")
 	off3 := pushLast3BytesFromAToFrontOfB(previousBlockY, currentBlockY)
 	VPSUBUSB(continuation4BytesY, off3, off3)
 

@@ -211,7 +211,7 @@ process:
 	CMPL      BX, $0x00
 	JNZ       non_ascii
 
-	// If this all block is ASCII, there is nothing to do, and it is an error if any of the previous code point was incomplete.
+	// If this whole block is ASCII, there is nothing to do, and it is an error if any of the previous code point was incomplete.
 	VPOR Y8, Y9, Y8
 	JMP  check_input
 
@@ -234,12 +234,12 @@ non_ascii:
 	VPSHUFB Y9, Y5, Y9
 	VPAND   Y9, Y11, Y11
 
-	// Find 2 bytes continuations
+	// Find 3 bytes continuations
 	VPERM2I128 $0x03, Y7, Y10, Y9
 	VPALIGNR   $0x0e, Y9, Y10, Y9
 	VPSUBUSB   Y2, Y9, Y9
 
-	// Find 3 bytes continuations
+	// Find 4 bytes continuations
 	VPERM2I128 $0x03, Y7, Y10, Y7
 	VPALIGNR   $0x0d, Y7, Y10, Y7
 	VPSUBUSB   Y1, Y7, Y7
@@ -336,21 +336,21 @@ DATA cont3_vec<>+24(SB)/8, $0xdfdfdfdfdfdfdfdf
 GLOBL cont3_vec<>(SB), RODATA|NOPTR, $32
 
 DATA nibble1_errors<>+0(SB)/8, $0x0202020202020202
-DATA nibble1_errors<>+8(SB)/8, $0x4915012180808080
+DATA nibble1_errors<>+8(SB)/8, $0xc10d011120202020
 DATA nibble1_errors<>+16(SB)/8, $0x0202020202020202
-DATA nibble1_errors<>+24(SB)/8, $0x4915012180808080
+DATA nibble1_errors<>+24(SB)/8, $0xc10d011120202020
 GLOBL nibble1_errors<>(SB), RODATA|NOPTR, $32
 
-DATA nibble2_errors<>+0(SB)/8, $0xcbcbcb8b8383a3e7
-DATA nibble2_errors<>+8(SB)/8, $0xcbcbdbcbcbcbcbcb
-DATA nibble2_errors<>+16(SB)/8, $0xcbcbcb8b8383a3e7
-DATA nibble2_errors<>+24(SB)/8, $0xcbcbdbcbcbcbcbcb
+DATA nibble2_errors<>+0(SB)/8, $0xe3e3e36323233337
+DATA nibble2_errors<>+8(SB)/8, $0xe3e3ebe3e3e3e3e3
+DATA nibble2_errors<>+16(SB)/8, $0xe3e3e36323233337
+DATA nibble2_errors<>+24(SB)/8, $0xe3e3ebe3e3e3e3e3
 GLOBL nibble2_errors<>(SB), RODATA|NOPTR, $32
 
 DATA nibble3_errors<>+0(SB)/8, $0x0101010101010101
-DATA nibble3_errors<>+8(SB)/8, $0x01010101babaaee6
+DATA nibble3_errors<>+8(SB)/8, $0x010101017a7a76b6
 DATA nibble3_errors<>+16(SB)/8, $0x0101010101010101
-DATA nibble3_errors<>+24(SB)/8, $0x01010101babaaee6
+DATA nibble3_errors<>+24(SB)/8, $0x010101017a7a76b6
 GLOBL nibble3_errors<>(SB), RODATA|NOPTR, $32
 
 DATA nibble_mask<>+0(SB)/8, $0x0f0f0f0f0f0f0f0f
