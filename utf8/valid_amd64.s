@@ -9,6 +9,89 @@
 TEXT ·Valid(SB), NOSPLIT, $32-25
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
+	JMP  stdlib
+
+	// if input < 32 bytes
+	CMPQ CX, $0x20
+	JG   init_avx
+
+stdlib:
+	// Non-vectorized implementation from the stdlib. Used for small inputs.
+	MOVQ $0x8080808080808080, DX
+	LEAQ first<>+0(SB), BX
+	LEAQ accept_ranges<>+0(SB), SI
+
+	// Fast ascii-check loop
+start_loop:
+	CMPQ  CX, $0x20
+	JL    end_loop
+	TESTQ DX, AX
+	JNZ   end_loop
+	SUBQ  $0x08, CX
+	ADDQ  $0x08, AX
+	JMP   start_loop
+
+end_loop:
+	// UTF-8 check byte-by-byte
+	XORQ DX, DX
+
+start_utf8_loop:
+	CMPQ    DX, CX
+	JGE     stdlib_ret_true
+	MOVBLZX (AX)(DX*1), DI
+	CMPB    DI, $0x80
+	JAE     test_first
+	ADDQ    $0x01, DX
+	JMP     start_utf8_loop
+
+test_first:
+	MOVB    (BX)(DI*1), DI
+	CMPB    DI, $0xf1
+	JEQ     stdlib_ret_false
+	MOVBQZX DI, R8
+	ANDQ    $0x07, R8
+	MOVQ    DX, R9
+	ADDQ    R8, R9
+	CMPQ    R9, CX
+	JA      stdlib_ret_false
+	SHRB    $0x04, DI
+	MOVW    (SI)(DI*2), DI
+	MOVB    DI, R9
+	SHRW    $0x08, DI
+	MOVB    1(AX)(DX*1), R10
+	CMPB    R10, R9
+	JB      stdlib_ret_false
+	CMPB    DI, R10
+	JB      stdlib_ret_false
+	CMPQ    R8, $0x02
+	JEQ     inc_size
+	MOVB    2(AX)(DX*1), R10
+	CMPB    R10, $0x80
+	JB      stdlib_ret_false
+	CMPB    R10, $0xbf
+	JA      stdlib_ret_false
+	CMPQ    R8, $0x03
+	JEQ     inc_size
+	MOVB    3(AX)(DX*1), R10
+	CMPB    R10, $0x80
+	JB      stdlib_ret_false
+	CMPB    R10, $0xbf
+	JA      stdlib_ret_false
+
+inc_size:
+	ADDQ R8, DX
+	JMP  start_utf8_loop
+
+stdlib_ret_true:
+	MOVB $0x01, ret+24(FP)
+	RET
+
+stdlib_ret_false:
+	MOVB $0x00, ret+24(FP)
+	RET
+
+	// End of stdlib implementation
+init_avx:
 	LEAQ (SP), DX
 
 	// Prepare the constant masks
@@ -195,6 +278,46 @@ end:
 	VPTEST Y8, Y8
 	SETEQ  ret+24(FP)
 	RET
+
+DATA first<>+0(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+8(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+16(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+24(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+32(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+40(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+48(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+56(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+64(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+72(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+80(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+88(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+96(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+104(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+112(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+120(SB)/8, $0xf0f0f0f0f0f0f0f0
+DATA first<>+128(SB)/8, $0xf1f1f1f1f1f1f1f1
+DATA first<>+136(SB)/8, $0xf1f1f1f1f1f1f1f1
+DATA first<>+144(SB)/8, $0xf1f1f1f1f1f1f1f1
+DATA first<>+152(SB)/8, $0xf1f1f1f1f1f1f1f1
+DATA first<>+160(SB)/8, $0xf1f1f1f1f1f1f1f1
+DATA first<>+168(SB)/8, $0xf1f1f1f1f1f1f1f1
+DATA first<>+176(SB)/8, $0xf1f1f1f1f1f1f1f1
+DATA first<>+184(SB)/8, $0xf1f1f1f1f1f1f1f1
+DATA first<>+192(SB)/8, $0x020202020202f1f1
+DATA first<>+200(SB)/8, $0x0202020202020202
+DATA first<>+208(SB)/8, $0x0202020202020202
+DATA first<>+216(SB)/8, $0x0202020202020202
+DATA first<>+224(SB)/8, $0x0303030303030313
+DATA first<>+232(SB)/8, $0x0303230303030303
+DATA first<>+240(SB)/8, $0xf1f1f14404040434
+DATA first<>+248(SB)/8, $0xf1f1f1f1f1f1f1f1
+GLOBL first<>(SB), RODATA|NOPTR, $256
+
+DATA accept_ranges<>+0(SB)/8, $0xbf909f80bfa0bf80
+DATA accept_ranges<>+8(SB)/8, $0x0000000000008f80
+DATA accept_ranges<>+16(SB)/8, $0x0000000000000000
+DATA accept_ranges<>+24(SB)/8, $0x0000000000000000
+GLOBL accept_ranges<>(SB), RODATA|NOPTR, $32
 
 DATA incomplete_mask<>+0(SB)/8, $0xffffffffffffffff
 DATA incomplete_mask<>+8(SB)/8, $0xffffffffffffffff

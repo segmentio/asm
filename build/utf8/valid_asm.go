@@ -5,14 +5,178 @@ package main
 
 import (
 	. "github.com/mmcloughlin/avo/build"
+	. "github.com/mmcloughlin/avo/gotypes"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
 	. "github.com/segmentio/asm/build/internal/asm"
-	x86 "github.com/segmentio/asm/build/internal/x86"
+	"github.com/segmentio/asm/build/internal/x86"
 )
 
 func init() {
 	ConstraintExpr("!pure go")
+}
+
+const (
+	runeSelf = 0x80
+
+	// The default lowest and highest continuation byte.
+	locb = 0b10000000 // 128 0x80
+	hicb = 0b10111111 // 191 0xBF
+
+	// These names of these constants are chosen to give nice alignment in the
+	// table below. The first nibble is an index into acceptRanges or F for
+	// special one-byte cases. The second nibble is the Rune length or the
+	// Status for the special one-byte case.
+	xx = 0xF1 // invalid: size 1
+	as = 0xF0 // ASCII: size 1
+	s1 = 0x02 // accept 0, size 2
+	s2 = 0x13 // accept 1, size 3
+	s3 = 0x03 // accept 0, size 3
+	s4 = 0x23 // accept 2, size 3
+	s5 = 0x34 // accept 3, size 4
+	s6 = 0x04 // accept 0, size 4
+	s7 = 0x44 // accept 4, size 4
+)
+
+// TODO: find the address of this from unicode/utf8.
+// first is information about the first byte in a UTF-8 sequence.
+var firstData = [256]uint8{
+	//   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x00-0x0F
+	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x10-0x1F
+	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x20-0x2F
+	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x30-0x3F
+	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x40-0x4F
+	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x50-0x5F
+	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x60-0x6F
+	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x70-0x7F
+	//   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+	xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, // 0x80-0x8F
+	xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, // 0x90-0x9F
+	xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, // 0xA0-0xAF
+	xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, // 0xB0-0xBF
+	xx, xx, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, // 0xC0-0xCF
+	s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, // 0xD0-0xDF
+	s2, s3, s3, s3, s3, s3, s3, s3, s3, s3, s3, s3, s3, s4, s3, s3, // 0xE0-0xEF
+	s5, s6, s6, s6, s7, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, // 0xF0-0xFF
+}
+
+// acceptRange gives the range of valid values for the second byte in a UTF-8
+// sequence.
+type acceptRange struct {
+	lo uint8 // lowest value for second byte.
+	hi uint8 // highest value for second byte.
+}
+
+var acceptRangesData = [32]uint8{
+	locb, hicb,
+	0xA0, hicb,
+	locb, 0x9F,
+	0x90, hicb,
+	locb, 0x8F,
+}
+
+func stdlib(d Register, n Register, ret *Basic) {
+	Comment("Non-vectorized implementation from the stdlib. Used for small inputs.")
+	mask := GP64()
+	MOVQ(U64(0x8080808080808080), mask)
+
+	first := Mem{Base: GP64(), Scale: 1}
+	LEAQ(ConstBytes("first", firstData[:]), first.Base)
+
+	acceptRanges := Mem{Base: GP64(), Scale: 2}
+	LEAQ(ConstBytes("accept_ranges", acceptRangesData[:]), acceptRanges.Base)
+
+	Comment("Fast ascii-check loop")
+	Label("start_loop")
+	CMPQ(n, U8(32))
+	JL(LabelRef("end_loop"))
+	TESTQ(mask, d)
+	JNZ(LabelRef("end_loop"))
+	SUBQ(U8(8), n)
+	ADDQ(U8(8), d)
+	JMP(LabelRef("start_loop"))
+	Label("end_loop")
+
+	Comment("UTF-8 check byte-by-byte")
+	i := GP64()
+	XORQ(i, i)
+
+	b := Mem{Base: d, Index: i, Scale: 1}
+	pi := GP32()
+
+	Label("start_utf8_loop")         // for
+	CMPQ(i, n)                       // i < n
+	JGE(LabelRef("stdlib_ret_true")) //   end of loop, return true
+
+	MOVBLZX(b, pi) // pi = b[i]
+
+	CMPB(pi.As8(), Imm(runeSelf))    // if pi >= runeSelf
+	JAE(LabelRef("test_first"))      //   more testing to do
+	ADDQ(Imm(1), i)                  // else: i++
+	JMP(LabelRef("start_utf8_loop")) //   continue
+
+	Label("test_first")
+	x := GP8()
+	MOVB(first.Idx(pi, 1), x)         // x = first[pi]
+	CMPB(x, Imm(xx))                  // if x == xx
+	JEQ(LabelRef("stdlib_ret_false")) //   return false (illegal started byte)
+
+	size := GP64()
+	MOVBQZX(x, size)     // size = x
+	ANDQ(Imm(0x7), size) // size &= 7
+	i2 := GP64()
+	MOVQ(i, i2)                      // i2 = i
+	ADDQ(size, i2)                   // i2 += size
+	CMPQ(i2, n)                      // if i2 > n
+	JA(LabelRef("stdlib_ret_false")) //  return false (short or invalid)
+
+	accept := GP16()
+	SHRB(Imm(4), x)                      // x = x >> 4
+	MOVW(acceptRanges.Idx(x, 2), accept) // accept = acceptRanges[x]
+	acceptLo := GP8()
+	MOVB(accept.As8(), acceptLo) // acceptLo = accept.lo
+	SHRW(Imm(8), accept)         // accept = accept.hi
+	// TODO: ^ this method to grab the fields seems odd
+
+	c := GP8()
+	MOVB(b.Offset(1), c)             // c = b[i+1]
+	CMPB(c, acceptLo)                // if c < accept.lo
+	JB(LabelRef("stdlib_ret_false")) //   return false
+	CMPB(accept.As8(), c)            // if accept.hi < c
+	JB(LabelRef("stdlib_ret_false")) //   return false
+
+	CMPQ(size, Imm(2))        // if size == 2
+	JEQ(LabelRef("inc_size")) //   -> inc_size
+
+	MOVB(b.Offset(2), c)             // c = b[i+2]
+	CMPB(c, U8(locb))                // if c < locb
+	JB(LabelRef("stdlib_ret_false")) //   return false
+	CMPB(c, U8(hicb))                // if hicb < c
+	JA(LabelRef("stdlib_ret_false")) //   return false
+
+	CMPQ(size, Imm(3))        // if size == 3
+	JEQ(LabelRef("inc_size")) //   -> inc_size
+
+	MOVB(b.Offset(3), c)             // c = b[i+3]
+	CMPB(c, Imm(locb))               // if c < locb
+	JB(LabelRef("stdlib_ret_false")) //   return false
+	CMPB(c, Imm(hicb))               // if hicb < c
+	JA(LabelRef("stdlib_ret_false")) //   return false
+
+	Label("inc_size")
+	ADDQ(size, i) // i += size
+
+	JMP(LabelRef("start_utf8_loop"))
+
+	Label("stdlib_ret_true")
+	MOVB(Imm(1), ret.Addr)
+	RET()
+	Label("stdlib_ret_false")
+	MOVB(Imm(0), ret.Addr)
+	RET()
+
+	Comment("End of stdlib implementation")
 }
 
 func main() {
@@ -24,9 +188,23 @@ func main() {
 	d := Load(Param("p").Base(), GP64())
 	n := Load(Param("p").Len(), GP64())
 
+	//	x86.JumpUnlessFeature("stdlib", cpu.AVX2) // TODO
+	JMP(LabelRef("stdlib")) // TODO:REMOVE ME
+
+	Comment("if input < 32 bytes")
+	CMPQ(n, U8(32))
+	JG(LabelRef("init_avx"))
+
+	Label("stdlib")
+	stdlib(d, n, ret)
+
+	Label("init_avx")
+
 	scratch := AllocLocal(32)
 	scratchAddr := GP64()
 	LEAQ(scratch, scratchAddr)
+
+	//stdlib(d, n, ret)
 
 	Comment("Prepare the constant masks")
 

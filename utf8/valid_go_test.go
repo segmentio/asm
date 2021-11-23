@@ -55,16 +55,16 @@ func TestValid(t *testing.T) {
 
 		"a\uFFFDb",
 
-		string("\xF4\x8F\xBF\xBF"), // U+10FFFF
+		"\xF4\x8F\xBF\xBF", // U+10FFFF
 
-		string("\xF4\x90\x80\x80"), // U+10FFFF+1; out of range
-		string("\xF7\xBF\xBF\xBF"), // 0x1FFFFF; out of range
+		"\xF4\x90\x80\x80", // U+10FFFF+1; out of range
+		"\xF7\xBF\xBF\xBF", // 0x1FFFFF; out of range
 
-		string("\xFB\xBF\xBF\xBF\xBF"), // 0x3FFFFFF; out of range
+		"\xFB\xBF\xBF\xBF\xBF", // 0x3FFFFFF; out of range
 
-		string("\xc0\x80"),     // U+0000 encoded in two bytes: incorrect
-		string("\xed\xa0\x80"), // U+D800 high surrogate (sic)
-		string("\xed\xbf\xbf"), // U+DFFF low surrogate (sic)
+		"\xc0\x80",     // U+0000 encoded in two bytes: incorrect
+		"\xed\xa0\x80", // U+D800 high surrogate (sic)
+		"\xed\xbf\xbf", // U+DFFF low surrogate (sic)
 	}
 
 	for _, tt := range examples {
