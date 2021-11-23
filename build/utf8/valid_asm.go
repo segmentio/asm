@@ -289,6 +289,7 @@ func nibbleMasksData() (nib1, nib2, nib3 []byte) {
 			}
 		}
 	}
+
 	return
 }
 
@@ -332,20 +333,50 @@ func main() {
 	continuation3BytesY := YMM()
 	VMOVDQU(continuation3Bytes, continuation3BytesY)
 
-	nib1Data, nib2Data, nib3Data := nibbleMasksData()
+	//	nib1Data, nib2Data, nib3Data := nibbleMasksData()
 
 	Comment("High nibble of current byte")
-	nibble1Errors := ConstBytes("nibble1_errors", nib1Data)
+	//	nibble1Errors := ConstBytes("nibble1_errors", nib1Data)
+	nibble1Errors := ConstArray32("nibble1_errors",
+		0x02020202,
+		0x02020202,
+		0x80808080,
+		0x49150121,
+		0x02020202,
+		0x02020202,
+		0x80808080,
+		0x49150121,
+	)
 	nibble1Y := YMM()
 	VMOVDQU(nibble1Errors, nibble1Y)
 
 	Comment("Low nibble of current byte")
-	nibble2Errors := ConstBytes("nibble2_errors", nib2Data)
+	//	nibble2Errors := ConstBytes("nibble2_errors", nib2Data)
+	nibble2Errors := ConstArray32("nibble2_errors",
+		0x8383A3E7,
+		0xCBCBCB8B,
+		0xCBCBCBCB,
+		0xCBCBDBCB,
+		0x8383A3E7,
+		0xCBCBCB8B,
+		0xCBCBCBCB,
+		0xCBCBDBCB,
+	)
 	nibble2Y := YMM()
 	VMOVDQU(nibble2Errors, nibble2Y)
 
 	Comment("High nibble of the next byte")
-	nibble3Errors := ConstBytes("nibble3_errors", nib3Data)
+	//	nibble3Errors := ConstBytes("nibble3_errors", nib3Data)
+	nibble3Errors := ConstArray32("nibble3_errors",
+		0x01010101,
+		0x01010101,
+		0xBABAAEE6,
+		0x01010101,
+		0x01010101,
+		0x01010101,
+		0xBABAAEE6,
+		0x01010101,
+	)
 	nibble3Y := YMM()
 	VMOVDQU(nibble3Errors, nibble3Y)
 
