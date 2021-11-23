@@ -161,8 +161,12 @@ func BenchmarkValid(b *testing.B) {
 		{"10Japan", []byte("日本語日本語日本語日")},
 	}
 
+	const KiB = 1024
+	const MiB = 1048576
+
 	a := []byte("\xF4\x8F\xBF\xBF")
 	for i := 0; i <= 400/len(a); i++ {
+		//	for _, i := range []int{1 * KiB, 8 * KiB, 16 * KiB, 64 * KiB, 1 * MiB, 8 * MiB, 32 * MiB, 64 * MiB} {
 		d := bytes.Repeat(a, i)
 		inputs = append(inputs, input{
 			name: fmt.Sprintf("small%d", len(d)),

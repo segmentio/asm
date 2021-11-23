@@ -6,7 +6,7 @@
 #include "textflag.h"
 
 // func Valid(p []byte) bool
-// Requires: AVX, AVX2, SSE2
+// Requires: AVX, AVX2, LZCNT
 TEXT ·Valid(SB), NOSPLIT, $32-25
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
@@ -121,6 +121,7 @@ init_avx:
 
 	// Zeroes the "previous block was incomplete" vector.
 	VXORPS Y9, Y9, Y9
+	XORB   DL, DL
 
 	// Top of the loop.
 check_input:
@@ -136,72 +137,18 @@ check_input:
 	JE   end
 
 	// If 0 < bytes left < 32.
-	// At that point we know we need the scratch buffer.
-	// Zero it
-	VXORPS  Y10, Y10, Y10
-	VMOVDQU Y10, (DX)
-
-	// Make a copy of the remaining bytes into the zeroed scratch space and make it the next block to read.
-	MOVQ AX, BX
-	MOVQ DX, AX
-	CMPQ CX, $0x01
-	JE   handle1
-	CMPQ CX, $0x03
-	JBE  handle2to3
-	CMPQ CX, $0x04
-	JE   handle4
-	CMPQ CX, $0x08
-	JB   handle5to7
-	JE   handle8
-	CMPQ CX, $0x10
-	JBE  handle9to16
-	CMPQ CX, $0x20
-	JBE  handle17to32
-
-handle1:
-	MOVB (BX), CL
-	MOVB CL, (AX)
-	JMP  after_copy
-
-handle2to3:
-	MOVW (BX), SI
-	MOVW -2(BX)(CX*1), BX
-	MOVW SI, (AX)
-	MOVW BX, -2(AX)(CX*1)
-	JMP  after_copy
-
-handle4:
-	MOVL (BX), CX
-	MOVL CX, (AX)
-	JMP  after_copy
-
-handle5to7:
-	MOVL (BX), SI
-	MOVL -4(BX)(CX*1), BX
-	MOVL SI, (AX)
-	MOVL BX, -4(AX)(CX*1)
-	JMP  after_copy
-
-handle8:
-	MOVQ (BX), CX
-	MOVQ CX, (AX)
-	JMP  after_copy
-
-handle9to16:
-	MOVQ (BX), SI
-	MOVQ -8(BX)(CX*1), BX
-	MOVQ SI, (AX)
-	MOVQ BX, -8(AX)(CX*1)
-	JMP  after_copy
-
-handle17to32:
-	MOVOU (BX), X10
-	MOVOU -16(BX)(CX*1), X11
-	MOVOU X10, (AX)
-	MOVOU X11, -16(AX)(CX*1)
-
-after_copy:
-	MOVQ $0x0000000000000020, CX
+	CMPB      DL, $0x01
+	JEQ       stdlib
+	VXORPS    Y0, Y0, Y0
+	VPCMPEQB  Y9, Y0, Y0
+	VPMOVMSKB Y0, DX
+	NOTL      DX
+	LZCNTL    DX, DX
+	SUBQ      $0x20, AX
+	ADDQ      DX, AX
+	ADDQ      $0x20, CX
+	SUBQ      DX, CX
+	JMP       stdlib
 
 	// Process one 32B block of data
 process:
@@ -268,6 +215,7 @@ non_ascii:
 	// Prepare for next iteration
 	VPSUBUSB Y0, Y10, Y9
 	VMOVDQU  Y10, Y7
+	MOVB     $0x01, DL
 
 	// End of loop
 	JMP check_input

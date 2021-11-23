@@ -372,6 +372,9 @@ func main() {
 	incompletePreviousBlockY := YMM()
 	zeroOutVector(incompletePreviousBlockY)
 
+	hasPreviousBlock := GP8()
+	XORB(hasPreviousBlock, hasPreviousBlock)
+
 	Comment("Top of the loop.")
 	Label("check_input")
 
@@ -387,18 +390,31 @@ func main() {
 	JE(LabelRef("end"))
 
 	Comment("If 0 < bytes left < 32.")
-	Comment("At that point we know we need the scratch buffer.")
-	Comment("Zero it") // TODO: is this necessary or is the runtime already doing it?
-	tmpZeroY := zeroOutVector(YMM())
-	VMOVDQU(tmpZeroY, Mem{Base: scratchAddr})
 
-	Comment("Make a copy of the remaining bytes into the zeroed scratch space and make it the next block to read.")
-	copySrcAddr := GP64()
-	MOVQ(d, copySrcAddr)
-	MOVQ(scratchAddr, d)
+	// If the AVX code has ran at least once, we need to walk back up to 4
+	// bytes to take into account continuations.
+	CMPB(hasPreviousBlock, Imm(1))
+	JEQ(LabelRef("stdlib"))
 
-	copyN(d, copySrcAddr, n)
-	MOVQ(U64(32), n)
+	zeroes := zeroOutVector(YMM())
+	VPCMPEQB(incompletePreviousBlockY, zeroes, zeroes)
+	// 'zeroes' now contains 1111 for all bytes that were zero, 0000
+	// otherwise.
+
+	bitset := GP64()
+	VPMOVMSKB(zeroes, bitset.As32())
+	// bitset now contains a 1 at the position of each zero byte of
+	// incompletePreviousBlockY, 0 otherwise.
+	NOTL(bitset.As32())
+	// Now bitset has 0 bits for each zero byte of incompltePreviousBlockY.
+	LZCNTL(bitset.As32(), bitset.As32())
+	// bitset is now an unsigned int in [0,32], corresponding to the number
+	// of leading zero bytes in incompletePreviousBlockY.
+	SUBQ(Imm(32), d)
+	ADDQ(bitset, d)
+	ADDQ(Imm(32), n)
+	SUBQ(bitset, n)
+	JMP(LabelRef("stdlib"))
 
 	Comment("Process one 32B block of data")
 	Label("process")
@@ -473,6 +489,7 @@ func main() {
 	Comment("Prepare for next iteration")
 	VPSUBUSB(incompleteMaskY, currentBlockY, incompletePreviousBlockY)
 	VMOVDQU(currentBlockY, previousBlockY)
+	MOVB(Imm(1), hasPreviousBlock)
 
 	Comment("End of loop")
 	JMP(LabelRef("check_input"))
@@ -527,85 +544,4 @@ func highNibbles(a VecVirtual, nibbleMask VecVirtual) VecVirtual {
 func zeroOutVector(y VecVirtual) VecVirtual {
 	VXORPS(y, y, y)
 	return y
-}
-
-// Assumptions:
-// - len(dst) == 32 bytes
-// - 0 < len(src) < 32
-// TODO: try to use x86.bytes
-func copyN(dst Register, src Register, n Register) {
-	v := VariableLengthBytes{
-		Process: func(regs []Register, memory ...Memory) {
-			src, dst := regs[0], regs[1]
-
-			count := len(memory)
-			operands := make([]Op, count*2)
-
-			for i, m := range memory {
-				operands[i] = m.Load(src)
-			}
-
-			for i, m := range memory {
-				m.Store(operands[i].(Register), dst)
-			}
-		},
-	}
-
-	inputs := []Register{src, dst}
-
-	CMPQ(n, Imm(1))
-	JE(LabelRef("handle1"))
-
-	CMPQ(n, Imm(3))
-	JBE(LabelRef("handle2to3"))
-
-	CMPQ(n, Imm(4))
-	JE(LabelRef("handle4"))
-
-	CMPQ(n, Imm(8))
-	JB(LabelRef("handle5to7"))
-	JE(LabelRef("handle8"))
-
-	CMPQ(n, Imm(16))
-	JBE(LabelRef("handle9to16"))
-
-	CMPQ(n, Imm(32))
-	JBE(LabelRef("handle17to32"))
-
-	Label("handle1")
-	v.Process(inputs, Memory{Size: 1})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle2to3")
-	v.Process(inputs,
-		Memory{Size: 2},
-		Memory{Size: 2, Index: n, Offset: -2})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle4")
-	v.Process(inputs, Memory{Size: 4})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle5to7")
-	v.Process(inputs,
-		Memory{Size: 4},
-		Memory{Size: 4, Index: n, Offset: -4})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle8")
-	v.Process(inputs, Memory{Size: 8})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle9to16")
-	v.Process(inputs,
-		Memory{Size: 8},
-		Memory{Size: 8, Index: n, Offset: -8})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle17to32")
-	v.Process(inputs,
-		Memory{Size: 16},
-		Memory{Size: 16, Index: n, Offset: -16})
-
-	Label("after_copy")
 }
