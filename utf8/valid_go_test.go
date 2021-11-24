@@ -66,6 +66,14 @@ func TestValid(t *testing.T) {
 		"\xc0\x80",     // U+0000 encoded in two bytes: incorrect
 		"\xed\xa0\x80", // U+D800 high surrogate (sic)
 		"\xed\xbf\xbf", // U+DFFF low surrogate (sic)
+
+		// valid at boundary
+		strings.Repeat("a", 128+28) + "☺☻☹",
+		strings.Repeat("a", 128+29) + "☺☻☹",
+		strings.Repeat("a", 128+30) + "☺☻☹",
+		strings.Repeat("a", 128+31) + "☺☻☹",
+		// invalid at boundary
+		strings.Repeat("a", 128+31) + "\xE2a",
 	}
 
 	for _, tt := range examples {
@@ -78,7 +86,7 @@ func TestValid(t *testing.T) {
 		})
 		t.Run("vec-padded-"+tt, func(t *testing.T) {
 			prefix := strings.Repeat("a", 128)
-			padding := strings.Repeat("b", 32-len(tt))
+			padding := strings.Repeat("b", 32-(len(tt)%32))
 			input := prefix + padding + tt
 			b := []byte(input)
 			if len(b)%32 != 0 {
