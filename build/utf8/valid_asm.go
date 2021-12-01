@@ -502,6 +502,7 @@ func main() {
 	Comment("Return whether any error bit was set")
 	VPTEST(errorY, errorY)
 	SETEQ(ret.Addr)
+	VZEROUPPER()
 	RET()
 
 	Generate()
