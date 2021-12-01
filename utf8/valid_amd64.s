@@ -227,6 +227,7 @@ end:
 	// Return whether any error bit was set
 	VPTEST Y8, Y8
 	SETEQ  ret+24(FP)
+	VZEROUPPER
 	RET
 
 DATA first<>+0(SB)/8, $0xf0f0f0f0f0f0f0f0
