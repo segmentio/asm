@@ -1,5 +1,5 @@
-// +build !purego
-// +build amd64
+//go:build !purego && amd64
+// +build !purego,amd64
 
 package qsort
 
