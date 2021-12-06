@@ -1,3 +1,4 @@
+//go:build !purego && (aix || android || darwin || dragonfly || freebsd || illumos || ios || linux || netbsd || openbsd || plan9 || solaris)
 // +build !purego
 // +build aix android darwin dragonfly freebsd illumos ios linux netbsd openbsd plan9 solaris
 

@@ -25,8 +25,14 @@ jobs:
     - name: Download Dependencies
       run: go mod download
 
+    - name: Vet
+      run: go vet ./...
+
     - name: Test
-      run: go test -v ./...
+      run: go test -race -v ./...
+
+    - name: Test (purego)
+      run: go test -race -tags purego -v ./...
 
   gen:
     runs-on: ubuntu-latest
