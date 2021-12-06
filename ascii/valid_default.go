@@ -1,34 +1,40 @@
+//go:build purego || !amd64
 // +build purego !amd64
 
 package ascii
 
-import "unsafe"
+import (
+	"unsafe"
+)
 
 // ValidString returns true if s contains only ASCII characters.
 func ValidString(s string) bool {
 	p := *(*unsafe.Pointer)(unsafe.Pointer(&s))
+	i := uintptr(0)
 	n := uintptr(len(s))
 
-	for n >= 8 {
-		if (*(*uint64)(p) & 0x8080808080808080) != 0 {
+	for i+8 <= n {
+		if (*(*uint64)(unsafe.Pointer(uintptr(p) + i)) & 0x8080808080808080) != 0 {
 			return false
 		}
-		p = unsafe.Pointer(uintptr(p) + 8)
-		n -= 8
+		i += 8
 	}
 
-	if n > 4 {
-		if (*(*uint32)(p) & 0x80808080) != 0 {
+	if i+4 <= n {
+		if (*(*uint32)(unsafe.Pointer(uintptr(p) + i)) & 0x80808080) != 0 {
 			return false
 		}
-		p = unsafe.Pointer(uintptr(p) + 4)
-		n -= 4
+		i += 4
 	}
+
+	if i == n {
+		return true
+	}
+
+	p = unsafe.Pointer(uintptr(p) + i)
 
 	var x uint32
-	switch n {
-	case 4:
-		x = *(*uint32)(p)
+	switch n - i {
 	case 3:
 		x = uint32(*(*uint16)(p)) | uint32(*(*uint8)(unsafe.Pointer(uintptr(p) + 2)))<<16
 	case 2:

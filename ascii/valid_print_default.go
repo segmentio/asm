@@ -7,26 +7,31 @@ import "unsafe"
 // ValidString returns true if s contains only printable ASCII characters.
 func ValidPrintString(s string) bool {
 	p := *(*unsafe.Pointer)(unsafe.Pointer(&s))
+	i := uintptr(0)
 	n := uintptr(len(s))
 
-	for n >= 8 {
-		if hasLess64(*(*uint64)(p), 0x20) || hasMore64(*(*uint64)(p), 0x7e) {
+	for i+8 <= n {
+		if hasLess64(*(*uint64)(unsafe.Pointer(uintptr(p) + i)), 0x20) || hasMore64(*(*uint64)(unsafe.Pointer(uintptr(p) + i)), 0x7e) {
 			return false
 		}
-		p = unsafe.Pointer(uintptr(p) + 8)
-		n -= 8
+		i += 8
 	}
 
-	if n >= 4 {
-		if hasLess32(*(*uint32)(p), 0x20) || hasMore32(*(*uint32)(p), 0x7e) {
+	if i+4 <= n {
+		if hasLess32(*(*uint32)(unsafe.Pointer(uintptr(p) + i)), 0x20) || hasMore32(*(*uint32)(unsafe.Pointer(uintptr(p) + i)), 0x7e) {
 			return false
 		}
-		p = unsafe.Pointer(uintptr(p) + 4)
-		n -= 4
+		i += 4
 	}
+
+	if i == n {
+		return true
+	}
+
+	p = unsafe.Pointer(uintptr(p) + i)
 
 	var x uint32
-	switch n {
+	switch n - i {
 	case 3:
 		x = 0x20000000 | uint32(*(*uint16)(p)) | uint32(*(*uint8)(unsafe.Pointer(uintptr(p) + 2)))<<16
 	case 2:
