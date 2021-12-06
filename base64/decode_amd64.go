@@ -5,6 +5,8 @@
 
 package base64
 
+var purego = false
+
 func decodeAVX2(dst []byte, src []byte, lut *int8) (int, int)
 
 func decodeAVX2URI(dst []byte, src []byte, lut *int8) (int, int)

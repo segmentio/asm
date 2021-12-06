@@ -1,3 +1,6 @@
+//go:build amd64 && !purego
+// +build amd64,!purego
+
 package base64
 
 import (
