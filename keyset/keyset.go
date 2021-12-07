@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/segmentio/asm/cpu"
+	"github.com/segmentio/asm/cpu/arm64"
 	"github.com/segmentio/asm/cpu/x86"
 )
 
@@ -15,7 +16,7 @@ import (
 // the caller should use a fallback.
 func New(keys [][]byte) []byte {
 	maxWidth, hasNullByte := checkKeys(keys)
-	if hasNullByte || maxWidth > 16 || !cpu.X86.Has(x86.AVX) {
+	if hasNullByte || maxWidth > 16 || !(cpu.X86.Has(x86.AVX) || cpu.ARM64.Has(arm64.ASIMD)) {
 		return nil
 	}
 
