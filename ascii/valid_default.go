@@ -1,5 +1,5 @@
-//go:build purego || !amd64
-// +build purego !amd64
+//go:build purego
+// +build purego
 
 package ascii
 

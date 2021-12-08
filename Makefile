@@ -28,4 +28,7 @@ $(dstdir)/%_amd64.s $(dstdir)/%_amd64.go: $(srcdir)/%_asm.go $(internal)
 		-stubs ../$(patsubst $(CURDIR)/%,%,$(patsubst $(srcdir)/%_asm.go,$(dstdir)/%_amd64.go,$<))
 	go fmt $(dstdir)/$(*)_amd64.go
 
+test-arm64:
+	GOARCH=arm64 GOOS=linux GOROOT=/usr/local/go-arm64 qemu-aarch64 -L /usr/aarch64-linux-gnu /usr/local/go-arm64/bin/go test  -v -run=TestValid ./ascii 
+
 .PHONY: build benchmp
