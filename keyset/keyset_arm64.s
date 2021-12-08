@@ -90,11 +90,12 @@ safeload:
 	// key and then shuffle the key forward in the register. We can shuffle and
 	// pad with zeroes at the same time to avoid having to also blend (as load
 	// does).
-	ADD  R3, R2, R2
-	SUB  $16, R2, R2
+	MOVD $16, R12
+	SUB  R3, R12, R12
+	SUB  R12, R2, R2
 	VLD1 (R2), [V0.B16]
 	MOVD $shuffle_masks<>(SB), R10
-	ADD  R3<<4, R10, R10
+	ADD  R12, R10, R10
 	VLD1 (R10), [V2.B16]
 	VTBL V2.B16, [V0.B16, V1.B16], V3.B16
 	JMP  loop
@@ -135,38 +136,8 @@ DATA blend_masks<>+256(SB)/8, $0x0706050403020100
 DATA blend_masks<>+264(SB)/8, $0x0F0E0D0C0B0A0908
 GLOBL blend_masks<>(SB), RODATA|NOPTR, $272
 
-DATA shuffle_masks<>+0(SB)/8, $0x1010101010101010
-DATA shuffle_masks<>+8(SB)/8, $0x1010101010101010
-DATA shuffle_masks<>+16(SB)/8, $0x101010101010100F
+DATA shuffle_masks<>+0(SB)/8, $0x0706050403020100
+DATA shuffle_masks<>+8(SB)/8, $0x0F0E0D0C0B0A0908
+DATA shuffle_masks<>+16(SB)/8, $0x1010101010101010
 DATA shuffle_masks<>+24(SB)/8, $0x1010101010101010
-DATA shuffle_masks<>+32(SB)/8, $0x1010101010100F0E
-DATA shuffle_masks<>+40(SB)/8, $0x1010101010101010
-DATA shuffle_masks<>+48(SB)/8, $0x10101010100F0E0D
-DATA shuffle_masks<>+56(SB)/8, $0x1010101010101010
-DATA shuffle_masks<>+64(SB)/8, $0x101010100F0E0D0C
-DATA shuffle_masks<>+72(SB)/8, $0x1010101010101010
-DATA shuffle_masks<>+80(SB)/8, $0x1010100F0E0D0C0B
-DATA shuffle_masks<>+88(SB)/8, $0x1010101010101010
-DATA shuffle_masks<>+96(SB)/8, $0x10100F0E0D0C0B0A
-DATA shuffle_masks<>+104(SB)/8, $0x1010101010101010
-DATA shuffle_masks<>+112(SB)/8, $0x100F0E0D0C0B0A09
-DATA shuffle_masks<>+120(SB)/8, $0x1010101010101010
-DATA shuffle_masks<>+128(SB)/8, $0x0F0E0D0C0B0A0908
-DATA shuffle_masks<>+136(SB)/8, $0x1010101010101010
-DATA shuffle_masks<>+144(SB)/8, $0x0E0D0C0B0A090807
-DATA shuffle_masks<>+152(SB)/8, $0x101010101010100F
-DATA shuffle_masks<>+160(SB)/8, $0x0D0C0B0A09080706
-DATA shuffle_masks<>+168(SB)/8, $0x1010101010100F0E
-DATA shuffle_masks<>+176(SB)/8, $0x0C0B0A0908070605
-DATA shuffle_masks<>+184(SB)/8, $0x10101010100F0E0D
-DATA shuffle_masks<>+192(SB)/8, $0x0B0A090807060504
-DATA shuffle_masks<>+200(SB)/8, $0x101010100F0E0D0C
-DATA shuffle_masks<>+208(SB)/8, $0x0A09080706050403
-DATA shuffle_masks<>+216(SB)/8, $0x1010100F0E0D0C0B
-DATA shuffle_masks<>+224(SB)/8, $0x0908070605040302
-DATA shuffle_masks<>+232(SB)/8, $0x10100F0E0D0C0B0A
-DATA shuffle_masks<>+240(SB)/8, $0x0807060504030201
-DATA shuffle_masks<>+248(SB)/8, $0x100F0E0D0C0B0A09
-DATA shuffle_masks<>+256(SB)/8, $0x0706050403020100
-DATA shuffle_masks<>+264(SB)/8, $0x0F0E0D0C0B0A0908
-GLOBL shuffle_masks<>(SB), RODATA|NOPTR, $272
+GLOBL shuffle_masks<>(SB), RODATA|NOPTR, $32
