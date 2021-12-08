@@ -39,9 +39,9 @@ load:
 	// vectors, we load a mask for the particular key length and then use TBL
 	// to select bytes from either V0 or V1.
 	VLD1 (R2), [V0.B16]
-	MOVD $blend_masks<>(SB), R11
-	ADD  R3<<4, R11, R11
-	VLD1 (R11), [V2.B16]
+	MOVD $blend_masks<>(SB), R10
+	ADD  R3<<4, R10, R10
+	VLD1 (R10), [V2.B16]
 	VTBL V2.B16, [V0.B16, V1.B16], V3.B16
 
 loop:
@@ -54,10 +54,10 @@ loop:
 	VCMEQ  V3.B16, V4.B16, V5.B16
 	VMOV   V5.D[0], R8
 	VMOV   V5.D[1], R9
-	AND    R8, R9, R10
+	AND    R8, R9, R9
 
 	// If the masks match, we found the key.
-	CMP R10, R7
+	CMP R9, R7
 	BEQ found
 	JMP loop
 
@@ -93,9 +93,9 @@ safeload:
 	ADD  R3, R2, R2
 	SUB  $16, R2, R2
 	VLD1 (R2), [V0.B16]
-	MOVD $shuffle_masks<>(SB), R11
-	ADD  R3<<4, R11, R11
-	VLD1 (R11), [V2.B16]
+	MOVD $shuffle_masks<>(SB), R10
+	ADD  R3<<4, R10, R10
+	VLD1 (R10), [V2.B16]
 	VTBL V2.B16, [V0.B16, V1.B16], V3.B16
 	JMP  loop
 
