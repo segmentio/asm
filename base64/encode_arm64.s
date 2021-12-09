@@ -2,9 +2,9 @@
 
 #define Rdst R6
 #define Rsrc R5
-#define Rtmp R4
 #define Rlen R1
-#define Rpos R3
+#define Rrd  R2
+#define Rwr  R3
 #define Rlut R0
 #define Ridx R0
 
@@ -12,6 +12,7 @@
 TEXT ·encodeARM64(SB),NOSPLIT,$0-72
 	MOVD    dst_base+0(FP), Rdst
 	MOVD    src_base+24(FP), Rsrc
+	MOVD    src_len+32(FP), Rlen
 	MOVD    lut+48(FP), Rlut
 	VLD1    (Rlut), [V6.B16]
 	VMOVI   $51, V17.B16
@@ -19,13 +20,12 @@ TEXT ·encodeARM64(SB),NOSPLIT,$0-72
 	VMOVI   $63, V19.B16
 	VMOVI   $13, V7.B16
 
-	MOVD    Rdst, Rpos
-	MOVD    $0, Ridx
+	MOVD    Rdst, Rwr
+	MOVD    Rsrc, Rrd
 
 loop:
-	ADD     Ridx, Rsrc, Rtmp
-	ADD     $48, Ridx, Ridx
-	VLD3    (Rtmp), [V25.B16, V26.B16, V27.B16]
+	SUB     $48, Rlen, Rlen
+	VLD3.P  48(Rrd), [V25.B16, V26.B16, V27.B16]
 	VUSHR   $4, V26.B16, V4.B16
 	VSHL    $4, V25.B16, V22.B16
 	VUSHR   $2, V25.B16, V28.B16
@@ -76,10 +76,11 @@ loop:
 	VMOV    V4.D[0], V5.D[1]
 	VADD    V21.B16, V20.B16, V2.B16
 	VADD    V18.B16, V5.B16, V3.B16
-	VST4.P  [V0.B16, V1.B16, V2.B16, V3.B16], 64(Rpos)
-	CMP     Ridx, Rlen
-	BHI     loop
-	SUB     Rdst, Rpos, Rtmp
-	MOVD    Rtmp, ret+56(FP)
-	MOVD    Ridx, ret1+64(FP)
+	VST4.P  [V0.B16, V1.B16, V2.B16, V3.B16], 64(Rwr)
+	CMP     $48, Rlen
+	BHS     loop
+	SUB     Rdst, Rwr, R0
+	SUB     Rsrc, Rrd, R1
+	MOVD    R0, ret+56(FP)
+	MOVD    R1, ret1+64(FP)
 	RET
