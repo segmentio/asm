@@ -1,0 +1,85 @@
+#include "textflag.h"
+
+#define Rdst R6
+#define Rsrc R5
+#define Rtmp R4
+#define Rlen R1
+#define Rpos R3
+#define Rlut R0
+#define Ridx R0
+
+// func encodeARM64(dst []byte, src []byte, lut *int8) (int, int)
+TEXT ·encodeARM64(SB),NOSPLIT,$0-72
+	MOVD    dst_base+0(FP), Rdst
+	MOVD    src_base+24(FP), Rsrc
+	MOVD    lut+48(FP), Rlut
+	VLD1    (Rlut), [V6.B16]
+	VMOVI   $51, V17.B16
+	VMOVI   $25, V16.B16
+	VMOVI   $63, V19.B16
+	VMOVI   $13, V7.B16
+
+	MOVD    Rdst, Rpos
+	MOVD    $0, Ridx
+
+loop:
+	ADD     Ridx, Rsrc, Rtmp
+	ADD     $48, Ridx, Ridx
+	VLD3    (Rtmp), [V25.B16, V26.B16, V27.B16]
+	VUSHR   $4, V26.B16, V4.B16
+	VSHL    $4, V25.B16, V22.B16
+	VUSHR   $2, V25.B16, V28.B16
+	VUSHR   $6, V27.B16, V18.B16
+	VSHL    $2, V26.B16, V21.B16
+	VORR    V4.B16, V22.B16, V22.B16
+	WORD    $0x6e3c3e04 //VCMHS   V28.B16, V16.B16, V4.B16
+	WORD    $0x6e312f85 //VUQSUB  V17.B16, V28.B16, V5.B16
+	VORR    V18.B16, V21.B16, V21.B16
+	VAND    V19.B16, V22.B16, V22.B16
+	VAND    V7.B16, V4.B16, V4.B16
+	VAND    V27.B16, V19.B16, V18.B16
+	VAND    V19.B16, V21.B16, V21.B16
+	WORD    $0x6e363e14 //VCMHS   V22.B16, V16.B16, V20.B16
+	VORR    V5.B16, V4.B16, V4.B16
+	WORD    $0x6e312ed7 //VUQSUB  V17.B16, V22.B16, V23.B16
+	VTBL    V4.B8, [V6.B16], V24.B8
+	WORD    $0x6e353e05 //VCMHS   V21.B16, V16.B16, V5.B16
+	VAND    V7.B16, V20.B16, V20.B16
+	VDUP    V24.D[0], V24
+	VDUP    V4.D[1], V4
+	VAND    V7.B16, V5.B16, V5.B16
+	VORR    V23.B16, V20.B16, V20.B16
+	VTBL    V4.B8, [V6.B16], V4.B8
+	VTBL    V20.B8, [V6.B16], V23.B8
+	VMOV    V4.D[0], V24.D[1]
+	WORD    $0x6e312eb9 //VUQSUB  V17.B16, V21.B16, V25.B16
+	VDUP    V23.D[0], V23
+	WORD    $0x6e323e04 //VCMHS   V18.B16, V16.B16, V4.B16
+	VADD    V28.B16, V24.B16, V0.B16
+	VORR    V25.B16, V5.B16, V5.B16
+	VDUP    V20.D[1], V20
+	VAND    V7.B16, V4.B16, V4.B16
+	VTBL    V20.B8, [V6.B16], V20.B8
+	WORD    $0x6e312e58 //VUQSUB  V17.B16, V18.B16, V24.B16
+	VMOV    V20.D[0], V23.D[1]
+	VTBL    V5.B8, [V6.B16], V20.B8
+	VDUP    V20.D[0], V20
+	VORR    V24.B16, V4.B16, V4.B16
+	VDUP    V5.D[1], V5
+	VTBL    V5.B8, [V6.B16], V5.B8
+	VMOV    V5.D[0], V20.D[1]
+	VTBL    V4.B8, [V6.B16], V5.B8
+	VDUP    V5.D[0], V5
+	VDUP    V4.D[1], V4
+	VTBL    V4.B8, [V6.B16], V4.B8
+	VADD    V22.B16, V23.B16, V1.B16
+	VMOV    V4.D[0], V5.D[1]
+	VADD    V21.B16, V20.B16, V2.B16
+	VADD    V18.B16, V5.B16, V3.B16
+	VST4.P  [V0.B16, V1.B16, V2.B16, V3.B16], 64(Rpos)
+	CMP     Ridx, Rlen
+	BHI     loop
+	SUB     Rdst, Rpos, Rtmp
+	MOVD    Rtmp, ret+56(FP)
+	MOVD    Ridx, ret1+64(FP)
+	RET
