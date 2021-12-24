@@ -1,5 +1,5 @@
-//go:build !purego && arm64
-// +build !purego,arm64
+//go:build !purego
+// +build !purego
 
 package ascii
 
