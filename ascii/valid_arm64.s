@@ -22,64 +22,67 @@ cmp8:
 	CMP $0x08, R1 // if len(s) < 8 goto cmp4
 	BLT cmp4
 
-	MOVD (R0), R6
-	AND $0x8080808080808080, R6, R3
+	MOVD (R0), R3
+	AND $0x8080808080808080, R3, R3
 	CBNZ R3, invalid
 
-	ADD $0x08, R0, R0
 	SUB $0x08, R1, R1
-	B cmp8
+	CBZ R1, done
 
+	ADD $0x08, R0, R0
+	JMP cmp8
 
 cmp4:
 	CMP $0x04, R1 // if len(s) < 4 goto cmp3
 	BLT cmp3
 
-	MOVW (R0), R6	
-	AND $0x80808080, R6, R3
+	MOVW (R0), R3
+	AND $0x80808080, R3, R3
 	CBNZ R3, invalid
 
-	ADD $0x04, R0, R0
 	SUB $0x04, R1, R1
-	B cmp4
+	CBZ R1, done
+
+	ADD $0x04, R0, R0
+	JMP cmp4
 
 
 cmp3:
 	CMP $0x03, R1 // if len(s) < 3 goto cmp2
 	BLT cmp2
 
-	MOVH (R0), R4
-	MOVB 2(R0), R5
-	MOVW $0x10, R6
-	LSL R6, R5, R6
-	ORR R4, R6, R6
+	MOVHU (R0), R3
+	MOVBU 2(R0), R5
+	ORR R5<<16, R3, R6
 
-	AND $0x80808080, R6, R3
-	CBZ R3, done
+	AND $0x80808080, R6, R0
+	CBZ R0, done
 
-	B invalid
+	JMP invalid
 
 cmp2:
 	TBZ $0x01, R1, cmp1 // if len(s) == 1 goto cmp1
 
-	MOVH (R0), R6	
-	AND $0x8080, R6, R3
-	CBZ R3, done
-
-	B invalid
+	MOVHU (R0), R0	
+	AND $0x8080, R0, R0
+	CMPW ZR, R0
+	CSET EQ, R0
+	MOVB R0, (R2)
+	RET
 
 cmp1:
 	TBZ $0x00, R1, done // if len(s) == 0 we are done
 
-	MOVB (R0), R6	
-	AND $0x80, R6, R3
-	CBZ R3, done
-
-	B invalid
+	MOVBU (R0), R0	
+	AND $0x80, R0, R0
+	CMPW ZR, R0
+	CSET EQ, R0
+	MOVB R0, (R2)
+	RET
 
 done:
-	MOVD $0x01, R7
-	MOVB R7, (R2)
+	ORR $1, ZR, R0
+	MOVB R0, (R2)
 	RET
 
 invalid:
