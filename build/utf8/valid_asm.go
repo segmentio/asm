@@ -165,8 +165,8 @@ func stdlib(d Register, n Register, ret *Basic) {
 
 	c3 := GP32()
 	MOVBLZX(Mem{Base: d}.Offset(3), c3) // c = b[i+3]
-	SUBL(Imm(128), c3)
-	CMPB(c3.As8(), Imm(63))
+	SUBL(Imm(locb), c3)
+	CMPB(c3.As8(), Imm(hicb-locb))
 	JLS(LabelRef("start_utf8_loop"))
 
 	Label("stdlib_ret_false")
