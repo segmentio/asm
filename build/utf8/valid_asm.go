@@ -350,7 +350,7 @@ func main() {
 	VMOVDQU(nibble3Errors, nibble3Y)
 
 	Comment("Nibble mask")
-	nibbleMask := ConstArray64("nibble_mask",
+	lowerNibbleMask := ConstArray64("nibble_mask",
 		0x0F0F0F0F0F0F0F0F,
 		0x0F0F0F0F0F0F0F0F,
 		0x0F0F0F0F0F0F0F0F,
@@ -358,7 +358,7 @@ func main() {
 	)
 
 	nibbleMaskY := YMM()
-	VMOVDQU(nibbleMask, nibbleMaskY)
+	VMOVDQU(lowerNibbleMask, nibbleMaskY)
 
 	Comment("For the first pass, set the previous block as zero.")
 	previousBlockY := YMM()
