@@ -84,15 +84,9 @@ func stdlib(d Register, n Register, ret *Basic) {
 	mask := GP64()
 	MOVQ(U64(0x8080808080808080), mask)
 
-	first := Mem{Base: GP64(), Scale: 1}
-	LEAQ(ConstBytes("first", firstData[:]), first.Base)
-
-	acceptRanges := Mem{Base: GP64(), Scale: 2}
-	LEAQ(ConstBytes("accept_ranges", acceptRangesData[:]), acceptRanges.Base)
-
 	Comment("Fast ascii-check loop")
 	Label("start_loop")
-	CMPQ(n, U8(32))
+	CMPQ(n, U8(8))
 	JL(LabelRef("end_loop"))
 	TESTQ(mask, d)
 	JNZ(LabelRef("end_loop"))
@@ -102,75 +96,79 @@ func stdlib(d Register, n Register, ret *Basic) {
 	Label("end_loop")
 
 	Comment("UTF-8 check byte-by-byte")
-	i := GP64()
-	XORQ(i, i)
 
-	b := Mem{Base: d, Index: i, Scale: 1}
-	pi := GP32()
+	end := GP64()
+	LEAQ(Mem{Base: d, Index: n, Scale: 1}, end)
 
-	Label("start_utf8_loop")         // for
-	CMPQ(i, n)                       // i < n
+	first := Mem{Base: GP64(), Scale: 1}
+	LEAQ(ConstBytes("first", firstData[:]), first.Base)
+
+	acceptRanges := Mem{Base: GP64(), Scale: 2}
+	LEAQ(ConstBytes("accept_ranges", acceptRangesData[:]), acceptRanges.Base)
+
+	nextD := GP64()
+	MOVQ(d, nextD)
+
+	Label("start_utf8_loop") // for
+	MOVQ(nextD, d)
+	CMPQ(d, end)                     // i < n
 	JGE(LabelRef("stdlib_ret_true")) //   end of loop, return true
 
-	MOVBLZX(b, pi) // pi = b[i]
+	pi := GP32()
+	MOVBLZX(Mem{Base: d}, pi) // pi = b[i]
 
-	CMPB(pi.As8(), Imm(runeSelf))    // if pi >= runeSelf
-	JAE(LabelRef("test_first"))      //   more testing to do
-	ADDQ(Imm(1), i)                  // else: i++
-	JMP(LabelRef("start_utf8_loop")) //   continue
+	CMPB(pi.As8(), Imm(runeSelf))       // if pi >= runeSelf
+	JAE(LabelRef("test_first"))         //   more testing to do
+	LEAQ(Mem{Base: d}.Offset(1), nextD) // else: i++
+	JMP(LabelRef("start_utf8_loop"))    //   continue
 
 	Label("test_first")
-	x := GP8()
-	MOVB(first.Idx(pi, 1), x)         // x = first[pi]
-	CMPB(x, Imm(xx))                  // if x == xx
+	x := GP64()
+	XORQ(x, x)
+	MOVB(first.Idx(pi, 1), x.As8())   // x = first[pi]
+	CMPB(x.As8(), Imm(xx))            // if x == xx
 	JEQ(LabelRef("stdlib_ret_false")) //   return false (illegal started byte)
 
 	size := GP64()
-	MOVBQZX(x, size)     // size = x
-	ANDQ(Imm(0x7), size) // size &= 7
-	i2 := GP64()
-	MOVQ(i, i2)                      // i2 = i
-	ADDQ(size, i2)                   // i2 += size
-	CMPQ(i2, n)                      // if i2 > n
+	MOVBQZX(x.As8(), size) // size = x
+	ANDQ(Imm(0x7), size)   // size &= 7
+	LEAQ(Mem{Base: d}.Idx(size, 1), nextD)
+	CMPQ(nextD, end)                 // if i2 > n
 	JA(LabelRef("stdlib_ret_false")) //  return false (short or invalid)
 
-	accept := GP16()
-	SHRB(Imm(4), x)                      // x = x >> 4
-	MOVW(acceptRanges.Idx(x, 2), accept) // accept = acceptRanges[x]
+	SHRB(Imm(4), x.As8()1) // x = x >> 4
+
 	acceptLo := GP8()
-	MOVB(accept.As8(), acceptLo) // acceptLo = accept.lo
-	SHRW(Imm(8), accept)         // accept = accept.hi
-	// TODO: ^ this method to grab the fields seems odd
+	MOVBLZX(acceptRanges.Idx(x, 2).Offset(0), acceptLo.As32())
+	acceptHi := GP8()
+	MOVBLZX(acceptRanges.Idx(x, 2).Offset(1), acceptHi.As32())
 
 	c := GP8()
-	MOVB(b.Offset(1), c)             // c = b[i+1]
+	MOVB(Mem{Base: d}.Offset(1), c)  // c = b[i+1]
 	CMPB(c, acceptLo)                // if c < accept.lo
 	JB(LabelRef("stdlib_ret_false")) //   return false
-	CMPB(accept.As8(), c)            // if accept.hi < c
+	CMPB(acceptHi, c)                // if accept.hi < c
 	JB(LabelRef("stdlib_ret_false")) //   return false
 
-	CMPQ(size, Imm(2))        // if size == 2
-	JEQ(LabelRef("inc_size")) //   -> inc_size
+	CMPQ(size, Imm(2))               // if size == 2
+	JEQ(LabelRef("start_utf8_loop")) //   -> inc_size
 
-	MOVB(b.Offset(2), c)             // c = b[i+2]
+	MOVB(Mem{Base: d}.Offset(2), c)  // c = b[i+2]
 	CMPB(c, U8(locb))                // if c < locb
 	JB(LabelRef("stdlib_ret_false")) //   return false
 	CMPB(c, U8(hicb))                // if hicb < c
 	JA(LabelRef("stdlib_ret_false")) //   return false
 
-	CMPQ(size, Imm(3))        // if size == 3
-	JEQ(LabelRef("inc_size")) //   -> inc_size
+	CMPQ(size, Imm(3))               // if size == 3
+	JEQ(LabelRef("start_utf8_loop")) //   -> inc_size
 
-	MOVB(b.Offset(3), c)             // c = b[i+3]
+	MOVB(Mem{Base: d}.Offset(3), c)  // c = b[i+3]
 	CMPB(c, Imm(locb))               // if c < locb
 	JB(LabelRef("stdlib_ret_false")) //   return false
 	CMPB(c, Imm(hicb))               // if hicb < c
 	JA(LabelRef("stdlib_ret_false")) //   return false
 
-	Label("inc_size")
-	ADDQ(size, i) // i += size
-
-	JMP(LabelRef("start_utf8_loop"))
+	JMP(LabelRef("start_utf8_loop")) // loop-back
 
 	Label("stdlib_ret_true")
 	MOVB(Imm(1), ret.Addr)

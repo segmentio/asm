@@ -20,12 +20,10 @@ TEXT ·Valid(SB), NOSPLIT, $32-25
 stdlib:
 	// Non-vectorized implementation from the stdlib. Used for small inputs.
 	MOVQ $0x8080808080808080, DX
-	LEAQ first<>+0(SB), BX
-	LEAQ accept_ranges<>+0(SB), SI
 
 	// Fast ascii-check loop
 start_loop:
-	CMPQ  CX, $0x20
+	CMPQ  CX, $0x08
 	JL    end_loop
 	TESTQ DX, AX
 	JNZ   end_loop
@@ -35,54 +33,54 @@ start_loop:
 
 end_loop:
 	// UTF-8 check byte-by-byte
-	XORQ DX, DX
+	LEAQ (AX)(CX*1), CX
+	LEAQ first<>+0(SB), DX
+	LEAQ accept_ranges<>+0(SB), BX
+	MOVQ AX, SI
 
 start_utf8_loop:
-	CMPQ    DX, CX
+	MOVQ    SI, AX
+	CMPQ    AX, CX
 	JGE     stdlib_ret_true
-	MOVBLZX (AX)(DX*1), DI
-	CMPB    DI, $0x80
+	MOVBLZX (AX), SI
+	CMPB    SI, $0x80
 	JAE     test_first
-	ADDQ    $0x01, DX
+	LEAQ    1(AX), SI
 	JMP     start_utf8_loop
 
 test_first:
-	MOVB    (BX)(DI*1), DI
+	XORQ    DI, DI
+	MOVB    (DX)(SI*1), DI
 	CMPB    DI, $0xf1
 	JEQ     stdlib_ret_false
 	MOVBQZX DI, R8
 	ANDQ    $0x07, R8
-	MOVQ    DX, R9
-	ADDQ    R8, R9
-	CMPQ    R9, CX
+	LEAQ    (AX)(R8*1), SI
+	CMPQ    SI, CX
 	JA      stdlib_ret_false
 	SHRB    $0x04, DI
-	MOVW    (SI)(DI*2), DI
-	MOVB    DI, R9
-	SHRW    $0x08, DI
-	MOVB    1(AX)(DX*1), R10
+	MOVBLZX (BX)(DI*2), R9
+	MOVBLZX 1(BX)(DI*2), DI
+	MOVB    1(AX), R10
 	CMPB    R10, R9
 	JB      stdlib_ret_false
 	CMPB    DI, R10
 	JB      stdlib_ret_false
 	CMPQ    R8, $0x02
-	JEQ     inc_size
-	MOVB    2(AX)(DX*1), R10
+	JEQ     start_utf8_loop
+	MOVB    2(AX), R10
 	CMPB    R10, $0x80
 	JB      stdlib_ret_false
 	CMPB    R10, $0xbf
 	JA      stdlib_ret_false
 	CMPQ    R8, $0x03
-	JEQ     inc_size
-	MOVB    3(AX)(DX*1), R10
+	JEQ     start_utf8_loop
+	MOVB    3(AX), R10
 	CMPB    R10, $0x80
 	JB      stdlib_ret_false
 	CMPB    R10, $0xbf
 	JA      stdlib_ret_false
-
-inc_size:
-	ADDQ R8, DX
-	JMP  start_utf8_loop
+	JMP     start_utf8_loop
 
 stdlib_ret_true:
 	MOVB $0x01, ret+24(FP)

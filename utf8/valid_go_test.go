@@ -121,7 +121,7 @@ func TestValid(t *testing.T) {
 
 // Takes about 10s to run on my machine.
 func TestValidExhaustive(t *testing.T) {
-	t.Skip()
+	//	t.Skip()
 	any := byteRange{0, 0xFF}
 	ascii := byteRange{0, 0x7F}
 	cont := byteRange{0x80, 0xBF}
