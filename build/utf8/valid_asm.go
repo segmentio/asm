@@ -105,22 +105,22 @@ func stdlib(d Register, n Register, ret *Basic) {
 
 	acceptRanges := Mem{Base: GP64(), Scale: 2}
 	LEAQ(ConstBytes("accept_ranges", acceptRangesData[:]), acceptRanges.Base)
-
-	nextD := GP64()
-	MOVQ(d, nextD)
+	JMP(LabelRef("start_utf8_loop_set"))
 
 	Label("start_utf8_loop") // for
+	nextD := GP64()
 	MOVQ(nextD, d)
+	Label("start_utf8_loop_set")
 	CMPQ(d, end)                     // i < n
 	JGE(LabelRef("stdlib_ret_true")) //   end of loop, return true
 
 	pi := GP32()
 	MOVBLZX(Mem{Base: d}, pi) // pi = b[i]
 
-	CMPB(pi.As8(), Imm(runeSelf))       // if pi >= runeSelf
-	JAE(LabelRef("test_first"))         //   more testing to do
-	LEAQ(Mem{Base: d}.Offset(1), nextD) // else: i++
-	JMP(LabelRef("start_utf8_loop"))    //   continue
+	CMPB(pi.As8(), Imm(runeSelf))        // if pi >= runeSelf
+	JAE(LabelRef("test_first"))          //   more testing to do
+	LEAQ(Mem{Base: d}.Offset(1), d)      // else: i++
+	JMP(LabelRef("start_utf8_loop_set")) //   continue
 
 	Label("test_first")
 	x := GP64()
