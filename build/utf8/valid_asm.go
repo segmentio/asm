@@ -200,8 +200,8 @@ func incompleteMaskData() []byte {
 }
 
 func continuationMaskData(pattern byte) []byte {
-	// Pattern is something like 0b1110000 to accept all bytes of the form
-	// 111xxxx.
+	// Pattern is something like 0b11100000 to accept all bytes of the form
+	// 111xxxxx.
 	v := pattern - 1
 	return bytes.Repeat([]byte{v}, 32)
 }
