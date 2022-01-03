@@ -68,26 +68,24 @@ test_first:
 	JB      stdlib_ret_false
 	CMPQ    R8, $0x02
 	JEQ     start_utf8_loop
-	MOVB    2(AX), R10
-	CMPB    R10, $0x80
+	MOVB    2(AX), DI
+	CMPB    DI, $0x80
 	JB      stdlib_ret_false
-	CMPB    R10, $0xbf
+	CMPB    DI, $0xbf
 	JA      stdlib_ret_false
 	CMPQ    R8, $0x03
 	JEQ     start_utf8_loop
-	MOVB    3(AX), R10
-	CMPB    R10, $0x80
-	JB      stdlib_ret_false
-	CMPB    R10, $0xbf
-	JA      stdlib_ret_false
-	JMP     start_utf8_loop
-
-stdlib_ret_true:
-	MOVB $0x01, ret+24(FP)
-	RET
+	MOVBLZX 3(AX), AX
+	SUBL    $0x80, AX
+	CMPB    AL, $0x3f
+	JLS     start_utf8_loop
 
 stdlib_ret_false:
 	MOVB $0x00, ret+24(FP)
+	RET
+
+stdlib_ret_true:
+	MOVB $0x01, ret+24(FP)
 	RET
 
 	// End of stdlib implementation

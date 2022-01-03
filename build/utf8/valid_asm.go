@@ -136,45 +136,45 @@ func stdlib(d Register, n Register, ret *Basic) {
 	CMPQ(nextD, end)                 // if i2 > n
 	JA(LabelRef("stdlib_ret_false")) //  return false (short or invalid)
 
-	SHRB(Imm(4), x.As8()1) // x = x >> 4
+	SHRB(Imm(4), x.As8()) // x = x >> 4
 
 	acceptLo := GP8()
 	MOVBLZX(acceptRanges.Idx(x, 2).Offset(0), acceptLo.As32())
 	acceptHi := GP8()
 	MOVBLZX(acceptRanges.Idx(x, 2).Offset(1), acceptHi.As32())
 
-	c := GP8()
-	MOVB(Mem{Base: d}.Offset(1), c)  // c = b[i+1]
-	CMPB(c, acceptLo)                // if c < accept.lo
+	c1 := GP8()
+	MOVB(Mem{Base: d}.Offset(1), c1) // c = b[i+1]
+	CMPB(c1, acceptLo)               // if c < accept.lo
 	JB(LabelRef("stdlib_ret_false")) //   return false
-	CMPB(acceptHi, c)                // if accept.hi < c
+	CMPB(acceptHi, c1)               // if accept.hi < c
 	JB(LabelRef("stdlib_ret_false")) //   return false
 
 	CMPQ(size, Imm(2))               // if size == 2
 	JEQ(LabelRef("start_utf8_loop")) //   -> inc_size
 
-	MOVB(Mem{Base: d}.Offset(2), c)  // c = b[i+2]
-	CMPB(c, U8(locb))                // if c < locb
+	c2 := GP8()
+	MOVB(Mem{Base: d}.Offset(2), c2) // c = b[i+2]
+	CMPB(c2, U8(locb))               // if c < locb
 	JB(LabelRef("stdlib_ret_false")) //   return false
-	CMPB(c, U8(hicb))                // if hicb < c
+	CMPB(c2, U8(hicb))               // if hicb < c
 	JA(LabelRef("stdlib_ret_false")) //   return false
 
 	CMPQ(size, Imm(3))               // if size == 3
 	JEQ(LabelRef("start_utf8_loop")) //   -> inc_size
 
-	MOVB(Mem{Base: d}.Offset(3), c)  // c = b[i+3]
-	CMPB(c, Imm(locb))               // if c < locb
-	JB(LabelRef("stdlib_ret_false")) //   return false
-	CMPB(c, Imm(hicb))               // if hicb < c
-	JA(LabelRef("stdlib_ret_false")) //   return false
+	c3 := GP32()
+	MOVBLZX(Mem{Base: d}.Offset(3), c3) // c = b[i+3]
+	SUBL(Imm(128), c3)
+	CMPB(c3.As8(), Imm(63))
+	JLS(LabelRef("start_utf8_loop"))
 
-	JMP(LabelRef("start_utf8_loop")) // loop-back
+	Label("stdlib_ret_false")
+	MOVB(Imm(0), ret.Addr)
+	RET()
 
 	Label("stdlib_ret_true")
 	MOVB(Imm(1), ret.Addr)
-	RET()
-	Label("stdlib_ret_false")
-	MOVB(Imm(0), ret.Addr)
 	RET()
 
 	Comment("End of stdlib implementation")
