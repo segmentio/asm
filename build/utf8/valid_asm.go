@@ -153,12 +153,11 @@ func stdlib(d Register, n Register, ret *Basic) {
 	CMPQ(size, Imm(2))               // if size == 2
 	JEQ(LabelRef("start_utf8_loop")) //   -> inc_size
 
-	c2 := GP8()
-	MOVB(Mem{Base: d}.Offset(2), c2) // c = b[i+2]
-	CMPB(c2, U8(locb))               // if c < locb
-	JB(LabelRef("stdlib_ret_false")) //   return false
-	CMPB(c2, U8(hicb))               // if hicb < c
-	JA(LabelRef("stdlib_ret_false")) //   return false
+	c2 := GP32()
+	MOVBLZX(Mem{Base: d}.Offset(2), c2) // c = b[i+2]
+	SUBL(Imm(locb), c2)
+	CMPB(c2.As8(), Imm(hicb-locb))
+	JHI(LabelRef("stdlib_ret_false"))
 
 	CMPQ(size, Imm(3))               // if size == 3
 	JEQ(LabelRef("start_utf8_loop")) //   -> inc_size

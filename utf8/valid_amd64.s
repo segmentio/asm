@@ -36,17 +36,19 @@ end_loop:
 	LEAQ (AX)(CX*1), CX
 	LEAQ first<>+0(SB), DX
 	LEAQ accept_ranges<>+0(SB), BX
-	MOVQ AX, SI
+	JMP  start_utf8_loop_set
 
 start_utf8_loop:
-	MOVQ    SI, AX
+	MOVQ SI, AX
+
+start_utf8_loop_set:
 	CMPQ    AX, CX
 	JGE     stdlib_ret_true
 	MOVBLZX (AX), SI
 	CMPB    SI, $0x80
 	JAE     test_first
-	LEAQ    1(AX), SI
-	JMP     start_utf8_loop
+	LEAQ    1(AX), AX
+	JMP     start_utf8_loop_set
 
 test_first:
 	XORQ    DI, DI
@@ -68,11 +70,10 @@ test_first:
 	JB      stdlib_ret_false
 	CMPQ    R8, $0x02
 	JEQ     start_utf8_loop
-	MOVB    2(AX), DI
-	CMPB    DI, $0x80
-	JB      stdlib_ret_false
-	CMPB    DI, $0xbf
-	JA      stdlib_ret_false
+	MOVBLZX 2(AX), DI
+	SUBL    $0x80, DI
+	CMPB    DI, $0x3f
+	JHI     stdlib_ret_false
 	CMPQ    R8, $0x03
 	JEQ     start_utf8_loop
 	MOVBLZX 3(AX), AX
