@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	ConstraintExpr("!pure go")
+	ConstraintExpr("!purego")
 }
 
 const (
