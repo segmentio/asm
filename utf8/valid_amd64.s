@@ -35,46 +35,45 @@ end_loop:
 	// UTF-8 check byte-by-byte
 	LEAQ (AX)(CX*1), CX
 	LEAQ first<>+0(SB), DX
-	LEAQ accept_ranges<>+0(SB), BX
+	LEAQ accept_ranges<>+0(SB), SI
 	JMP  start_utf8_loop_set
 
 start_utf8_loop:
-	MOVQ SI, AX
+	MOVQ DI, AX
 
 start_utf8_loop_set:
 	CMPQ    AX, CX
 	JGE     stdlib_ret_true
-	MOVBLZX (AX), SI
-	CMPB    SI, $0x80
+	MOVBLZX (AX), DI
+	CMPB    DI, $0x80
 	JAE     test_first
 	LEAQ    1(AX), AX
 	JMP     start_utf8_loop_set
 
 test_first:
-	XORQ    DI, DI
-	MOVB    (DX)(SI*1), DI
-	CMPB    DI, $0xf1
+	MOVB    (DX)(DI*1), BL
+	CMPB    BL, $0xf1
 	JEQ     stdlib_ret_false
-	MOVBQZX DI, R8
-	ANDQ    $0x07, R8
-	LEAQ    (AX)(R8*1), SI
-	CMPQ    SI, CX
+	MOVBLZX BL, R8
+	ANDL    $0x07, R8
+	LEAQ    (AX)(R8*1), DI
+	CMPQ    DI, CX
 	JA      stdlib_ret_false
-	SHRB    $0x04, DI
-	MOVBLZX (BX)(DI*2), R9
-	MOVBLZX 1(BX)(DI*2), DI
-	MOVB    1(AX), R10
-	CMPB    R10, R9
+	SHRB    $0x04, BL
+	MOVBLZX (SI)(BX*2), R9
+	MOVBLZX 1(SI)(BX*2), R10
+	MOVB    1(AX), BL
+	CMPB    BL, R9
 	JB      stdlib_ret_false
-	CMPB    DI, R10
+	CMPB    R10, BL
 	JB      stdlib_ret_false
-	CMPQ    R8, $0x02
+	CMPL    R8, $0x02
 	JEQ     start_utf8_loop
-	MOVBLZX 2(AX), DI
-	SUBL    $0x80, DI
-	CMPB    DI, $0x3f
+	MOVBLZX 2(AX), R9
+	SUBL    $0x80, R9
+	CMPB    R9, $0x3f
 	JHI     stdlib_ret_false
-	CMPQ    R8, $0x03
+	CMPL    R8, $0x03
 	JEQ     start_utf8_loop
 	MOVBLZX 3(AX), AX
 	SUBL    $0x80, AX
@@ -118,7 +117,7 @@ init_avx:
 
 	// Zeroes the "previous block was incomplete" vector.
 	VXORPS Y9, Y9, Y9
-	XORB   DL, DL
+	XORB   BL, BL
 
 	// Top of the loop.
 check_input:
@@ -134,7 +133,7 @@ check_input:
 	JE   end
 
 	// If 0 < bytes left < 32.
-	CMPB      DL, $0x01
+	CMPB      BL, $0x01
 	JNE       stdlib
 	VPTEST    Y8, Y8
 	JNZ       exit
@@ -157,8 +156,8 @@ process:
 	ADDQ    $0x20, AX
 
 	// Fast check to see if ASCII
-	VPMOVMSKB Y10, BX
-	CMPL      BX, $0x00
+	VPMOVMSKB Y10, DX
+	CMPL      DX, $0x00
 	JNZ       non_ascii
 
 	// If this whole block is ASCII, there is nothing to do, and it is an error if any of the previous code point was incomplete.
@@ -214,7 +213,7 @@ non_ascii:
 	// Prepare for next iteration
 	VPSUBUSB Y0, Y10, Y9
 	VMOVDQU  Y10, Y7
-	MOVB     $0x01, DL
+	MOVB     $0x01, BL
 
 	// End of loop
 	JMP check_input

@@ -123,15 +123,14 @@ func stdlib(d Register, n Register, ret *Basic) {
 	JMP(LabelRef("start_utf8_loop_set")) //   continue
 
 	Label("test_first")
-	x := GP64()
-	XORQ(x, x)
+	x := GP32()
 	MOVB(first.Idx(pi, 1), x.As8())   // x = first[pi]
 	CMPB(x.As8(), Imm(xx))            // if x == xx
 	JEQ(LabelRef("stdlib_ret_false")) //   return false (illegal started byte)
 
-	size := GP64()
-	MOVBQZX(x.As8(), size) // size = x
-	ANDQ(Imm(0x7), size)   // size &= 7
+	size := GP32()
+	MOVBLZX(x.As8(), size) // size = x
+	ANDL(Imm(0x7), size)   // size &= 7
 	LEAQ(Mem{Base: d}.Idx(size, 1), nextD)
 	CMPQ(nextD, end)                 // if i2 > n
 	JA(LabelRef("stdlib_ret_false")) //  return false (short or invalid)
@@ -150,7 +149,7 @@ func stdlib(d Register, n Register, ret *Basic) {
 	CMPB(acceptHi, c1)               // if accept.hi < c
 	JB(LabelRef("stdlib_ret_false")) //   return false
 
-	CMPQ(size, Imm(2))               // if size == 2
+	CMPL(size, Imm(2))               // if size == 2
 	JEQ(LabelRef("start_utf8_loop")) //   -> inc_size
 
 	c2 := GP32()
@@ -159,7 +158,7 @@ func stdlib(d Register, n Register, ret *Basic) {
 	CMPB(c2.As8(), Imm(hicb-locb))
 	JHI(LabelRef("stdlib_ret_false"))
 
-	CMPQ(size, Imm(3))               // if size == 3
+	CMPL(size, Imm(3))               // if size == 3
 	JEQ(LabelRef("start_utf8_loop")) //   -> inc_size
 
 	c3 := GP32()
