@@ -138,7 +138,7 @@ check_input:
 
 	// If 0 < bytes left < 32.
 	CMPB      DL, $0x01
-	JEQ       stdlib
+	JNE       stdlib
 	VXORPS    Y0, Y0, Y0
 	VPCMPEQB  Y9, Y0, Y0
 	VPMOVMSKB Y0, DX

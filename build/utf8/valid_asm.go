@@ -391,10 +391,17 @@ func main() {
 
 	Comment("If 0 < bytes left < 32.")
 
-	// If the AVX code has ran at least once, we need to walk back up to 4
-	// bytes to take into account continuations.
+	// If the AVX code never ran, we can proceed with using the stdlib
+	// implementation.
 	CMPB(hasPreviousBlock, Imm(1))
-	JEQ(LabelRef("stdlib"))
+	JNE(LabelRef("stdlib"))
+
+	// If the AVX code has ran at least once, we need to walk back up to 4
+	// bytes to take into account continuations. This is done by
+	// substracting the current input offset with the number of bytes
+	// between the first non-zero byte of incompletePreviousBlockY and the
+	// end of the vector. That way, stdlib starts at the first known
+	// incomplete byte.
 
 	zeroes := zeroOutVector(YMM())
 	VPCMPEQB(incompletePreviousBlockY, zeroes, zeroes)
