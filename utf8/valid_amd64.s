@@ -139,6 +139,8 @@ check_input:
 	// If 0 < bytes left < 32.
 	CMPB      DL, $0x01
 	JNE       stdlib
+	VPTEST    Y8, Y8
+	JNZ       exit
 	VXORPS    Y0, Y0, Y0
 	VPCMPEQB  Y9, Y0, Y0
 	VPMOVMSKB Y0, DX
@@ -226,7 +228,9 @@ end:
 
 	// Return whether any error bit was set
 	VPTEST Y8, Y8
-	SETEQ  ret+24(FP)
+
+exit:
+	SETEQ ret+24(FP)
 	VZEROUPPER
 	RET
 

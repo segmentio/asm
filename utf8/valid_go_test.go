@@ -74,6 +74,9 @@ func TestValid(t *testing.T) {
 		strings.Repeat("a", 128+31) + "☺☻☹",
 		// invalid at boundary
 		strings.Repeat("a", 128+31) + "\xE2a",
+
+		// bugs found with fuzzing
+		"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\xc300",
 	}
 
 	for _, tt := range examples {

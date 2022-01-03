@@ -396,6 +396,10 @@ func main() {
 	CMPB(hasPreviousBlock, Imm(1))
 	JNE(LabelRef("stdlib"))
 
+	// Fast exit if the error vector is not empty.
+	VPTEST(errorY, errorY)
+	JNZ(LabelRef("exit"))
+
 	// If the AVX code has ran at least once, we need to walk back up to 4
 	// bytes to take into account continuations. This is done by
 	// substracting the current input offset with the number of bytes
@@ -508,6 +512,7 @@ func main() {
 
 	Comment("Return whether any error bit was set")
 	VPTEST(errorY, errorY)
+	Label("exit")
 	SETEQ(ret.Addr)
 	VZEROUPPER()
 	RET()
