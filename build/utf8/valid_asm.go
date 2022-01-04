@@ -310,10 +310,6 @@ func main() {
 
 	Label("init_avx")
 
-	scratch := AllocLocal(32)
-	scratchAddr := GP64()
-	LEAQ(scratch, scratchAddr)
-
 	Comment("Prepare the constant masks")
 
 	incompleteMask := ConstBytes("incomplete_mask", incompleteMaskData())

@@ -7,7 +7,7 @@
 
 // func Valid(p []byte) bool
 // Requires: AVX, AVX2, LZCNT
-TEXT ·Valid(SB), NOSPLIT, $32-25
+TEXT ·Valid(SB), NOSPLIT, $0-25
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
@@ -90,8 +90,6 @@ stdlib_ret_true:
 
 	// End of stdlib implementation
 init_avx:
-	LEAQ (SP), DX
-
 	// Prepare the constant masks
 	VMOVDQU incomplete_mask<>+0(SB), Y0
 	VMOVDQU cont4_vec<>+0(SB), Y1
