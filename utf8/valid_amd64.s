@@ -5,11 +5,12 @@
 
 #include "textflag.h"
 
-// func Valid(p []byte) bool
+// func Validate(p []byte) (bool, bool)
 // Requires: AVX, AVX2, LZCNT
-TEXT ·Valid(SB), NOSPLIT, $0-25
+TEXT ·Validate(SB), NOSPLIT, $0-26
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
+	MOVB $0x01, DL
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC  stdlib
 
@@ -19,22 +20,26 @@ TEXT ·Valid(SB), NOSPLIT, $0-25
 
 stdlib:
 	// Non-vectorized implementation from the stdlib. Used for small inputs.
-	MOVQ $0x8080808080808080, DX
+	MOVQ $0x8080808080808080, BX
 
 	// Fast ascii-check loop
 start_loop:
 	CMPQ  CX, $0x08
 	JL    end_loop
-	TESTQ DX, AX
-	JNZ   end_loop
+	MOVQ  (AX), SI
+	TESTQ BX, SI
+	JNZ   fail_loop
 	SUBQ  $0x08, CX
 	ADDQ  $0x08, AX
 	JMP   start_loop
 
+fail_loop:
+	XORB DL, DL
+
 end_loop:
 	// UTF-8 check byte-by-byte
 	LEAQ (AX)(CX*1), CX
-	LEAQ first<>+0(SB), DX
+	LEAQ first<>+0(SB), BX
 	LEAQ accept_ranges<>+0(SB), SI
 	JMP  start_utf8_loop_set
 
@@ -51,29 +56,31 @@ start_utf8_loop_set:
 	JMP     start_utf8_loop_set
 
 test_first:
-	MOVB    (DX)(DI*1), BL
-	CMPB    BL, $0xf1
+	XORB    DL, DL
+	XORL    R8, R8
+	MOVB    (BX)(DI*1), R8
+	CMPB    R8, $0xf1
 	JEQ     stdlib_ret_false
-	MOVBLZX BL, R8
-	ANDL    $0x07, R8
-	LEAQ    (AX)(R8*1), DI
+	MOVBLZX R8, R9
+	ANDL    $0x07, R9
+	LEAQ    (AX)(R9*1), DI
 	CMPQ    DI, CX
 	JA      stdlib_ret_false
-	SHRB    $0x04, BL
-	MOVBLZX (SI)(BX*2), R9
-	MOVBLZX 1(SI)(BX*2), R10
-	MOVB    1(AX), BL
-	CMPB    BL, R9
+	SHRB    $0x04, R8
+	MOVBLZX (SI)(R8*2), R10
+	MOVBLZX 1(SI)(R8*2), R8
+	MOVB    1(AX), R11
+	CMPB    R11, R10
 	JB      stdlib_ret_false
-	CMPB    R10, BL
+	CMPB    R8, R11
 	JB      stdlib_ret_false
-	CMPL    R8, $0x02
+	CMPL    R9, $0x02
 	JEQ     start_utf8_loop
-	MOVBLZX 2(AX), R9
-	SUBL    $0x80, R9
-	CMPB    R9, $0x3f
+	MOVBLZX 2(AX), R8
+	SUBL    $0x80, R8
+	CMPB    R8, $0x3f
 	JHI     stdlib_ret_false
-	CMPL    R8, $0x03
+	CMPL    R9, $0x03
 	JEQ     start_utf8_loop
 	MOVBLZX 3(AX), AX
 	SUBL    $0x80, AX
@@ -82,10 +89,12 @@ test_first:
 
 stdlib_ret_false:
 	MOVB $0x00, ret+24(FP)
+	MOVB DL, ret1+25(FP)
 	RET
 
 stdlib_ret_true:
 	MOVB $0x01, ret+24(FP)
+	MOVB DL, ret1+25(FP)
 	RET
 
 	// End of stdlib implementation
@@ -137,13 +146,13 @@ check_input:
 	JNZ       exit
 	VXORPS    Y0, Y0, Y0
 	VPCMPEQB  Y9, Y0, Y0
-	VPMOVMSKB Y0, DX
-	NOTL      DX
-	LZCNTL    DX, DX
+	VPMOVMSKB Y0, BX
+	NOTL      BX
+	LZCNTL    BX, BX
 	SUBQ      $0x20, AX
-	ADDQ      DX, AX
+	ADDQ      BX, AX
 	ADDQ      $0x20, CX
-	SUBQ      DX, CX
+	SUBQ      BX, CX
 	JMP       stdlib
 
 	// Process one 32B block of data
@@ -154,8 +163,8 @@ process:
 	ADDQ    $0x20, AX
 
 	// Fast check to see if ASCII
-	VPMOVMSKB Y10, DX
-	CMPL      DX, $0x00
+	VPMOVMSKB Y10, SI
+	CMPL      SI, $0x00
 	JNZ       non_ascii
 
 	// If this whole block is ASCII, there is nothing to do, and it is an error if any of the previous code point was incomplete.
@@ -163,6 +172,8 @@ process:
 	JMP  check_input
 
 non_ascii:
+	XORB DL, DL
+
 	// Check errors on the high nibble of the previous byte
 	VPERM2I128 $0x03, Y7, Y10, Y9
 	VPALIGNR   $0x0f, Y9, Y10, Y9
@@ -225,6 +236,7 @@ end:
 
 exit:
 	SETEQ ret+24(FP)
+	MOVB  DL, ret1+25(FP)
 	VZEROUPPER
 	RET
 

@@ -5,5 +5,5 @@
 
 package utf8
 
-// Valid reports whether p consists entirely of valid UTF-8-encoded runes.
-func Valid(p []byte) bool
+// Validate is a more precise version of Valid that also indicates whether the input was valid ASCII.
+func Validate(p []byte) (bool, bool)

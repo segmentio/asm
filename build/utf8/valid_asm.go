@@ -79,7 +79,7 @@ var acceptRangesData = [32]uint8{
 	locb, 0x8F,
 }
 
-func stdlib(d Register, n Register, ret *Basic) {
+func stdlib(d Register, n Register, validAsciiReg Register, retUtf8 *Basic, retAscii *Basic) {
 	Comment("Non-vectorized implementation from the stdlib. Used for small inputs.")
 	mask := GP64()
 	MOVQ(U64(0x8080808080808080), mask)
@@ -88,11 +88,15 @@ func stdlib(d Register, n Register, ret *Basic) {
 	Label("start_loop")
 	CMPQ(n, U8(8))
 	JL(LabelRef("end_loop"))
-	TESTQ(mask, d)
-	JNZ(LabelRef("end_loop"))
+	tmp := GP64()
+	MOVQ(Mem{Base: d}, tmp)
+	TESTQ(mask, tmp)
+	JNZ(LabelRef("fail_loop"))
 	SUBQ(U8(8), n)
 	ADDQ(U8(8), d)
 	JMP(LabelRef("start_loop"))
+	Label("fail_loop")
+	XORB(validAsciiReg, validAsciiReg)
 	Label("end_loop")
 
 	Comment("UTF-8 check byte-by-byte")
@@ -123,7 +127,9 @@ func stdlib(d Register, n Register, ret *Basic) {
 	JMP(LabelRef("start_utf8_loop_set")) //   continue
 
 	Label("test_first")
+	XORB(validAsciiReg, validAsciiReg)
 	x := GP32()
+	XORL(x, x)
 	MOVB(first.Idx(pi, 1), x.As8())   // x = first[pi]
 	CMPB(x.As8(), Imm(xx))            // if x == xx
 	JEQ(LabelRef("stdlib_ret_false")) //   return false (illegal started byte)
@@ -168,11 +174,13 @@ func stdlib(d Register, n Register, ret *Basic) {
 	JLS(LabelRef("start_utf8_loop"))
 
 	Label("stdlib_ret_false")
-	MOVB(Imm(0), ret.Addr)
+	MOVB(Imm(0), retUtf8.Addr)
+	MOVB(validAsciiReg, retAscii.Addr)
 	RET()
 
 	Label("stdlib_ret_true")
-	MOVB(Imm(1), ret.Addr)
+	MOVB(Imm(1), retUtf8.Addr)
+	MOVB(validAsciiReg, retAscii.Addr)
 	RET()
 
 	Comment("End of stdlib implementation")
@@ -289,13 +297,17 @@ func nibbleMasksData() (nib1, nib2, nib3 []byte) {
 }
 
 func main() {
-	TEXT("Valid", NOSPLIT, "func(p []byte) bool")
-	Doc("Valid reports whether p consists entirely of valid UTF-8-encoded runes.")
+	TEXT("Validate", NOSPLIT, "func(p []byte) (bool, bool)")
+	Doc("Validate is a more precise version of Valid that also indicates whether the input was valid ASCII.")
 
-	ret, _ := ReturnIndex(0).Resolve()
+	retUtf8, _ := ReturnIndex(0).Resolve()
+	retAscii, _ := ReturnIndex(1).Resolve()
 
 	d := Load(Param("p").Base(), GP64())
 	n := Load(Param("p").Len(), GP64())
+
+	validAsciiReg := GP8()
+	MOVB(Imm(1), validAsciiReg)
 
 	JumpUnlessFeature("stdlib", cpu.AVX2)
 
@@ -306,7 +318,7 @@ func main() {
 	JGE(LabelRef("init_avx"))
 
 	Label("stdlib")
-	stdlib(d, n, ret)
+	stdlib(d, n, validAsciiReg, retUtf8, retAscii)
 
 	Label("init_avx")
 
@@ -439,6 +451,7 @@ func main() {
 	JMP(LabelRef("check_input"))
 
 	Label("non_ascii")
+	XORB(validAsciiReg, validAsciiReg)
 	Comment("Check errors on the high nibble of the previous byte")
 	previousY := pushLastByteFromAToFrontOfB(previousBlockY, currentBlockY)
 
@@ -505,7 +518,8 @@ func main() {
 	Comment("Return whether any error bit was set")
 	VPTEST(errorY, errorY)
 	Label("exit")
-	SETEQ(ret.Addr)
+	SETEQ(retUtf8.Addr)
+	MOVB(validAsciiReg, retAscii.Addr)
 	VZEROUPPER()
 	RET()
 

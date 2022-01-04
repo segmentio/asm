@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	stdutf8 "unicode/utf8"
+
+	stdascii "github.com/segmentio/asm/ascii"
 )
 
 type byteRange struct {
@@ -137,11 +139,7 @@ func TestValid(t *testing.T) {
 
 	for _, tt := range examples {
 		t.Run(tt, func(t *testing.T) {
-			b := []byte(tt)
-			expected := stdutf8.Valid(b)
-			if Valid(b) != expected {
-				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
-			}
+			validate(t, []byte(tt))
 		})
 
 		// Generate variations of the input to exercise errors at the
@@ -159,10 +157,7 @@ func TestValid(t *testing.T) {
 			size := 32 - len(tt)
 			prefix := strings.Repeat("a", size)
 			b := []byte(prefix + tt)
-			expected := stdutf8.Valid(b)
-			if Valid(b) != expected {
-				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
-			}
+			validate(t, b)
 		})
 		t.Run("vec-padded-"+tt, func(t *testing.T) {
 			prefix := strings.Repeat("a", 32)
@@ -172,10 +167,7 @@ func TestValid(t *testing.T) {
 			if len(b)%32 != 0 {
 				panic("test should generate block of 32")
 			}
-			expected := stdutf8.Valid(b)
-			if Valid(b) != expected {
-				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
-			}
+			validate(t, b)
 		})
 		t.Run("vec-"+tt, func(t *testing.T) {
 			prefix := strings.Repeat("a", 32)
@@ -187,11 +179,29 @@ func TestValid(t *testing.T) {
 			if len(b)%32 == 0 {
 				panic("test should not generate block of 32")
 			}
-			expected := stdutf8.Valid(b)
-			if Valid(b) != expected {
-				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
-			}
+			validate(t, b)
 		})
+	}
+}
+
+func validate(t *testing.T, b []byte) {
+	// Check that both Valid and Validate behave properly. Should not be
+	// necessary given the definition of Valid, but just in case.
+
+	expected := stdutf8.Valid(b)
+	if Valid(b) != expected {
+		t.Errorf("Valid(%q) = %v; want %v", string(b), !expected, expected)
+	}
+
+	utf8valid, asciivalid := Validate(b)
+
+	if utf8valid != expected {
+		t.Errorf("Validate(%q) utf8 valid: %v; want %v", string(b), !expected, expected)
+	}
+
+	expected = stdascii.Valid(b)
+	if asciivalid != expected {
+		t.Errorf("Validate(%q) ascii valid: %v; want %v", string(b), !expected, expected)
 	}
 }
 
