@@ -5,5 +5,5 @@
 
 package utf8
 
-// Validate is a more precise version of Valid that also indicates whether the input was valid ASCII.
-func Validate(p []byte) (bool, bool)
+// Optimized version of Validate for inputs of more than 32B.
+func validateAvx(p []byte) (bool, bool)

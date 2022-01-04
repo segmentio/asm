@@ -5,99 +5,15 @@
 
 #include "textflag.h"
 
-// func Validate(p []byte) (bool, bool)
+// func validateAvx(p []byte) (bool, bool)
 // Requires: AVX, AVX2, SSE2
-TEXT ·Validate(SB), NOSPLIT, $32-26
+TEXT ·validateAvx(SB), NOSPLIT, $32-26
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
 	MOVB $0x01, DL
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCC  stdlib
+	JCS  init_avx
 
-	// if input < 32 bytes
-	CMPQ CX, $0x20
-	JGE  init_avx
-
-stdlib:
-	// Non-vectorized implementation from the stdlib. Used for small inputs.
-	MOVQ $0x8080808080808080, BX
-
-	// Fast ascii-check loop
-start_loop:
-	CMPQ  CX, $0x08
-	JL    end_loop
-	MOVQ  (AX), SI
-	TESTQ BX, SI
-	JNZ   fail_loop
-	SUBQ  $0x08, CX
-	ADDQ  $0x08, AX
-	JMP   start_loop
-
-fail_loop:
-	XORB DL, DL
-
-end_loop:
-	// UTF-8 check byte-by-byte
-	LEAQ (AX)(CX*1), CX
-	LEAQ first<>+0(SB), BX
-	LEAQ accept_ranges<>+0(SB), SI
-	JMP  start_utf8_loop_set
-
-start_utf8_loop:
-	MOVQ DI, AX
-
-start_utf8_loop_set:
-	CMPQ    AX, CX
-	JGE     stdlib_ret_true
-	MOVBLZX (AX), DI
-	CMPB    DI, $0x80
-	JAE     test_first
-	LEAQ    1(AX), AX
-	JMP     start_utf8_loop_set
-
-test_first:
-	XORB    DL, DL
-	XORL    R8, R8
-	MOVB    (BX)(DI*1), R8
-	CMPB    R8, $0xf1
-	JEQ     stdlib_ret_false
-	MOVBLZX R8, R9
-	ANDL    $0x07, R9
-	LEAQ    (AX)(R9*1), DI
-	CMPQ    DI, CX
-	JA      stdlib_ret_false
-	SHRB    $0x04, R8
-	MOVBLZX (SI)(R8*2), R10
-	MOVBLZX 1(SI)(R8*2), R8
-	MOVB    1(AX), R11
-	CMPB    R11, R10
-	JB      stdlib_ret_false
-	CMPB    R8, R11
-	JB      stdlib_ret_false
-	CMPL    R9, $0x02
-	JEQ     start_utf8_loop
-	MOVBLZX 2(AX), R8
-	SUBL    $0x80, R8
-	CMPB    R8, $0x3f
-	JHI     stdlib_ret_false
-	CMPL    R9, $0x03
-	JEQ     start_utf8_loop
-	MOVBLZX 3(AX), AX
-	SUBL    $0x80, AX
-	CMPB    AL, $0x3f
-	JLS     start_utf8_loop
-
-stdlib_ret_false:
-	MOVB $0x00, ret+24(FP)
-	MOVB DL, ret1+25(FP)
-	RET
-
-stdlib_ret_true:
-	MOVB $0x01, ret+24(FP)
-	MOVB DL, ret1+25(FP)
-	RET
-
-	// End of stdlib implementation
 init_avx:
 	// Prepare the constant masks
 	VMOVDQU incomplete_mask<>+0(SB), Y0
@@ -287,46 +203,6 @@ end:
 	MOVB   DL, ret1+25(FP)
 	VZEROUPPER
 	RET
-
-DATA first<>+0(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+8(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+16(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+24(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+32(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+40(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+48(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+56(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+64(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+72(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+80(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+88(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+96(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+104(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+112(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+120(SB)/8, $0xf0f0f0f0f0f0f0f0
-DATA first<>+128(SB)/8, $0xf1f1f1f1f1f1f1f1
-DATA first<>+136(SB)/8, $0xf1f1f1f1f1f1f1f1
-DATA first<>+144(SB)/8, $0xf1f1f1f1f1f1f1f1
-DATA first<>+152(SB)/8, $0xf1f1f1f1f1f1f1f1
-DATA first<>+160(SB)/8, $0xf1f1f1f1f1f1f1f1
-DATA first<>+168(SB)/8, $0xf1f1f1f1f1f1f1f1
-DATA first<>+176(SB)/8, $0xf1f1f1f1f1f1f1f1
-DATA first<>+184(SB)/8, $0xf1f1f1f1f1f1f1f1
-DATA first<>+192(SB)/8, $0x020202020202f1f1
-DATA first<>+200(SB)/8, $0x0202020202020202
-DATA first<>+208(SB)/8, $0x0202020202020202
-DATA first<>+216(SB)/8, $0x0202020202020202
-DATA first<>+224(SB)/8, $0x0303030303030313
-DATA first<>+232(SB)/8, $0x0303230303030303
-DATA first<>+240(SB)/8, $0xf1f1f14404040434
-DATA first<>+248(SB)/8, $0xf1f1f1f1f1f1f1f1
-GLOBL first<>(SB), RODATA|NOPTR, $256
-
-DATA accept_ranges<>+0(SB)/8, $0xbf909f80bfa0bf80
-DATA accept_ranges<>+8(SB)/8, $0x0000000000008f80
-DATA accept_ranges<>+16(SB)/8, $0x0000000000000000
-DATA accept_ranges<>+24(SB)/8, $0x0000000000000000
-GLOBL accept_ranges<>(SB), RODATA|NOPTR, $32
 
 DATA incomplete_mask<>+0(SB)/8, $0xffffffffffffffff
 DATA incomplete_mask<>+8(SB)/8, $0xffffffffffffffff

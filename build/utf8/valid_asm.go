@@ -7,7 +7,6 @@ import (
 	"bytes"
 
 	. "github.com/mmcloughlin/avo/build"
-	. "github.com/mmcloughlin/avo/gotypes"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
 	. "github.com/segmentio/asm/build/internal/asm"
@@ -17,173 +16,6 @@ import (
 
 func init() {
 	ConstraintExpr("!purego")
-}
-
-const (
-	runeSelf = 0x80
-
-	// The default lowest and highest continuation byte.
-	locb = 0b10000000 // 128 0x80
-	hicb = 0b10111111 // 191 0xBF
-
-	// These names of these constants are chosen to give nice alignment in the
-	// table below. The first nibble is an index into acceptRanges or F for
-	// special one-byte cases. The second nibble is the Rune length or the
-	// Status for the special one-byte case.
-	xx = 0xF1 // invalid: size 1
-	as = 0xF0 // ASCII: size 1
-	s1 = 0x02 // accept 0, size 2
-	s2 = 0x13 // accept 1, size 3
-	s3 = 0x03 // accept 0, size 3
-	s4 = 0x23 // accept 2, size 3
-	s5 = 0x34 // accept 3, size 4
-	s6 = 0x04 // accept 0, size 4
-	s7 = 0x44 // accept 4, size 4
-)
-
-// TODO: find the address of this from unicode/utf8.
-// first is information about the first byte in a UTF-8 sequence.
-var firstData = [256]uint8{
-	//   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
-	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x00-0x0F
-	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x10-0x1F
-	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x20-0x2F
-	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x30-0x3F
-	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x40-0x4F
-	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x50-0x5F
-	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x60-0x6F
-	as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, as, // 0x70-0x7F
-	//   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
-	xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, // 0x80-0x8F
-	xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, // 0x90-0x9F
-	xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, // 0xA0-0xAF
-	xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, // 0xB0-0xBF
-	xx, xx, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, // 0xC0-0xCF
-	s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, s1, // 0xD0-0xDF
-	s2, s3, s3, s3, s3, s3, s3, s3, s3, s3, s3, s3, s3, s4, s3, s3, // 0xE0-0xEF
-	s5, s6, s6, s6, s7, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, xx, // 0xF0-0xFF
-}
-
-// acceptRange gives the range of valid values for the second byte in a UTF-8
-// sequence.
-type acceptRange struct {
-	lo uint8 // lowest value for second byte.
-	hi uint8 // highest value for second byte.
-}
-
-var acceptRangesData = [32]uint8{
-	locb, hicb,
-	0xA0, hicb,
-	locb, 0x9F,
-	0x90, hicb,
-	locb, 0x8F,
-}
-
-func stdlib(d Register, n Register, validAsciiReg Register, retUtf8 *Basic, retAscii *Basic) {
-	Comment("Non-vectorized implementation from the stdlib. Used for small inputs.")
-	mask := GP64()
-	MOVQ(U64(0x8080808080808080), mask)
-
-	Comment("Fast ascii-check loop")
-	Label("start_loop")
-	CMPQ(n, U8(8))
-	JL(LabelRef("end_loop"))
-	tmp := GP64()
-	MOVQ(Mem{Base: d}, tmp)
-	TESTQ(mask, tmp)
-	JNZ(LabelRef("fail_loop"))
-	SUBQ(U8(8), n)
-	ADDQ(U8(8), d)
-	JMP(LabelRef("start_loop"))
-	Label("fail_loop")
-	XORB(validAsciiReg, validAsciiReg)
-	Label("end_loop")
-
-	Comment("UTF-8 check byte-by-byte")
-
-	end := GP64()
-	LEAQ(Mem{Base: d, Index: n, Scale: 1}, end)
-
-	first := Mem{Base: GP64(), Scale: 1}
-	LEAQ(ConstBytes("first", firstData[:]), first.Base)
-
-	acceptRanges := Mem{Base: GP64(), Scale: 2}
-	LEAQ(ConstBytes("accept_ranges", acceptRangesData[:]), acceptRanges.Base)
-	JMP(LabelRef("start_utf8_loop_set"))
-
-	Label("start_utf8_loop") // for
-	nextD := GP64()
-	MOVQ(nextD, d)
-	Label("start_utf8_loop_set")
-	CMPQ(d, end)                     // i < n
-	JGE(LabelRef("stdlib_ret_true")) //   end of loop, return true
-
-	pi := GP32()
-	MOVBLZX(Mem{Base: d}, pi) // pi = b[i]
-
-	CMPB(pi.As8(), Imm(runeSelf))        // if pi >= runeSelf
-	JAE(LabelRef("test_first"))          //   more testing to do
-	LEAQ(Mem{Base: d}.Offset(1), d)      // else: i++
-	JMP(LabelRef("start_utf8_loop_set")) //   continue
-
-	Label("test_first")
-	XORB(validAsciiReg, validAsciiReg)
-	x := GP32()
-	XORL(x, x)
-	MOVB(first.Idx(pi, 1), x.As8())   // x = first[pi]
-	CMPB(x.As8(), Imm(xx))            // if x == xx
-	JEQ(LabelRef("stdlib_ret_false")) //   return false (illegal started byte)
-
-	size := GP32()
-	MOVBLZX(x.As8(), size) // size = x
-	ANDL(Imm(0x7), size)   // size &= 7
-	LEAQ(Mem{Base: d}.Idx(size, 1), nextD)
-	CMPQ(nextD, end)                 // if i2 > n
-	JA(LabelRef("stdlib_ret_false")) //  return false (short or invalid)
-
-	SHRB(Imm(4), x.As8()) // x = x >> 4
-
-	acceptLo := GP8()
-	MOVBLZX(acceptRanges.Idx(x, 2).Offset(0), acceptLo.As32())
-	acceptHi := GP8()
-	MOVBLZX(acceptRanges.Idx(x, 2).Offset(1), acceptHi.As32())
-
-	c1 := GP8()
-	MOVB(Mem{Base: d}.Offset(1), c1) // c = b[i+1]
-	CMPB(c1, acceptLo)               // if c < accept.lo
-	JB(LabelRef("stdlib_ret_false")) //   return false
-	CMPB(acceptHi, c1)               // if accept.hi < c
-	JB(LabelRef("stdlib_ret_false")) //   return false
-
-	CMPL(size, Imm(2))               // if size == 2
-	JEQ(LabelRef("start_utf8_loop")) //   -> inc_size
-
-	c2 := GP32()
-	MOVBLZX(Mem{Base: d}.Offset(2), c2) // c = b[i+2]
-	SUBL(Imm(locb), c2)
-	CMPB(c2.As8(), Imm(hicb-locb))
-	JHI(LabelRef("stdlib_ret_false"))
-
-	CMPL(size, Imm(3))               // if size == 3
-	JEQ(LabelRef("start_utf8_loop")) //   -> inc_size
-
-	c3 := GP32()
-	MOVBLZX(Mem{Base: d}.Offset(3), c3) // c = b[i+3]
-	SUBL(Imm(locb), c3)
-	CMPB(c3.As8(), Imm(hicb-locb))
-	JLS(LabelRef("start_utf8_loop"))
-
-	Label("stdlib_ret_false")
-	MOVB(Imm(0), retUtf8.Addr)
-	MOVB(validAsciiReg, retAscii.Addr)
-	RET()
-
-	Label("stdlib_ret_true")
-	MOVB(Imm(1), retUtf8.Addr)
-	MOVB(validAsciiReg, retAscii.Addr)
-	RET()
-
-	Comment("End of stdlib implementation")
 }
 
 func incompleteMaskData() []byte {
@@ -297,8 +129,8 @@ func nibbleMasksData() (nib1, nib2, nib3 []byte) {
 }
 
 func main() {
-	TEXT("Validate", NOSPLIT, "func(p []byte) (bool, bool)")
-	Doc("Validate is a more precise version of Valid that also indicates whether the input was valid ASCII.")
+	TEXT("validateAvx", NOSPLIT, "func(p []byte) (bool, bool)")
+	Doc("Optimized version of Validate for inputs of more than 32B.")
 
 	retUtf8, _ := ReturnIndex(0).Resolve()
 	retAscii, _ := ReturnIndex(1).Resolve()
@@ -309,16 +141,9 @@ func main() {
 	validAsciiReg := GP8()
 	MOVB(Imm(1), validAsciiReg)
 
-	JumpUnlessFeature("stdlib", cpu.AVX2)
+	JumpIfFeature("init_avx", cpu.AVX2)
 
-	// 32 has been found empirically on an Intel i7-8559U machine. After
-	// that size, the AVX2 implementation is faster than the stdlib one.
-	Comment("if input < 32 bytes")
-	CMPQ(n, U8(32))
-	JGE(LabelRef("init_avx"))
-
-	Label("stdlib")
-	stdlib(d, n, validAsciiReg, retUtf8, retAscii)
+	// TODO: call stdlib
 
 	Label("init_avx")
 
