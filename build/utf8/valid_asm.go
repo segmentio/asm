@@ -299,10 +299,10 @@ func main() {
 
 	JumpUnlessFeature("stdlib", cpu.AVX2)
 
-	// 128 has been found empirically on my machine. After that size, the
-	// AVX2 implementation is faster than the stdlib one.
-	Comment("if input < 128 bytes")
-	CMPQ(n, U8(128))
+	// 32 has been found empirically on an Intel i7-8559U machine. After
+	// that size, the AVX2 implementation is faster than the stdlib one.
+	Comment("if input < 32 bytes")
+	CMPQ(n, U8(32))
 	JGE(LabelRef("init_avx"))
 
 	Label("stdlib")

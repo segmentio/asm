@@ -13,8 +13,8 @@ TEXT ·Valid(SB), NOSPLIT, $32-25
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCC  stdlib
 
-	// if input < 128 bytes
-	CMPQ CX, $0x80
+	// if input < 32 bytes
+	CMPQ CX, $0x20
 	JGE  init_avx
 
 stdlib:
