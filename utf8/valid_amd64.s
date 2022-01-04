@@ -6,8 +6,8 @@
 #include "textflag.h"
 
 // func Validate(p []byte) (bool, bool)
-// Requires: AVX, AVX2
-TEXT ·Validate(SB), NOSPLIT, $0-26
+// Requires: AVX, AVX2, SSE2
+TEXT ·Validate(SB), NOSPLIT, $32-26
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
 	MOVB $0x01, DL
@@ -124,7 +124,6 @@ init_avx:
 
 	// Zeroes the "previous block was incomplete" vector.
 	VXORPS Y9, Y9, Y9
-	XORB   BL, BL
 
 	// Top of the loop.
 check_input:
@@ -140,20 +139,72 @@ check_input:
 	JE   end
 
 	// If 0 < bytes left < 32.
-	CMPB      BL, $0x01
-	JNE       stdlib
-	VPTEST    Y8, Y8
-	JNZ       exit
-	VXORPS    Y0, Y0, Y0
-	VPCMPEQB  Y9, Y0, Y0
-	VPMOVMSKB Y0, BX
-	NOTL      BX
-	BSFL      BX, BX
-	SUBQ      $0x20, AX
-	ADDQ      BX, AX
-	ADDQ      $0x20, CX
-	SUBQ      BX, CX
-	JMP       stdlib
+	// Prepare scratch space
+	LEAQ    (SP), BX
+	VXORPS  Y10, Y10, Y10
+	VMOVDQU Y10, (BX)
+
+	// Make a copy of the remaining bytes into the zeroed scratch space and make it the next block to read.
+	MOVQ AX, SI
+	MOVQ BX, AX
+	CMPQ CX, $0x01
+	JE   handle1
+	CMPQ CX, $0x03
+	JBE  handle2to3
+	CMPQ CX, $0x04
+	JE   handle4
+	CMPQ CX, $0x08
+	JB   handle5to7
+	JE   handle8
+	CMPQ CX, $0x10
+	JBE  handle9to16
+	CMPQ CX, $0x20
+	JBE  handle17to32
+
+handle1:
+	MOVB (SI), CL
+	MOVB CL, (AX)
+	JMP  after_copy
+
+handle2to3:
+	MOVW (SI), BX
+	MOVW -2(SI)(CX*1), SI
+	MOVW BX, (AX)
+	MOVW SI, -2(AX)(CX*1)
+	JMP  after_copy
+
+handle4:
+	MOVL (SI), CX
+	MOVL CX, (AX)
+	JMP  after_copy
+
+handle5to7:
+	MOVL (SI), BX
+	MOVL -4(SI)(CX*1), SI
+	MOVL BX, (AX)
+	MOVL SI, -4(AX)(CX*1)
+	JMP  after_copy
+
+handle8:
+	MOVQ (SI), CX
+	MOVQ CX, (AX)
+	JMP  after_copy
+
+handle9to16:
+	MOVQ (SI), BX
+	MOVQ -8(SI)(CX*1), SI
+	MOVQ BX, (AX)
+	MOVQ SI, -8(AX)(CX*1)
+	JMP  after_copy
+
+handle17to32:
+	MOVOU (SI), X10
+	MOVOU -16(SI)(CX*1), X11
+	MOVOU X10, (AX)
+	MOVOU X11, -16(AX)(CX*1)
+
+after_copy:
+	MOVQ $0x0000000000000020, CX
 
 	// Process one 32B block of data
 process:
@@ -163,8 +214,8 @@ process:
 	ADDQ    $0x20, AX
 
 	// Fast check to see if ASCII
-	VPMOVMSKB Y10, SI
-	CMPL      SI, $0x00
+	VPMOVMSKB Y10, BX
+	CMPL      BX, $0x00
 	JNZ       non_ascii
 
 	// If this whole block is ASCII, there is nothing to do, and it is an error if any of the previous code point was incomplete.
@@ -222,7 +273,6 @@ non_ascii:
 	// Prepare for next iteration
 	VPSUBUSB Y0, Y10, Y9
 	VMOVDQU  Y10, Y7
-	MOVB     $0x01, BL
 
 	// End of loop
 	JMP check_input
@@ -233,10 +283,8 @@ end:
 
 	// Return whether any error bit was set
 	VPTEST Y8, Y8
-
-exit:
-	SETEQ ret+24(FP)
-	MOVB  DL, ret1+25(FP)
+	SETEQ  ret+24(FP)
+	MOVB   DL, ret1+25(FP)
 	VZEROUPPER
 	RET
 
