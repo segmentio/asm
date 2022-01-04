@@ -24,7 +24,7 @@ func genExamples(current string, ranges []byteRange) []string {
 	r := ranges[0]
 	var all []string
 
-	for x := r.Low; x <= r.High; x++ {
+	for _, x := range []byte{r.Low, r.High} {
 		s := current + string(x)
 		all = append(all, genExamples(s, ranges[1:])...)
 		if x == r.High {
@@ -119,9 +119,7 @@ func TestValid(t *testing.T) {
 	}
 }
 
-// Takes about 10s to run on my machine.
-func TestValidExhaustive(t *testing.T) {
-	t.Skip()
+func TestValidBounds(t *testing.T) {
 	any := byteRange{0, 0xFF}
 	ascii := byteRange{0, 0x7F}
 	cont := byteRange{0x80, 0xBF}
