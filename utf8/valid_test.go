@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	stdutf8 "unicode/utf8"
+	"unicode/utf8"
 
-	stdascii "github.com/segmentio/asm/ascii"
+	"github.com/segmentio/asm/ascii"
 )
 
 type byteRange struct {
@@ -190,7 +190,7 @@ func validate(t *testing.T, b []byte) {
 	// Check that both Valid and Validate behave properly. Should not be
 	// necessary given the definition of Valid, but just in case.
 
-	expected := stdutf8.Valid(b)
+	expected := utf8.Valid(b)
 	if Valid(b) != expected {
 		t.Errorf("Valid(%q) = %v; want %v", string(b), !expected, expected)
 	}
@@ -201,7 +201,7 @@ func validate(t *testing.T, b []byte) {
 		t.Errorf("Validate(%q) utf8 valid: %v; want %v", string(b), !expected, expected)
 	}
 
-	expected = stdascii.Valid(b)
+	expected = ascii.Valid(b)
 	if asciivalid != expected {
 		t.Errorf("Validate(%q) ascii valid: %v; want %v", string(b), !expected, expected)
 	}
@@ -213,7 +213,7 @@ var valid1M = bytes.Repeat(valid1k, 1024)
 func BenchmarkValid(b *testing.B) {
 	impls := map[string]func([]byte) bool{
 		"AVX":    Valid,
-		"Stdlib": stdutf8.Valid,
+		"Stdlib": utf8.Valid,
 	}
 
 	type input struct {

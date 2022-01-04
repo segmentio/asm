@@ -4,12 +4,18 @@
 package utf8
 
 import (
-	stdutf8 "unicode/utf8"
+	"unicode/utf8"
+
+	"github.com/segmentio/asm/ascii"
 )
 
-func Validate(p []byte) (bool, bool) {
+func Validate(p []byte) (validUtf8, validAscii bool) {
 	if len(p) < 32 {
-		return stdutf8.Valid(p), false
+		validAscii = ascii.Valid(p)
+		if validAscii {
+			return true, true
+		}
+		return utf8.Valid(p), false
 	}
 	return validateAvx(p)
 }
