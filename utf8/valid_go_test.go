@@ -24,7 +24,14 @@ func genExamples(current string, ranges []byteRange) []string {
 	r := ranges[0]
 	var all []string
 
-	for _, x := range []byte{r.Low, r.High} {
+	elements := []byte{r.Low, r.High}
+
+	mid := (r.High + r.Low) / 2
+	if mid != r.Low && mid != r.High {
+		elements = append(elements, mid)
+	}
+
+	for _, x := range elements {
 		s := current + string(x)
 		all = append(all, genExamples(s, ranges[1:])...)
 		if x == r.High {
@@ -35,8 +42,8 @@ func genExamples(current string, ranges []byteRange) []string {
 }
 
 func TestValid(t *testing.T) {
-	// Tests copied from the stdlib
 	var examples = []string{
+		// Tests copied from the stdlib
 		"",
 		"a",
 		"abc",
@@ -68,58 +75,23 @@ func TestValid(t *testing.T) {
 		"\xed\xbf\xbf", // U+DFFF low surrogate (sic)
 
 		// valid at boundary
-		strings.Repeat("a", 128+28) + "☺☻☹",
-		strings.Repeat("a", 128+29) + "☺☻☹",
-		strings.Repeat("a", 128+30) + "☺☻☹",
-		strings.Repeat("a", 128+31) + "☺☻☹",
+		strings.Repeat("a", 32+28) + "☺☻☹",
+		strings.Repeat("a", 32+29) + "☺☻☹",
+		strings.Repeat("a", 32+30) + "☺☻☹",
+		strings.Repeat("a", 32+31) + "☺☻☹",
 		// invalid at boundary
-		strings.Repeat("a", 128+31) + "\xE2a",
+		strings.Repeat("a", 32+31) + "\xE2a",
+
+		// same inputs as benchmarks
+		"0123456789",
+		"日本語日本語日本語日",
+		"\xF4\x8F\xBF\xBF",
 
 		// bugs found with fuzzing
 		"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\xc60",
 		"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\xc300",
 	}
 
-	for _, tt := range examples {
-		t.Run(tt, func(t *testing.T) {
-			b := []byte(tt)
-			expected := stdutf8.Valid(b)
-			if Valid(b) != expected {
-				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
-			}
-		})
-		t.Run("vec-padded-"+tt, func(t *testing.T) {
-			prefix := strings.Repeat("a", 128)
-			padding := strings.Repeat("b", 32-(len(tt)%32))
-			input := prefix + padding + tt
-			b := []byte(input)
-			if len(b)%32 != 0 {
-				panic("test should generate block of 32")
-			}
-			expected := stdutf8.Valid(b)
-			if Valid(b) != expected {
-				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
-			}
-		})
-		t.Run("vec-"+tt, func(t *testing.T) {
-			prefix := strings.Repeat("a", 128)
-			input := prefix + tt
-			if len(tt)%32 == 0 {
-				input += "x"
-			}
-			b := []byte(input)
-			if len(b)%32 == 0 {
-				panic("test should not generate block of 32")
-			}
-			expected := stdutf8.Valid(b)
-			if Valid(b) != expected {
-				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
-			}
-		})
-	}
-}
-
-func TestValidBounds(t *testing.T) {
 	any := byteRange{0, 0xFF}
 	ascii := byteRange{0, 0x7F}
 	cont := byteRange{0x80, 0xBF}
@@ -159,24 +131,66 @@ func TestValidBounds(t *testing.T) {
 		{one(0xE0), {0xA0, 0xBF}, cont},
 	}
 
-	t.Parallel()
-
 	for _, r := range rangesToTest {
-		r := r
-		name := fmt.Sprintf("%v", r)
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+		examples = append(examples, genExamples("", r)...)
+	}
 
-			examples := genExamples("", r)
-
-			for _, e := range examples {
-				b := []byte(e)
-				expected := stdutf8.Valid(b)
-				if Valid(b) != expected {
-					t.Errorf("Valid(%q) = %v; want %v", e, !expected, expected)
-				}
+	for _, tt := range examples {
+		t.Run(tt, func(t *testing.T) {
+			b := []byte(tt)
+			expected := stdutf8.Valid(b)
+			if Valid(b) != expected {
+				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
 			}
+		})
 
+		// Generate variations of the input to exercise errors at the
+		// boundary, using the vector implementation on 32-sized input,
+		// and on non-32-sized inputs.
+		//
+		// Large examples don't go through those variations because they
+		// are likely specific tests.
+
+		if len(tt) >= 32 {
+			continue
+		}
+
+		t.Run("boundary-"+tt, func(t *testing.T) {
+			size := 32 - len(tt)
+			prefix := strings.Repeat("a", size)
+			b := []byte(prefix + tt)
+			expected := stdutf8.Valid(b)
+			if Valid(b) != expected {
+				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
+			}
+		})
+		t.Run("vec-padded-"+tt, func(t *testing.T) {
+			prefix := strings.Repeat("a", 32)
+			padding := strings.Repeat("b", 32-(len(tt)%32))
+			input := prefix + padding + tt
+			b := []byte(input)
+			if len(b)%32 != 0 {
+				panic("test should generate block of 32")
+			}
+			expected := stdutf8.Valid(b)
+			if Valid(b) != expected {
+				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
+			}
+		})
+		t.Run("vec-"+tt, func(t *testing.T) {
+			prefix := strings.Repeat("a", 32)
+			input := prefix + tt
+			if len(tt)%32 == 0 {
+				input += "x"
+			}
+			b := []byte(input)
+			if len(b)%32 == 0 {
+				panic("test should not generate block of 32")
+			}
+			expected := stdutf8.Valid(b)
+			if Valid(b) != expected {
+				t.Errorf("Valid(%q) = %v; want %v", tt, !expected, expected)
+			}
 		})
 	}
 }
