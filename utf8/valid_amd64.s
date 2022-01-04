@@ -6,7 +6,7 @@
 #include "textflag.h"
 
 // func Validate(p []byte) (bool, bool)
-// Requires: AVX, AVX2, LZCNT
+// Requires: AVX, AVX2
 TEXT ·Validate(SB), NOSPLIT, $0-26
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
@@ -148,7 +148,7 @@ check_input:
 	VPCMPEQB  Y9, Y0, Y0
 	VPMOVMSKB Y0, BX
 	NOTL      BX
-	LZCNTL    BX, BX
+	BSFL      BX, BX
 	SUBQ      $0x20, AX
 	ADDQ      BX, AX
 	ADDQ      $0x20, CX

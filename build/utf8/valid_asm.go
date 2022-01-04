@@ -421,8 +421,8 @@ func main() {
 	// bitset now contains a 1 at the position of each zero byte of
 	// incompletePreviousBlockY, 0 otherwise.
 	NOTL(bitset.As32())
-	// Now bitset has 0 bits for each zero byte of incompltePreviousBlockY.
-	LZCNTL(bitset.As32(), bitset.As32())
+	// Now bitset has 0 bits for each zero byte of incompletePreviousBlockY.
+	BSFL(bitset.As32(), bitset.As32())
 	// bitset is now an unsigned int in [0,32], corresponding to the number
 	// of leading zero bytes in incompletePreviousBlockY.
 	SUBQ(Imm(32), d)
