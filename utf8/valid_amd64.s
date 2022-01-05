@@ -145,12 +145,14 @@ process:
 non_ascii:
 	XORB DL, DL
 
+	// Prepare intermediate vector for push operations
+	VPERM2I128 $0x03, Y8, Y11, Y8
+
 	// Check errors on the high nibble of the previous byte
-	VPERM2I128 $0x03, Y8, Y11, Y10
-	VPALIGNR   $0x0f, Y10, Y11, Y10
-	VPSRLW     $0x04, Y10, Y12
-	VPAND      Y12, Y6, Y12
-	VPSHUFB    Y12, Y3, Y12
+	VPALIGNR $0x0f, Y8, Y11, Y10
+	VPSRLW   $0x04, Y10, Y12
+	VPAND    Y12, Y6, Y12
+	VPSHUFB  Y12, Y3, Y12
 
 	// Check errors on the low nibble of the previous byte
 	VPAND   Y10, Y6, Y10
@@ -164,14 +166,12 @@ non_ascii:
 	VPAND   Y10, Y12, Y12
 
 	// Find 3 bytes continuations
-	VPERM2I128 $0x03, Y8, Y11, Y10
-	VPALIGNR   $0x0e, Y10, Y11, Y10
-	VPSUBUSB   Y2, Y10, Y10
+	VPALIGNR $0x0e, Y8, Y11, Y10
+	VPSUBUSB Y2, Y10, Y10
 
 	// Find 4 bytes continuations
-	VPERM2I128 $0x03, Y8, Y11, Y8
-	VPALIGNR   $0x0d, Y8, Y11, Y8
-	VPSUBUSB   Y1, Y8, Y8
+	VPALIGNR $0x0d, Y8, Y11, Y8
+	VPSUBUSB Y1, Y8, Y8
 
 	// Combine them to have all continuations
 	VPOR Y10, Y8, Y8

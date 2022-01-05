@@ -267,8 +267,13 @@ func main() {
 	Label("non_ascii")
 	XORB(isAscii, isAscii)
 
+	Comment("Prepare intermediate vector for push operations")
+	vp := YMM()
+	VPERM2I128(Imm(3), previousBlockY, currentBlockY, vp)
+
 	Comment("Check errors on the high nibble of the previous byte")
-	previousY := pushLastByteFromAToFrontOfB(previousBlockY, currentBlockY)
+	previousY := YMM()
+	VPALIGNR(Imm(15), vp, currentBlockY, previousY)
 
 	highPrev := highNibbles(previousY, nibbleMaskY)
 	VPSHUFB(highPrev, nibble1Y, highPrev)
@@ -284,11 +289,14 @@ func main() {
 	VPAND(highCurr, highPrev, highPrev)
 
 	Comment("Find 3 bytes continuations")
-	off2 := pushLast2BytesFromAToFrontOfB(previousBlockY, currentBlockY)
+	off2 := YMM()
+	VPALIGNR(Imm(14), vp, currentBlockY, off2)
 	VPSUBUSB(continuation3BytesY, off2, off2)
 
 	Comment("Find 4 bytes continuations")
-	off3 := pushLast3BytesFromAToFrontOfB(previousBlockY, currentBlockY)
+	off3 := YMM()
+	VPALIGNR(Imm(13), vp, currentBlockY, off3)
+
 	VPSUBUSB(continuation4BytesY, off3, off3)
 
 	Comment("Combine them to have all continuations")
@@ -335,27 +343,6 @@ func main() {
 	RET()
 
 	Generate()
-}
-
-func pushLast2BytesFromAToFrontOfB(a, b VecVirtual) VecVirtual {
-	out := YMM()
-	VPERM2I128(Imm(3), a, b, out)
-	VPALIGNR(Imm(14), out, b, out)
-	return out
-}
-
-func pushLast3BytesFromAToFrontOfB(a, b VecVirtual) VecVirtual {
-	out := YMM()
-	VPERM2I128(Imm(3), a, b, out)
-	VPALIGNR(Imm(13), out, b, out)
-	return out
-}
-
-func pushLastByteFromAToFrontOfB(a, b VecVirtual) VecVirtual {
-	out := YMM()
-	VPERM2I128(Imm(3), a, b, out)
-	VPALIGNR(Imm(15), out, b, out)
-	return out
 }
 
 func lowNibbles(a VecVirtual, nibbleMask VecVirtual) VecVirtual {
