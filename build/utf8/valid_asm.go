@@ -191,6 +191,17 @@ func main() {
 	nibbleMaskY := YMM()
 	VMOVDQU(lowerNibbleMask, nibbleMaskY)
 
+	Comment("MSB mask")
+	msbMask := ConstArray64("msb_mask",
+		0x8080808080808080,
+		0x8080808080808080,
+		0x8080808080808080,
+		0x8080808080808080,
+	)
+
+	msbMaskY := YMM()
+	VMOVDQU(msbMask, msbMaskY)
+
 	Comment("For the first pass, set the previous block as zero.")
 	previousBlockY := YMM()
 	zeroOutVector(previousBlockY)
@@ -289,15 +300,6 @@ func main() {
 	VPCMPGTB(tmpY, continuationBitsY, continuationBitsY)
 
 	Comment("Find bytes that are continuations by looking at their most significant bit.")
-	msbMask := ConstArray64("msb_mask",
-		0x8080808080808080,
-		0x8080808080808080,
-		0x8080808080808080,
-		0x8080808080808080,
-	)
-
-	msbMaskY := YMM()
-	VMOVDQU(msbMask, msbMaskY)
 	VPAND(msbMaskY, continuationBitsY, continuationBitsY)
 
 	Comment("Find mismatches between expected and actual continuation bytes")

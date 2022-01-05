@@ -33,14 +33,17 @@ init_avx:
 	// Nibble mask
 	VMOVDQU nibble_mask<>+0(SB), Y6
 
-	// For the first pass, set the previous block as zero.
-	VXORPS Y7, Y7, Y7
+	// MSB mask
+	VMOVDQU msb_mask<>+0(SB), Y7
 
-	// Zeroes the error vector.
+	// For the first pass, set the previous block as zero.
 	VXORPS Y8, Y8, Y8
 
-	// Zeroes the "previous block was incomplete" vector.
+	// Zeroes the error vector.
 	VXORPS Y9, Y9, Y9
+
+	// Zeroes the "previous block was incomplete" vector.
+	VXORPS Y10, Y10, Y10
 
 	// Top of the loop.
 check_input:
@@ -58,8 +61,8 @@ check_input:
 	// If 0 < bytes left < 32.
 	// Prepare scratch space
 	LEAQ    (SP), BX
-	VXORPS  Y10, Y10, Y10
-	VMOVDQU Y10, (BX)
+	VXORPS  Y11, Y11, Y11
+	VMOVDQU Y11, (BX)
 
 	// Make a copy of the remaining bytes into the zeroed scratch space and make it the next block to read.
 	MOVQ AX, SI
@@ -115,10 +118,10 @@ handle9to16:
 	JMP  after_copy
 
 handle17to32:
-	MOVOU (SI), X10
-	MOVOU -16(SI)(CX*1), X11
-	MOVOU X10, (AX)
-	MOVOU X11, -16(AX)(CX*1)
+	MOVOU (SI), X11
+	MOVOU -16(SI)(CX*1), X12
+	MOVOU X11, (AX)
+	MOVOU X12, -16(AX)(CX*1)
 
 after_copy:
 	MOVQ $0x0000000000000020, CX
@@ -126,80 +129,79 @@ after_copy:
 	// Process one 32B block of data
 process:
 	// Load the next block of bytes
-	VMOVDQU (AX), Y10
+	VMOVDQU (AX), Y11
 	SUBQ    $0x20, CX
 	ADDQ    $0x20, AX
 
 	// Fast check to see if ASCII
-	VPMOVMSKB Y10, BX
+	VPMOVMSKB Y11, BX
 	CMPL      BX, $0x00
 	JNZ       non_ascii
 
 	// If this whole block is ASCII, there is nothing to do, and it is an error if any of the previous code point was incomplete.
-	VPOR Y8, Y9, Y8
+	VPOR Y9, Y10, Y9
 	JMP  check_input
 
 non_ascii:
 	XORB DL, DL
 
 	// Check errors on the high nibble of the previous byte
-	VPERM2I128 $0x03, Y7, Y10, Y9
-	VPALIGNR   $0x0f, Y9, Y10, Y9
-	VPSRLW     $0x04, Y9, Y11
-	VPAND      Y11, Y6, Y11
-	VPSHUFB    Y11, Y3, Y11
+	VPERM2I128 $0x03, Y8, Y11, Y10
+	VPALIGNR   $0x0f, Y10, Y11, Y10
+	VPSRLW     $0x04, Y10, Y12
+	VPAND      Y12, Y6, Y12
+	VPSHUFB    Y12, Y3, Y12
 
 	// Check errors on the low nibble of the previous byte
-	VPAND   Y9, Y6, Y9
-	VPSHUFB Y9, Y4, Y9
-	VPAND   Y9, Y11, Y11
+	VPAND   Y10, Y6, Y10
+	VPSHUFB Y10, Y4, Y10
+	VPAND   Y10, Y12, Y12
 
 	// Check errors on the high nibble on the current byte
-	VPSRLW  $0x04, Y10, Y9
-	VPAND   Y9, Y6, Y9
-	VPSHUFB Y9, Y5, Y9
-	VPAND   Y9, Y11, Y11
+	VPSRLW  $0x04, Y11, Y10
+	VPAND   Y10, Y6, Y10
+	VPSHUFB Y10, Y5, Y10
+	VPAND   Y10, Y12, Y12
 
 	// Find 3 bytes continuations
-	VPERM2I128 $0x03, Y7, Y10, Y9
-	VPALIGNR   $0x0e, Y9, Y10, Y9
-	VPSUBUSB   Y2, Y9, Y9
+	VPERM2I128 $0x03, Y8, Y11, Y10
+	VPALIGNR   $0x0e, Y10, Y11, Y10
+	VPSUBUSB   Y2, Y10, Y10
 
 	// Find 4 bytes continuations
-	VPERM2I128 $0x03, Y7, Y10, Y7
-	VPALIGNR   $0x0d, Y7, Y10, Y7
-	VPSUBUSB   Y1, Y7, Y7
+	VPERM2I128 $0x03, Y8, Y11, Y8
+	VPALIGNR   $0x0d, Y8, Y11, Y8
+	VPSUBUSB   Y1, Y8, Y8
 
 	// Combine them to have all continuations
-	VPOR Y9, Y7, Y7
+	VPOR Y10, Y8, Y8
 
 	// Perform a byte-sized signed comparison with zero to turn any non-zero bytes into 0xFF.
-	VXORPS   Y9, Y9, Y9
-	VPCMPGTB Y9, Y7, Y7
+	VXORPS   Y10, Y10, Y10
+	VPCMPGTB Y10, Y8, Y8
 
 	// Find bytes that are continuations by looking at their most significant bit.
-	VMOVDQU msb_mask<>+0(SB), Y9
-	VPAND   Y9, Y7, Y7
+	VPAND Y7, Y8, Y8
 
 	// Find mismatches between expected and actual continuation bytes
-	VPXOR Y7, Y11, Y7
+	VPXOR Y8, Y12, Y8
 
 	// Store result in sticky error
-	VPOR Y8, Y7, Y8
+	VPOR Y9, Y8, Y9
 
 	// Prepare for next iteration
-	VPSUBUSB Y0, Y10, Y9
-	VMOVDQU  Y10, Y7
+	VPSUBUSB Y0, Y11, Y10
+	VMOVDQU  Y11, Y8
 
 	// End of loop
 	JMP check_input
 
 end:
 	// If the previous block was incomplete, this is an error.
-	VPOR Y9, Y8, Y8
+	VPOR Y10, Y9, Y9
 
 	// Return whether any error bit was set
-	VPTEST Y8, Y8
+	VPTEST Y9, Y9
 	SETEQ  AL
 
 	// Bit 0 tells if the input is valid utf8, bit 1 tells if it's valid ascii
