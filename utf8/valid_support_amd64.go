@@ -3,19 +3,12 @@
 
 package utf8
 
-import (
-	"unicode/utf8"
-
-	"github.com/segmentio/asm/ascii"
-)
-
-func Validate(p []byte) (validUtf8, validAscii bool) {
+// Validate is a more precise version of Valid that also indicates whether the
+// input was valid ASCII.
+func Validate(p []byte) Validation {
 	if len(p) < 32 {
-		validAscii = ascii.Valid(p)
-		if validAscii {
-			return true, true
-		}
-		return utf8.Valid(p), false
+		return validate(p)
 	}
-	return validateAvx(p)
+	r := validateAvx(p)
+	return Validation(r)
 }

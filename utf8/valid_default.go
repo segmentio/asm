@@ -12,10 +12,6 @@ import (
 
 // Validate is a more precise version of Valid that also indicates whether the
 // input was valid ASCII.
-func Validate(p []byte) (validUtf8, validAscii bool) {
-	valid := ascii.Valid(p)
-	if valid {
-		return true, true
-	}
-	return utf8.Valid(p), false
+func Validate(p []byte) Validation {
+	return validate(p)
 }

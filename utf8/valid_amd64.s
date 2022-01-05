@@ -5,16 +5,17 @@
 
 #include "textflag.h"
 
-// func validateAvx(p []byte) (bool, bool)
+// func validateAvx(p []byte) byte
 // Requires: AVX, AVX2, SSE2
-TEXT ·validateAvx(SB), NOSPLIT, $32-26
+TEXT ·validateAvx(SB), NOSPLIT, $32-25
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
-	MOVB $0x01, DL
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
 	JCS  init_avx
 
 init_avx:
+	MOVB $0x01, DL
+
 	// Prepare the constant masks
 	VMOVDQU incomplete_mask<>+0(SB), Y0
 	VMOVDQU cont4_vec<>+0(SB), Y1
@@ -199,8 +200,13 @@ end:
 
 	// Return whether any error bit was set
 	VPTEST Y8, Y8
-	SETEQ  ret+24(FP)
-	MOVB   DL, ret1+25(FP)
+	SETEQ  AL
+
+	// Bit 0 tells if the input is valid utf8, bit 1 tells if it's valid ascii
+	ANDB AL, DL
+	SHLB $0x01, DL
+	ORB  DL, AL
+	MOVB AL, ret+24(FP)
 	VZEROUPPER
 	RET
 

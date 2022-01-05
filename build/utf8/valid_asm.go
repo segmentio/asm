@@ -129,23 +129,25 @@ func nibbleMasksData() (nib1, nib2, nib3 []byte) {
 }
 
 func main() {
-	TEXT("validateAvx", NOSPLIT, "func(p []byte) (bool, bool)")
+	TEXT("validateAvx", NOSPLIT, "func(p []byte) byte")
 	Doc("Optimized version of Validate for inputs of more than 32B.")
 
-	retUtf8, _ := ReturnIndex(0).Resolve()
-	retAscii, _ := ReturnIndex(1).Resolve()
+	ret, err := ReturnIndex(0).Resolve()
+	if err != nil {
+		panic(err)
+	}
 
 	d := Load(Param("p").Base(), GP64())
 	n := Load(Param("p").Len(), GP64())
-
-	validAsciiReg := GP8()
-	MOVB(Imm(1), validAsciiReg)
 
 	JumpIfFeature("init_avx", cpu.AVX2)
 
 	// TODO: call stdlib
 
 	Label("init_avx")
+
+	isAscii := GP8()
+	MOVB(Imm(1), isAscii)
 
 	Comment("Prepare the constant masks")
 
@@ -252,7 +254,8 @@ func main() {
 	JMP(LabelRef("check_input"))
 
 	Label("non_ascii")
-	XORB(validAsciiReg, validAsciiReg)
+	XORB(isAscii, isAscii)
+
 	Comment("Check errors on the high nibble of the previous byte")
 	previousY := pushLastByteFromAToFrontOfB(previousBlockY, currentBlockY)
 
@@ -317,9 +320,15 @@ func main() {
 
 	Comment("Return whether any error bit was set")
 	VPTEST(errorY, errorY)
-	Label("exit")
-	SETEQ(retUtf8.Addr)
-	MOVB(validAsciiReg, retAscii.Addr)
+	out := GP8()
+	SETEQ(out)
+
+	Comment("Bit 0 tells if the input is valid utf8, bit 1 tells if it's valid ascii")
+	ANDB(out, isAscii)
+	SHLB(Imm(1), isAscii)
+	ORB(isAscii, out)
+
+	MOVB(out, ret.Addr)
 	VZEROUPPER()
 	RET()
 

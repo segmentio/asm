@@ -141,7 +141,7 @@ func TestValid(t *testing.T) {
 
 	for _, tt := range examples {
 		t.Run(tt, func(t *testing.T) {
-			validate(t, []byte(tt))
+			check(t, []byte(tt))
 		})
 
 		// Generate variations of the input to exercise errors at the
@@ -159,7 +159,7 @@ func TestValid(t *testing.T) {
 			size := 32 - len(tt)
 			prefix := strings.Repeat("a", size)
 			b := []byte(prefix + tt)
-			validate(t, b)
+			check(t, b)
 		})
 		t.Run("vec-padded-"+tt, func(t *testing.T) {
 			prefix := strings.Repeat("a", 32)
@@ -169,7 +169,7 @@ func TestValid(t *testing.T) {
 			if len(b)%32 != 0 {
 				panic("test should generate block of 32")
 			}
-			validate(t, b)
+			check(t, b)
 		})
 		t.Run("vec-"+tt, func(t *testing.T) {
 			prefix := strings.Repeat("a", 32)
@@ -181,12 +181,12 @@ func TestValid(t *testing.T) {
 			if len(b)%32 == 0 {
 				panic("test should not generate block of 32")
 			}
-			validate(t, b)
+			check(t, b)
 		})
 	}
 }
 
-func validate(t *testing.T, b []byte) {
+func check(t *testing.T, b []byte) {
 	// Check that both Valid and Validate behave properly. Should not be
 	// necessary given the definition of Valid, but just in case.
 
@@ -195,14 +195,14 @@ func validate(t *testing.T, b []byte) {
 		t.Errorf("Valid(%q) = %v; want %v", string(b), !expected, expected)
 	}
 
-	utf8valid, asciivalid := Validate(b)
+	v := Validate(b)
 
-	if utf8valid != expected {
+	if v.IsUTF8() != expected {
 		t.Errorf("Validate(%q) utf8 valid: %v; want %v", string(b), !expected, expected)
 	}
 
 	expected = ascii.Valid(b)
-	if asciivalid != expected {
+	if v.IsASCII() != expected {
 		t.Errorf("Validate(%q) ascii valid: %v; want %v", string(b), !expected, expected)
 	}
 }

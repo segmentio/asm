@@ -6,4 +6,4 @@
 package utf8
 
 // Optimized version of Validate for inputs of more than 32B.
-func validateAvx(p []byte) (bool, bool)
+func validateAvx(p []byte) byte
