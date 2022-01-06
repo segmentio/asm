@@ -12,14 +12,14 @@ import (
 
 func FuzzValid(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
-		vu, va := Validate(data)
+		v := Validate(data)
 		ru := stdlib.Valid(data)
-		if ru != vu {
-			t.Errorf("Validate(%q) UTF8 = %v; want %v", data, vu, ru)
+		if ru != v.IsUTF8() {
+			t.Errorf("Validate(%q) UTF8 = %v; want %v", data, v.IsUTF8(), ru)
 		}
 		ra := ascii.Valid(data)
-		if ra != va {
-			t.Errorf("Validate(%q) ASCII = %v; want %v", data, va, ra)
+		if ra != v.IsASCII() {
+			t.Errorf("Validate(%q) ASCII = %v; want %v", data, v.IsASCII(), ra)
 		}
 	})
 }
