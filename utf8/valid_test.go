@@ -3,6 +3,7 @@ package utf8
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -139,6 +140,11 @@ func TestValid(t *testing.T) {
 		examples = append(examples, genExamples("", r)...)
 	}
 
+	for _, i := range []int{300, 316} {
+		d := bytes.Repeat(someutf8, i/len(someutf8))
+		examples = append(examples, string(d))
+	}
+
 	for _, tt := range examples {
 		t.Run(tt, func(t *testing.T) {
 			check(t, []byte(tt))
@@ -187,11 +193,18 @@ func TestValid(t *testing.T) {
 }
 
 func check(t *testing.T, b []byte) {
+	t.Helper()
+
 	// Check that both Valid and Validate behave properly. Should not be
 	// necessary given the definition of Valid, but just in case.
 
 	expected := utf8.Valid(b)
 	if Valid(b) != expected {
+		err := ioutil.WriteFile("test.out.txt", b, 0600)
+		if err != nil {
+			panic(err)
+		}
+
 		t.Errorf("Valid(%q) = %v; want %v", string(b), !expected, expected)
 	}
 
@@ -209,6 +222,7 @@ func check(t *testing.T, b []byte) {
 
 var valid1k = bytes.Repeat([]byte("0123456789日本語日本語日本語日abcdefghijklmnopqrstuvwx"), 16)
 var valid1M = bytes.Repeat(valid1k, 1024)
+var someutf8 = []byte("\xF4\x8F\xBF\xBF")
 
 func BenchmarkValid(b *testing.B) {
 	impls := map[string]func([]byte) bool{
@@ -230,12 +244,19 @@ func BenchmarkValid(b *testing.B) {
 	const KiB = 1024
 	const MiB = 1048576
 
-	a := []byte("\xF4\x8F\xBF\xBF")
-	for i := 0; i <= 400/len(a); i++ {
+	for i := 0; i <= 400/len(someutf8); i++ {
 		//	for _, i := range []int{1 * KiB, 8 * KiB, 16 * KiB, 64 * KiB, 1 * MiB, 8 * MiB, 32 * MiB, 64 * MiB} {
-		d := bytes.Repeat(a, i)
+		d := bytes.Repeat(someutf8, i)
 		inputs = append(inputs, input{
 			name: fmt.Sprintf("small%d", len(d)),
+			data: d,
+		})
+	}
+
+	for _, i := range []int{300, 316} {
+		d := bytes.Repeat(someutf8, i/len(someutf8))
+		inputs = append(inputs, input{
+			name: fmt.Sprintf("tail%d", len(d)),
 			data: d,
 		})
 	}
@@ -243,9 +264,9 @@ func BenchmarkValid(b *testing.B) {
 	for _, input := range inputs {
 		for implName, f := range impls {
 			testName := fmt.Sprintf("%s/%s", input.name, implName)
+
 			b.Run(testName, func(b *testing.B) {
 				b.SetBytes(int64(len(input.data)))
-				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
 					f(input.data)
