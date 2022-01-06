@@ -315,7 +315,7 @@ func main() {
 
 	ADDQ(n, offset)
 	ADDQ(n, offset)
-	SUBQ(Imm(46), offset)
+	SUBQ(Imm(48), offset)
 
 	LEAQ(shuffleMask.Offset(16), shuffleMaskPtr)
 	SUBQ(offset, shuffleMaskPtr)

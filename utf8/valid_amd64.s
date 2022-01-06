@@ -83,7 +83,7 @@ check_input:
 tail_load_large:
 	ADDQ           CX, BX
 	ADDQ           CX, BX
-	SUBQ           $0x2e, BX
+	SUBQ           $0x30, BX
 	LEAQ           shuffle_mask<>+16(SB), SI
 	SUBQ           BX, SI
 	VMOVDQU        (SI), Y13
