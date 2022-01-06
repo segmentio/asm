@@ -217,6 +217,8 @@ func main() {
 	Comment("Top of the loop.")
 	Label("check_input")
 
+	currentBlockY := YMM()
+
 	Comment("if bytes left >= 32")
 	CMPQ(n, U8(32))
 	Comment("go process the next block")
@@ -228,31 +230,132 @@ func main() {
 	CMPQ(n, U8(0))
 	JE(LabelRef("end"))
 
-	Comment("If 0 < bytes left < 32.")
+	// At this point we know we need to load up to 32 bytes of input to
+	// finish the validation and pad the rest of the input vector with
+	// zeroes.
+	//
+	// This code assumes that the remainder of the input data ends right
+	// before a page boundary. As a result, we need to take special care to
+	// avoid a page fault.
+	//
+	// At a high level:
+	//
+	// 1. Move back the data pointer so that the 32 bytes load ends exactly
+	// where the input does.
+	//
+	// 2. Shift right the loaded input so that the remaining input starts at
+	// the beginning of the vector.
+	//
+	// 3. Pad the rest of the vector with zeroes.
+	//
+	// Because AVX2 32 bytes vectors are really two 16 bytes vector, we need
+	// to jump through hoops to perform the shift operation accross
+	// lates. This code has two versions, one for inputs of less than 16
+	// bytes, and one for larger inputs. Though the latter as more steps,
+	// they work using a shuffle mask to shift the bytes in the vector, and
+	// a blend operation to stich together the various pieces of the
+	// resulting vector.
+	//
+	// TODO: faster load code when not near a page boundary.
 
-	Comment("Prepare scratch space")
-	scratch := AllocLocal(32)
-	scratchAddr := GP64()
-	LEAQ(scratch, scratchAddr)
-	tmpZeroY := zeroOutVector(YMM())
-	VMOVDQU(tmpZeroY, Mem{Base: scratchAddr})
+	Comment("If 0 < bytes left < 32")
 
-	Comment("Make a copy of the remaining bytes into the zeroed scratch space and make it the next block to read.")
-	copySrcAddr := GP64()
-	MOVQ(d, copySrcAddr)
-	MOVQ(scratchAddr, d)
+	zeroes := YMM()
+	VPXOR(zeroes, zeroes, zeroes)
 
-	copyN(d, copySrcAddr, n)
-	MOVQ(U64(32), n)
+	shuffleMaskBytes := make([]byte, 3*16)
+	for i := byte(0); i < 16; i++ {
+		shuffleMaskBytes[i] = i
+		shuffleMaskBytes[i+16] = i
+		shuffleMaskBytes[i+32] = i
+	}
+	shuffleMask := ConstBytes("shuffle_mask", shuffleMaskBytes)
+
+	shuffleClearMaskBytes := make([]byte, 3*16)
+	for i := byte(0); i < 16; i++ {
+		shuffleClearMaskBytes[i] = i
+		shuffleClearMaskBytes[i+16] = 0xFF
+		shuffleClearMaskBytes[i+32] = 0xFF
+	}
+	shuffleClearMask := ConstBytes("shuffle_clear_mask", shuffleClearMaskBytes)
+
+	offset := GP64()
+	shuffleMaskPtr := GP64()
+	shuffle := YMM()
+	tmp1 := YMM()
+
+	MOVQ(U64(32), offset)
+	SUBQ(n, offset)
+
+	SUBQ(offset, d)
+
+	VMOVDQU(Mem{Base: d}, currentBlockY)
+
+	CMPQ(n, U8(16))
+	JA(LabelRef("tail_load_large"))
+
+	Comment("Shift right that works if remaining bytes <= 16, safe next to a page boundary")
+
+	VPERM2I128(Imm(3), currentBlockY, zeroes, currentBlockY)
+
+	LEAQ(shuffleClearMask.Offset(16), shuffleMaskPtr)
+	ADDQ(n, offset)
+	ADDQ(n, offset)
+	SUBQ(Imm(32), offset)
+	SUBQ(offset, shuffleMaskPtr)
+	VMOVDQU(Mem{Base: shuffleMaskPtr}, shuffle)
+
+	VPSHUFB(shuffle, currentBlockY, currentBlockY)
+
+	XORQ(n, n)
+	JMP(LabelRef("loaded"))
+
+	Comment("Shift right that works if remaining bytes >= 16, safe next to a page boundary")
+	Label("tail_load_large")
+
+	ADDQ(n, offset)
+	ADDQ(n, offset)
+	SUBQ(Imm(46), offset)
+
+	LEAQ(shuffleMask.Offset(16), shuffleMaskPtr)
+	SUBQ(offset, shuffleMaskPtr)
+	VMOVDQU(Mem{Base: shuffleMaskPtr}, shuffle)
+
+	VPSHUFB(shuffle, currentBlockY, tmp1)
+
+	tmp2 := YMM()
+	VPERM2I128(Imm(3), currentBlockY, zeroes, tmp2)
+
+	VPSHUFB(shuffle, tmp2, tmp2)
+
+	blendMaskBytes := make([]byte, 3*16)
+	for i := byte(0); i < 16; i++ {
+		blendMaskBytes[i] = 0xFF
+		blendMaskBytes[i+16] = 0x00
+		blendMaskBytes[i+32] = 0xFF
+	}
+	blendMask := ConstBytes("blend_mask", blendMaskBytes)
+
+	blendMaskStartPtr := GP64()
+	LEAQ(blendMask.Offset(16), blendMaskStartPtr)
+	SUBQ(offset, blendMaskStartPtr)
+
+	blend := YMM()
+	VBROADCASTF128(Mem{Base: blendMaskStartPtr}, blend)
+	VPBLENDVB(blend, tmp1, tmp2, currentBlockY)
+
+	XORQ(n, n)
+	JMP(LabelRef("loaded"))
 
 	Comment("Process one 32B block of data")
 	Label("process")
-	currentBlockY := YMM()
 
 	Comment("Load the next block of bytes")
 	VMOVDQU(Mem{Base: d}, currentBlockY)
 	SUBQ(U8(32), n)
 	ADDQ(U8(32), d)
+
+	Label("loaded")
 
 	Comment("Fast check to see if ASCII")
 	tmp := GP32()
@@ -361,85 +464,4 @@ func highNibbles(a VecVirtual, nibbleMask VecVirtual) VecVirtual {
 func zeroOutVector(y VecVirtual) VecVirtual {
 	VXORPS(y, y, y)
 	return y
-}
-
-// Assumptions:
-// - len(dst) == 32 bytes
-// - 0 < len(src) < 32
-// TODO: try to use x86.bytes
-func copyN(dst Register, src Register, n Register) {
-	v := VariableLengthBytes{
-		Process: func(regs []Register, memory ...Memory) {
-			src, dst := regs[0], regs[1]
-
-			count := len(memory)
-			operands := make([]Op, count*2)
-
-			for i, m := range memory {
-				operands[i] = m.Load(src)
-			}
-
-			for i, m := range memory {
-				m.Store(operands[i].(Register), dst)
-			}
-		},
-	}
-
-	inputs := []Register{src, dst}
-
-	CMPQ(n, Imm(1))
-	JE(LabelRef("handle1"))
-
-	CMPQ(n, Imm(3))
-	JBE(LabelRef("handle2to3"))
-
-	CMPQ(n, Imm(4))
-	JE(LabelRef("handle4"))
-
-	CMPQ(n, Imm(8))
-	JB(LabelRef("handle5to7"))
-	JE(LabelRef("handle8"))
-
-	CMPQ(n, Imm(16))
-	JBE(LabelRef("handle9to16"))
-
-	CMPQ(n, Imm(32))
-	JBE(LabelRef("handle17to32"))
-
-	Label("handle1")
-	v.Process(inputs, Memory{Size: 1})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle2to3")
-	v.Process(inputs,
-		Memory{Size: 2},
-		Memory{Size: 2, Index: n, Offset: -2})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle4")
-	v.Process(inputs, Memory{Size: 4})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle5to7")
-	v.Process(inputs,
-		Memory{Size: 4},
-		Memory{Size: 4, Index: n, Offset: -4})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle8")
-	v.Process(inputs, Memory{Size: 8})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle9to16")
-	v.Process(inputs,
-		Memory{Size: 8},
-		Memory{Size: 8, Index: n, Offset: -8})
-	JMP(LabelRef("after_copy"))
-
-	Label("handle17to32")
-	v.Process(inputs,
-		Memory{Size: 16},
-		Memory{Size: 16, Index: n, Offset: -16})
-
-	Label("after_copy")
 }

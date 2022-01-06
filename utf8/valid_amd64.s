@@ -6,8 +6,8 @@
 #include "textflag.h"
 
 // func validateAvx(p []byte) byte
-// Requires: AVX, AVX2, SSE2
-TEXT ·validateAvx(SB), NOSPLIT, $32-25
+// Requires: AVX, AVX2
+TEXT ·validateAvx(SB), NOSPLIT, $0-25
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
 	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
@@ -58,73 +58,44 @@ check_input:
 	CMPQ CX, $0x00
 	JE   end
 
-	// If 0 < bytes left < 32.
-	// Prepare scratch space
-	LEAQ    (SP), BX
-	VXORPS  Y11, Y11, Y11
-	VMOVDQU Y11, (BX)
+	// If 0 < bytes left < 32
+	VPXOR   Y12, Y12, Y12
+	MOVQ    $0x0000000000000020, BX
+	SUBQ    CX, BX
+	SUBQ    BX, AX
+	VMOVDQU (AX), Y11
+	CMPQ    CX, $0x10
+	JA      tail_load_large
 
-	// Make a copy of the remaining bytes into the zeroed scratch space and make it the next block to read.
-	MOVQ AX, SI
-	MOVQ BX, AX
-	CMPQ CX, $0x01
-	JE   handle1
-	CMPQ CX, $0x03
-	JBE  handle2to3
-	CMPQ CX, $0x04
-	JE   handle4
-	CMPQ CX, $0x08
-	JB   handle5to7
-	JE   handle8
-	CMPQ CX, $0x10
-	JBE  handle9to16
-	CMPQ CX, $0x20
-	JBE  handle17to32
+	// Shift right that works if remaining bytes <= 16, safe next to a page boundary
+	VPERM2I128 $0x03, Y11, Y12, Y11
+	LEAQ       shuffle_clear_mask<>+16(SB), SI
+	ADDQ       CX, BX
+	ADDQ       CX, BX
+	SUBQ       $0x20, BX
+	SUBQ       BX, SI
+	VMOVDQU    (SI), Y13
+	VPSHUFB    Y13, Y11, Y11
+	XORQ       CX, CX
+	JMP        loaded
 
-handle1:
-	MOVB (SI), CL
-	MOVB CL, (AX)
-	JMP  after_copy
-
-handle2to3:
-	MOVW (SI), BX
-	MOVW -2(SI)(CX*1), SI
-	MOVW BX, (AX)
-	MOVW SI, -2(AX)(CX*1)
-	JMP  after_copy
-
-handle4:
-	MOVL (SI), CX
-	MOVL CX, (AX)
-	JMP  after_copy
-
-handle5to7:
-	MOVL (SI), BX
-	MOVL -4(SI)(CX*1), SI
-	MOVL BX, (AX)
-	MOVL SI, -4(AX)(CX*1)
-	JMP  after_copy
-
-handle8:
-	MOVQ (SI), CX
-	MOVQ CX, (AX)
-	JMP  after_copy
-
-handle9to16:
-	MOVQ (SI), BX
-	MOVQ -8(SI)(CX*1), SI
-	MOVQ BX, (AX)
-	MOVQ SI, -8(AX)(CX*1)
-	JMP  after_copy
-
-handle17to32:
-	MOVOU (SI), X11
-	MOVOU -16(SI)(CX*1), X12
-	MOVOU X11, (AX)
-	MOVOU X12, -16(AX)(CX*1)
-
-after_copy:
-	MOVQ $0x0000000000000020, CX
+	// Shift right that works if remaining bytes >= 16, safe next to a page boundary
+tail_load_large:
+	ADDQ           CX, BX
+	ADDQ           CX, BX
+	SUBQ           $0x2e, BX
+	LEAQ           shuffle_mask<>+16(SB), SI
+	SUBQ           BX, SI
+	VMOVDQU        (SI), Y13
+	VPSHUFB        Y13, Y11, Y14
+	VPERM2I128     $0x03, Y11, Y12, Y11
+	VPSHUFB        Y13, Y11, Y11
+	LEAQ           blend_mask<>+16(SB), CX
+	SUBQ           BX, CX
+	VBROADCASTF128 (CX), Y12
+	VPBLENDVB      Y12, Y14, Y11, Y11
+	XORQ           CX, CX
+	JMP            loaded
 
 	// Process one 32B block of data
 process:
@@ -133,6 +104,7 @@ process:
 	SUBQ    $0x20, CX
 	ADDQ    $0x20, AX
 
+loaded:
 	// Fast check to see if ASCII
 	VPMOVMSKB Y11, BX
 	CMPL      BX, $0x00
@@ -259,3 +231,27 @@ DATA msb_mask<>+8(SB)/8, $0x8080808080808080
 DATA msb_mask<>+16(SB)/8, $0x8080808080808080
 DATA msb_mask<>+24(SB)/8, $0x8080808080808080
 GLOBL msb_mask<>(SB), RODATA|NOPTR, $32
+
+DATA shuffle_mask<>+0(SB)/8, $0x0706050403020100
+DATA shuffle_mask<>+8(SB)/8, $0x0f0e0d0c0b0a0908
+DATA shuffle_mask<>+16(SB)/8, $0x0706050403020100
+DATA shuffle_mask<>+24(SB)/8, $0x0f0e0d0c0b0a0908
+DATA shuffle_mask<>+32(SB)/8, $0x0706050403020100
+DATA shuffle_mask<>+40(SB)/8, $0x0f0e0d0c0b0a0908
+GLOBL shuffle_mask<>(SB), RODATA|NOPTR, $48
+
+DATA shuffle_clear_mask<>+0(SB)/8, $0x0706050403020100
+DATA shuffle_clear_mask<>+8(SB)/8, $0x0f0e0d0c0b0a0908
+DATA shuffle_clear_mask<>+16(SB)/8, $0xffffffffffffffff
+DATA shuffle_clear_mask<>+24(SB)/8, $0xffffffffffffffff
+DATA shuffle_clear_mask<>+32(SB)/8, $0xffffffffffffffff
+DATA shuffle_clear_mask<>+40(SB)/8, $0xffffffffffffffff
+GLOBL shuffle_clear_mask<>(SB), RODATA|NOPTR, $48
+
+DATA blend_mask<>+0(SB)/8, $0xffffffffffffffff
+DATA blend_mask<>+8(SB)/8, $0xffffffffffffffff
+DATA blend_mask<>+16(SB)/8, $0x0000000000000000
+DATA blend_mask<>+24(SB)/8, $0x0000000000000000
+DATA blend_mask<>+32(SB)/8, $0xffffffffffffffff
+DATA blend_mask<>+40(SB)/8, $0xffffffffffffffff
+GLOBL blend_mask<>(SB), RODATA|NOPTR, $48
