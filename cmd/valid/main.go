@@ -17,7 +17,7 @@ func main() {
 	var data []byte
 	if len(os.Args) > 1 {
 		s := os.Args[1]
-		s, err := strconv.Unquote(`"`+s+`"`)
+		s, err := strconv.Unquote(`"` + s + `"`)
 		if err != nil {
 			panic(err)
 		}

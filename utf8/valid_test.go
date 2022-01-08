@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/segmentio/asm/ascii"
+	"github.com/segmentio/asm/internal/buffer"
 )
 
 type byteRange struct {
@@ -189,6 +190,32 @@ func TestValid(t *testing.T) {
 			}
 			check(t, b)
 		})
+	}
+}
+
+func TestValidPageBoundary(t *testing.T) {
+	buf, err := buffer.New(64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer buf.Release()
+
+	head := buf.ProtectHead()
+	tail := buf.ProtectTail()
+
+	data := bytes.Repeat(someutf8, 64/len(someutf8))
+
+	copy(head, data)
+	copy(tail, data)
+
+	for i := 0; i <= 32; i++ {
+		input := head[:i]
+		check(t, input)
+	}
+
+	for i := 0; i <= 32; i++ {
+		input := tail[i:]
+		check(t, input)
 	}
 }
 
