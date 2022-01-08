@@ -31,7 +31,7 @@ valid:  utf8: false ascii: false v: 0
 Alternatively it can also conusme input from stdin:
 
 ```
-desktop-linux | ~/s/g/s/a/c/valid$ cat example.txt
+$ cat example.txt
 hello! 😊
 $ go run main.go < example.txt
 hello! 😊
