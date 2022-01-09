@@ -10,8 +10,6 @@ import (
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
 	. "github.com/segmentio/asm/build/internal/asm"
-	. "github.com/segmentio/asm/build/internal/x86"
-	"github.com/segmentio/asm/cpu"
 )
 
 func init() {
@@ -139,12 +137,6 @@ func main() {
 
 	d := Load(Param("p").Base(), GP64())
 	n := Load(Param("p").Len(), GP64())
-
-	JumpIfFeature("init_avx", cpu.AVX2)
-
-	// TODO: call stdlib
-
-	Label("init_avx")
 
 	isAscii := GP8()
 	MOVB(Imm(1), isAscii)

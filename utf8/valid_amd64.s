@@ -10,10 +10,6 @@
 TEXT ·validateAvx(SB), NOSPLIT, $0-25
 	MOVQ p_base+0(FP), AX
 	MOVQ p_len+8(FP), CX
-	BTL  $0x08, github·com∕segmentio∕asm∕cpu·X86+0(SB)
-	JCS  init_avx
-
-init_avx:
 	MOVB $0x01, DL
 
 	// Prepare the constant masks
