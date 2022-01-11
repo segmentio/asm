@@ -41,7 +41,8 @@
 	VBIT    V16.B8, v.B8, V12.B8;                                \
 	VBIT    V17.B8, v.B8, V13.B8
 
-#define SPLIT_INPUT()                                          \
+#define DECODE_INPUT(goto_err)                                 \
+	/* Create hi/lo nibles */                                    \
 	VUSHR   $4, V10.B8, V18.B8;                                  \
 	VUSHR   $4, V11.B8, V19.B8;                                  \
 	VUSHR   $4, V12.B8, V20.B8;                                  \
@@ -49,9 +50,8 @@
 	VAND    V7.B8, V10.B8, V22.B8;                               \
 	VAND    V7.B8, V11.B8, V23.B8;                               \
 	VAND    V7.B8, V12.B8, V24.B8;                               \
-	VAND    V7.B8, V13.B8, V25.B8
-
-#define VALIDATE_INPUT(label)                                  \
+	VAND    V7.B8, V13.B8, V25.B8;                               \
+  /* Detect invalid input characters */                        \
 	VTBL    V22.B8, [V2.B8], V22.B8;                             \
 	VTBL    V23.B8, [V2.B8], V23.B8;                             \
 	VTBL    V24.B8, [V2.B8], V24.B8;                             \
@@ -74,9 +74,8 @@
 	VMOV    V26.D[0], R5;                                        \
 	VMOV    V26.D[1], R6;                                        \
 	ORR     R6, R5;                                              \
-	CBNZ    R5, label
-
-#define COMBINE_RESULTS()                                      \
+	CBNZ    R5, goto_err;                                        \
+	/* Shift hi nibles */                                        \
 	VTBL    V18.B8, [V4.B8], V18.B8;                             \
 	VTBL    V19.B8, [V4.B8], V19.B8;                             \
 	VTBL    V20.B8, [V4.B8], V20.B8;                             \
@@ -85,6 +84,7 @@
 	VBIT    V15.B8, V8.B8, V19.B8;                               \
 	VBIT    V16.B8, V8.B8, V20.B8;                               \
 	VBIT    V17.B8, V8.B8, V21.B8;                               \
+	/* Combine results */                                        \
 	VADD    V18.B8, V10.B8, V10.B8;                              \
 	VADD    V19.B8, V11.B8, V11.B8;                              \
 	VADD    V20.B8, V12.B8, V12.B8;                              \
@@ -98,11 +98,11 @@
 	VORR    V11.B8, V15.B8, V17.B8;                              \
 	VORR    V12.B8, V13.B8, V18.B8
 
-#define ADVANCE_LOOP(label)                                    \
+#define ADVANCE_LOOP(goto_done)                                \
 	VST3.P  [V16.B8, V17.B8, V18.B8], 24(R3);                    \
 	ADD     $32, R4;                                             \
 	CMP     R4, R2;                                              \
-	BGT     label
+	BGT     goto_done
 
 #define RETURN()                                               \
 	SUB     R0, R3;                                              \
@@ -127,10 +127,8 @@ loop:
 	COMPARE_INPUT(V1)
 	UPDATE_INPUT(V6)
 
-	SPLIT_INPUT()        // Create hi/lo nibbles
-	VALIDATE_INPUT(done) // Detect invalid input characters
-	COMBINE_RESULTS()    // Shift hi nibbles and Combine results
-	ADVANCE_LOOP(loop)   // Store results and continue
+	DECODE_INPUT(done) // Detect invalid input characters
+	ADVANCE_LOOP(loop) // Store results and continue
 
 done:
 	RETURN()
@@ -143,11 +141,9 @@ TEXT ·decodeStdARM64(SB),NOSPLIT,$0-72
 
 loop:
 	LOAD_INPUT()
-	COMPARE_INPUT(V6)    // Compare to '+'
-	SPLIT_INPUT()        // Create hi/lo nibbles
-	VALIDATE_INPUT(done) // Detect invalid input characters
-	COMBINE_RESULTS()    // Shift hi nibbles and Combine results
-	ADVANCE_LOOP(loop)   // Store results and continue
+	COMPARE_INPUT(V6)  // Compare to '+'
+	DECODE_INPUT(done) // Detect invalid input characters
+	ADVANCE_LOOP(loop) // Store results and continue
 
 done:
 	RETURN()
