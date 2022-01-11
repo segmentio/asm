@@ -51,7 +51,7 @@
 	VAND    V7.B8, V11.B8, V23.B8;                               \
 	VAND    V7.B8, V12.B8, V24.B8;                               \
 	VAND    V7.B8, V13.B8, V25.B8;                               \
-  /* Detect invalid input characters */                        \
+	/* Detect invalid input characters */                        \
 	VTBL    V22.B8, [V2.B8], V22.B8;                             \
 	VTBL    V23.B8, [V2.B8], V23.B8;                             \
 	VTBL    V24.B8, [V2.B8], V24.B8;                             \
