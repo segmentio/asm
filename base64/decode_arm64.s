@@ -98,11 +98,11 @@
 	VORR    V11.B8, V15.B8, V17.B8;                              \
 	VORR    V12.B8, V13.B8, V18.B8
 
-#define ADVANCE_LOOP(goto_done)                                \
+#define ADVANCE_LOOP(goto_loop)                                \
 	VST3.P  [V16.B8, V17.B8, V18.B8], 24(R3);                    \
 	ADD     $32, R4;                                             \
 	CMP     R4, R2;                                              \
-	BGT     goto_done
+	BGT     goto_loop
 
 #define RETURN()                                               \
 	SUB     R0, R3;                                              \
