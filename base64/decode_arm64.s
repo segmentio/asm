@@ -24,7 +24,6 @@
 	VMOVI   $47, V6.B8;                                          \
 	VMOVI   $15, V7.B8;                                          \
 	VMOVI   $16, V8.B8;                                          \
-	VMOVI   $0, V9.B8
 
 #define LOAD_INPUT()                                           \
 	VLD4    (R4), [V10.B8, V11.B8, V12.B8, V13.B8]
@@ -64,10 +63,10 @@
 	VAND    V23.B8, V27.B8, V27.B8;                              \
 	VAND    V24.B8, V28.B8, V28.B8;                              \
 	VAND    V25.B8, V29.B8, V29.B8;                              \
-	VCMEQ   V9.B8, V26.B8, V26.B8;                               \
-	VCMEQ   V9.B8, V27.B8, V27.B8;                               \
-	VCMEQ   V9.B8, V28.B8, V28.B8;                               \
-	VCMEQ   V9.B8, V29.B8, V29.B8;                               \
+	WORD    $0x0e209b5a /* VCMEQ   $0, V26.B8, V26.B8 */;        \
+	WORD    $0x0e209b7b /* VCMEQ   $0, V27.B8, V27.B8 */;        \
+	WORD    $0x0e209b9c /* VCMEQ   $0, V28.B8, V28.B8 */;        \
+	WORD    $0x0e209bbd /* VCMEQ   $0, V29.B8, V29.B8 */;        \
 	VORR    V26.B8, V27.B8, V26.B8;                              \
 	VORR    V28.B8, V29.B8, V28.B8;                              \
 	VORR    V26.B8, V28.B8, V26.B8;                              \
