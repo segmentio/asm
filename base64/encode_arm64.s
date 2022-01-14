@@ -56,22 +56,19 @@ loop:
 	VAND    V3.B16, Vfld2.B16, Vfld2.B16
 	VAND    V3.B16, Vsrc2.B16, Vfld3.B16
 
-	// if v < 51 { v = 0 } else { v = v - 51 }
 	WORD    $0x6e212ccd // VUQSUB  V1.B16, Vfld0.B16, Vr0a.B16
-	WORD    $0x6e212cee // VUQSUB  V1.B16, Vfld1.B16, Vr1a.B16
-	WORD    $0x6e212d0f // VUQSUB  V1.B16, Vfld2.B16, Vr2a.B16
-	WORD    $0x6e212d30 // VUQSUB  V1.B16, Vfld3.B16, Vr3a.B16
-
-	// Split lookup ranges 0..25 -> 0 and 26..51 -> 13
 	WORD    $0x4e263451 // VCMGT   V2.B16, Vfld0.B16, Vr0b.B16
 	VAND    V4.B16, Vr0b.B16, Vr0b.B16
 	VORR    Vr0b.B16, Vr0a.B16, Vr0a.B16
+	WORD    $0x6e212cee // VUQSUB  V1.B16, Vfld1.B16, Vr1a.B16
 	WORD    $0x4e273452 // VCMGT   V2.B16, Vfld1.B16, Vr1b.B16
 	VAND    V4.B16, Vr1b.B16, Vr1b.B16
 	VORR    Vr1b.B16, Vr1a.B16, Vr1a.B16
+	WORD    $0x6e212d0f // VUQSUB  V1.B16, Vfld2.B16, Vr2a.B16
 	WORD    $0x4e283453 // VCMGT   V2.B16, Vfld2.B16, Vr2b.B16
 	VAND    V4.B16, Vr2b.B16, Vr2b.B16
 	VORR    Vr2b.B16, Vr2a.B16, Vr2a.B16
+	WORD    $0x6e212d30 // VUQSUB  V1.B16, Vfld3.B16, Vr3a.B16
 	WORD    $0x4e293454 // VCMGT   V2.B16, Vfld3.B16, Vr3b.B16
 	VAND    V4.B16, Vr3b.B16, Vr3b.B16
 	VORR    Vr3b.B16, Vr3a.B16, Vr3a.B16
