@@ -1,5 +1,6 @@
-//go:build amd64 && !purego
-// +build amd64,!purego
+//go:build (amd64 || arm64) && !purego
+// +build amd64 arm64
+// +build !purego
 
 package base64
 
@@ -25,7 +26,7 @@ func fillBuffers(b *buffer.Buffer, size int) map[string][]byte {
 	return bufs
 }
 
-func TestEncodeAVX2(t *testing.T) {
+func TestEncodeASM(t *testing.T) {
 	b, err := buffer.New(512)
 	if err != nil {
 		t.Fatal(err)
@@ -36,7 +37,7 @@ func TestEncodeAVX2(t *testing.T) {
 
 	for _, enc := range encodings {
 		if enc.candidate.enc == nil {
-			t.Log("AVX2 not enabled")
+			t.Log("asm not enabled")
 			continue
 		}
 		for name, buf := range bufs {
@@ -49,8 +50,8 @@ func TestEncodeAVX2(t *testing.T) {
 
 				_, ns := enc.candidate.enc(dst.ProtectTail(), buf, &enc.candidate.enclut[0])
 
-				if len(buf)-ns >= 32 {
-					t.Errorf("encode remain should be less than 32, but is %d", len(buf)-ns)
+				if len(buf)-ns >= minEncodeLen {
+					t.Errorf("encode remain should be less than %d, but is %d", minEncodeLen, len(buf)-ns)
 				}
 			})
 
@@ -61,7 +62,7 @@ func TestEncodeAVX2(t *testing.T) {
 	}
 }
 
-func TestDecodeAVX2(t *testing.T) {
+func TestDecodeASM(t *testing.T) {
 	b, err := buffer.New(512)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +73,7 @@ func TestDecodeAVX2(t *testing.T) {
 
 	for _, enc := range encodings {
 		if enc.candidate.dec == nil {
-			t.Log("AVX2 not enabled")
+			t.Log("asm not enabled")
 			continue
 		}
 
@@ -89,8 +90,8 @@ func TestDecodeAVX2(t *testing.T) {
 
 				_, ns := enc.candidate.dec(dst.ProtectTail(), src, &enc.candidate.declut[0])
 
-				if len(buf)-ns >= 45 {
-					t.Errorf("decode remain should be less than 45, but is %d", len(buf)-ns)
+				if len(buf)-ns >= minDecodeLen {
+					t.Errorf("decode remain should be less than %d, but is %d", minDecodeLen, len(buf)-ns)
 				}
 			})
 
