@@ -89,35 +89,92 @@ func randint(lo, hi int) int {
 }
 
 func BenchmarkSort8(b *testing.B) {
-	benchSort(b, 8)
+	for _, count := range []int{1e3, 1e4, 1e5, 1e6} {
+		b.Run(strconv.Itoa(count), benchSort(count, 8, random, nil))
+	}
+}
+
+func BenchmarkSort8Indirect(b *testing.B) {
+	swap := func(int, int) {}
+	const count = 100000
+	b.Run("random", benchSort(count, 8, random, swap))
+	b.Run("asc", benchSort(count, 8, asc, swap))
+	b.Run("desc", benchSort(count, 8, desc, swap))
 }
 
 func BenchmarkSort16(b *testing.B) {
-	benchSort(b, 16)
+	for _, count := range []int{1e3, 1e4, 1e5, 1e6} {
+		b.Run(strconv.Itoa(count), benchSort(count, 16, random, nil))
+	}
+}
+
+func BenchmarkSort16Indirect(b *testing.B) {
+	swap := func(int, int) {}
+	const count = 100000
+	b.Run("random", benchSort(count, 16, random, swap))
+	b.Run("asc", benchSort(count, 16, asc, swap))
+	b.Run("desc", benchSort(count, 16, desc, swap))
 }
 
 func BenchmarkSort24(b *testing.B) {
-	benchSort(b, 24)
+	for _, count := range []int{1e3, 1e4, 1e5, 1e6} {
+		b.Run(strconv.Itoa(count), benchSort(count, 24, random, nil))
+	}
+}
+
+func BenchmarkSort24Indirect(b *testing.B) {
+	swap := func(int, int) {}
+	const count = 100000
+	b.Run("random", benchSort(count, 24, random, swap))
+	b.Run("asc", benchSort(count, 24, asc, swap))
+	b.Run("desc", benchSort(count, 24, desc, swap))
 }
 
 func BenchmarkSort32(b *testing.B) {
-	benchSort(b, 32)
+	for _, count := range []int{1e3, 1e4, 1e5, 1e6} {
+		b.Run(strconv.Itoa(count), benchSort(count, 32, random, nil))
+	}
 }
 
-func benchSort(b *testing.B, size int) {
-	for _, count := range []int{1e3, 1e4, 1e5, 1e6} {
-		b.Run(strconv.Itoa(count), func(b *testing.B) {
-			buf := make([]byte, count*size)
-			unsorted := make([]byte, count*size)
-			prng.Read(unsorted)
+func BenchmarkSort32Indirect(b *testing.B) {
+	swap := func(int, int) {}
+	const count = 100000
+	b.Run("random", benchSort(count, 32, random, swap))
+	b.Run("asc", benchSort(count, 32, asc, swap))
+	b.Run("desc", benchSort(count, 32, desc, swap))
+}
 
-			b.SetBytes(int64(len(buf)))
-			b.ResetTimer()
+type order int
 
-			for i := 0; i < b.N; i++ {
-				copy(buf, unsorted)
-				Sort(buf, size, nil)
+const (
+	random order = iota
+	asc
+	desc
+)
+
+func benchSort(count, size int, order order, indirect func(int, int)) func(*testing.B) {
+	return func(b *testing.B) {
+		buf := make([]byte, count*size)
+		unsorted := make([]byte, count*size)
+		prng.Read(unsorted)
+
+		if order == asc || order == desc {
+			sort.Sort(newGeneric(unsorted, size, nil))
+		}
+		if order == desc {
+			g := newGeneric(unsorted, size, nil)
+			items := g.Len()
+			for i := 0; i < items/2; i++ {
+				g.Swap(i, items-1-i)
 			}
-		})
+		}
+
+		b.SetBytes(int64(len(buf)))
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			copy(buf, unsorted)
+			Sort(buf, size, indirect)
+		}
 	}
 }
