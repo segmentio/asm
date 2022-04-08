@@ -112,5 +112,5 @@ func hybridPartition128(data, scratch []uint128) int {
 }
 
 func less128(a, b uint128) bool {
-	return a.hi < b.hi || (a.hi == b.hi && a.lo <= b.lo)
+	return a.hi < b.hi || (a.hi == b.hi && a.lo < b.lo)
 }

@@ -83,5 +83,5 @@ func hoarePartition192(data []uint192, base int, swap func(int, int)) int {
 func less192(a, b uint192) bool {
 	return a.hi < b.hi ||
 		(a.hi == b.hi && a.mid < b.mid) ||
-		(a.hi == b.hi && a.mid == b.mid && a.lo <= b.lo)
+		(a.hi == b.hi && a.mid == b.mid && a.lo < b.lo)
 }

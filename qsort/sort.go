@@ -20,7 +20,7 @@ func Sort(data []byte, size int, swap func(int, int)) {
 	}
 
 	// No specialization available. Use the slower generic sorting routine.
-	if purego || size%8 != 0 || size > 32 {
+	if size%8 != 0 || size > 32 {
 		sort.Sort(newGeneric(data, size, swap))
 		return
 	}
@@ -37,11 +37,11 @@ func Sort(data []byte, size int, swap func(int, int)) {
 	// If no indirect swapping is required, try to use the hybrid partitioning scheme from
 	// https://blog.reverberate.org/2020/05/29/hoares-rebuttal-bubble-sorts-comeback.html
 	switch {
-	case swap == nil && size == 8 && cpu.X86.Has(x86.CMOV):
+	case swap == nil && !purego && size == 8 && cpu.X86.Has(x86.CMOV):
 		hybridQuicksort64(unsafeBytesTo64(data))
-	case swap == nil && size == 16 && cpu.X86.Has(x86.AVX):
+	case swap == nil && !purego && size == 16 && cpu.X86.Has(x86.AVX):
 		hybridQuicksort128(unsafeBytesTo128(data))
-	case swap == nil && size == 32 && cpu.X86.Has(x86.AVX2):
+	case swap == nil && !purego && size == 32 && cpu.X86.Has(x86.AVX2):
 		hybridQuicksort256(unsafeBytesTo256(data))
 	case size == 8:
 		quicksort64(unsafeBytesTo64(data), 0, smallCutoff, insertionsort64, hoarePartition64, swap)
