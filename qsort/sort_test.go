@@ -81,6 +81,74 @@ func testSort(t *testing.T, size int) {
 	}
 }
 
+func TestPivot8(t *testing.T) {
+	lo := uint64(1)
+	mid := uint64(2)
+	hi := uint64(3)
+
+	for i := 0; i < 1000; i++ {
+		input := []uint64{lo, mid, hi}
+		rand.Shuffle(3, func(i, j int) {
+			input[i], input[j] = input[j], input[i]
+		})
+		medianOfThree64(input, 3, nil)
+		if input[0] != mid {
+			t.Fatal("medianOfThree128 did not put pivot in first position")
+		}
+	}
+}
+
+func TestPivot16(t *testing.T) {
+	lo := uint128{lo: 1}
+	mid := uint128{lo: 2}
+	hi := uint128{lo: 3}
+
+	for i := 0; i < 1000; i++ {
+		input := []uint128{lo, mid, hi}
+		rand.Shuffle(3, func(i, j int) {
+			input[i], input[j] = input[j], input[i]
+		})
+		medianOfThree128(input, 3, nil)
+		if input[0] != mid {
+			t.Fatal("medianOfThree128 did not put pivot in first position")
+		}
+	}
+}
+
+func TestPivot24(t *testing.T) {
+	lo := uint192{lo: 1}
+	mid := uint192{lo: 2}
+	hi := uint192{lo: 3}
+
+	for i := 0; i < 1000; i++ {
+		input := []uint192{lo, mid, hi}
+		rand.Shuffle(3, func(i, j int) {
+			input[i], input[j] = input[j], input[i]
+		})
+		medianOfThree192(input, 3, nil)
+		if input[0] != mid {
+			t.Fatal("medianOfThree192 did not put pivot in first position")
+		}
+	}
+}
+
+func TestPivot32(t *testing.T) {
+	lo := uint256{d: 1}
+	mid := uint256{d: 2}
+	hi := uint256{d: 3}
+
+	for i := 0; i < 1000; i++ {
+		input := []uint256{lo, mid, hi}
+		rand.Shuffle(3, func(i, j int) {
+			input[i], input[j] = input[j], input[i]
+		})
+		medianOfThree256(input, 3, nil)
+		if input[0] != mid {
+			t.Fatal("medianOfThree256 did not put pivot in first position")
+		}
+	}
+}
+
 func randint(lo, hi int) int {
 	if hi == lo {
 		return lo
