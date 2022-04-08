@@ -112,5 +112,5 @@ func less256(a, b uint256) bool {
 	return a.a < b.a ||
 		(a.a == b.a && a.b < b.b) ||
 		(a.a == b.a && a.b == b.b && a.c < b.c) ||
-		(a.a == b.a && a.b == b.b && a.c == b.c && a.d <= b.d)
+		(a.a == b.a && a.b == b.b && a.c == b.c && a.d < b.d)
 }
