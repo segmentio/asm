@@ -2,10 +2,13 @@
 // +build !purego
 // +build aix android darwin dragonfly freebsd illumos ios linux netbsd openbsd plan9 solaris
 
+// TODO: replace the above with go:build unix once Go 1.19 is the lowest
+// supported version
+
 package buffer
 
 import (
-	"syscall"
+	"golang.org/x/sys/unix"
 )
 
 type Buffer struct {
@@ -15,18 +18,18 @@ type Buffer struct {
 }
 
 func New(n int) (Buffer, error) {
-	pg := syscall.Getpagesize()
+	pg := unix.Getpagesize()
 	full := ((n+(pg-1))/pg + 2) * pg
 
-	b, err := syscall.Mmap(-1, 0, full, syscall.PROT_NONE, syscall.MAP_ANON|syscall.MAP_PRIVATE)
+	b, err := unix.Mmap(-1, 0, full, unix.PROT_NONE, unix.MAP_ANON|unix.MAP_PRIVATE)
 	if err != nil {
 		return Buffer{}, err
 	}
 
 	if n > 0 {
-		err = syscall.Mprotect(b[pg:full-pg], syscall.PROT_READ|syscall.PROT_WRITE)
+		err = unix.Mprotect(b[pg:full-pg], unix.PROT_READ|unix.PROT_WRITE)
 		if err != nil {
-			syscall.Munmap(b)
+			unix.Munmap(b)
 			return Buffer{}, err
 		}
 	}
@@ -49,5 +52,5 @@ func (a *Buffer) ProtectTail() []byte {
 }
 
 func (a *Buffer) Release() {
-	syscall.Munmap(a.mmap)
+	unix.Munmap(a.mmap)
 }
