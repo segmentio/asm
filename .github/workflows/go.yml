@@ -7,8 +7,8 @@ jobs:
     strategy:
       matrix:
         go:
-        - 1.16
-        - 1.17
+        - 1.17.x
+        - 1.18.x
         os:
         - ubuntu-latest
 
@@ -43,12 +43,9 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.17.x
+        go-version: 1.18.x
 
-    - name: Generate
-      run: make --always-make build
-
-    - name: Git Status
+    - name: Ensure generated assembler code is up to date
       run: |
-        git diff
-        test -z "$(git status --porcelain)"
+        go install github.com/kevinburke/differ@1.2
+        differ make --always-make build
