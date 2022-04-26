@@ -11,6 +11,9 @@ import (
 
 var prng = rand.New(rand.NewSource(0))
 
+// Note, "8", "16", "32" etc are all byte measurements, not bits. So a 32 byte
+// integer, for example, which you might see in e.g. a SHA256 hash.
+
 func TestSort8(t *testing.T) {
 	testSort(t, 8)
 }
@@ -162,6 +165,31 @@ func BenchmarkSort8(b *testing.B) {
 	}
 }
 
+func stdlibSort8(b *testing.B, size int) {
+	// 8 bytes per int64
+	b.SetBytes(8 * int64(size))
+	data := make([]int64, size)
+	unsorted := make([]int64, size)
+	for j := 0; j < len(unsorted); j++ {
+		unsorted[j] = int64(rand.Intn(size / 10))
+	}
+	b.StopTimer()
+	for i := 0; i < b.N; i++ {
+		copy(data, unsorted)
+		b.StartTimer()
+		sort.Slice(data, func(i, j int) bool { return data[i] < data[j] })
+		b.StopTimer()
+	}
+}
+
+func BenchmarkStdlibSort8(b *testing.B) {
+	for _, size := range []int{1e5, 1e6} {
+		b.Run(strconv.Itoa(size), func(b *testing.B) {
+			stdlibSort8(b, size)
+		})
+	}
+}
+
 func BenchmarkSort8Indirect(b *testing.B) {
 	swap := func(int, int) {}
 	const count = 100000
@@ -222,6 +250,7 @@ const (
 
 func benchSort(count, size int, order order, indirect func(int, int)) func(*testing.B) {
 	return func(b *testing.B) {
+		b.StopTimer()
 		buf := make([]byte, count*size)
 		unsorted := make([]byte, count*size)
 		prng.Read(unsorted)
@@ -238,11 +267,12 @@ func benchSort(count, size int, order order, indirect func(int, int)) func(*test
 		}
 
 		b.SetBytes(int64(len(buf)))
-		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
 			copy(buf, unsorted)
+			b.StartTimer()
 			Sort(buf, size, indirect)
+			b.StopTimer()
 		}
 	}
 }
