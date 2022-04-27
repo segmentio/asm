@@ -1,20 +1,16 @@
 # asm ![build status](https://github.com/segmentio/asm/actions/workflows/go.yml/badge.svg) [![GoDoc](https://godoc.org/github.com/segmentio/asm?status.svg)](https://godoc.org/github.com/segmentio/asm)
 
-Go library providing algorithms optimized to leverage the characteristics of
-modern CPUs.
+Go library providing algorithms that use the full power of modern CPUs to get
+the best performance.
 
 ## Motivation
 
-With the development of Cloud technologies, access to large scale compute
-capacity has never been easier, and running distributed systems deployed across
-dozens or sometimes hundreds of CPUs has become common practice. As a side
-effect of being provided seemingly unlimited (but somewhat expensive) compute
-capacity, software engineers are now in direct connections with the economical
-and environmental impact of running the software they develop in production;
-performance and efficiency of our programs matters today more than it has ever
-before.
+The cloud makes it easier than ever to access large scale compute capacity,
+and it's become common to run distributed systems deployed across dozens or
+sometimes hundreds of CPUs. Because projects run on so many cores now, program
+performance and efficiency matters more today than it has ever before.
 
-Modern CPUs are complex machines with performance characteristic that may
+Modern CPUs are complex machines with performance characteristics that may
 vary by orders of magnitude depending on how they are used. Features like
 branch prediction, instruction reordering, pipelining, or caching are all
 input variables that determine the compute throughput that a CPU can achieve.
@@ -102,7 +98,7 @@ Sort16/1000000  59.4MB/s ± 2%  351.2MB/s ± 3%  +491.24%  (p=0.008 n=5+5)
 
 ## Maintenance
 
-Generation of the assembly code is managed with [AVO](https://github.com/mmcloughlin/avo),
+The assembly code is generated with [AVO](https://github.com/mmcloughlin/avo),
 and orchestrated by a Makefile which helps maintainers rebuild the assembly
 source code when the AVO files are modified.
 
@@ -121,6 +117,17 @@ stable APIs on the main package, breaking changes may be introduced on the
 `build` package more often, as it is intended to be ground for more experimental
 constructs in the project.
 
+### Requirements
+
+Some libraries have custom purpose code for both amd64 and arm64. Others (qsort)
+have only amd64. Search for a `.s` file matching your architecture to be sure
+you are using the assembler optimized library instructions.
+
+The Go code requires Go 1.17 or above. These versions contain significant
+performance improvements compared to previous Go versions.
+
+`asm` version v1.1.5 and earlier maintain compatibility with Go 1.16.
+
 ### purego
 
 Programs in the `build` module should add the following declaration:
@@ -132,7 +139,7 @@ func init() {
 ```
 
 It instructs AVO to inject the `!purego` tag in the generated files, allowing
-compilation of the libraries without any assembly optimizations with a build
+the libraries to be compiled without any assembly optimizations with a build
 command such as:
 
 ```
@@ -141,4 +148,3 @@ go build -tags purego ...
 
 This is mainly useful to compare the impact of using the assembly optimized
 versions instead of the simpler Go-only implementations.
-
