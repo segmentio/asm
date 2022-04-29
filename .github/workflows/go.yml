@@ -10,6 +10,7 @@ jobs:
         - 1.17.x
         - 1.18.x
         os:
+        - [self-hosted, linux, arm64, segment]
         - ubuntu-latest
 
     runs-on: ${{ matrix.os }}
