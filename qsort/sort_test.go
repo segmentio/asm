@@ -161,7 +161,12 @@ func randint(lo, hi int) int {
 
 func BenchmarkSort8(b *testing.B) {
 	for _, count := range []int{1e3, 1e4, 1e5, 1e6} {
-		b.Run(strconv.Itoa(count), benchSort(count, 8, random, nil))
+		b.Run("random-"+strconv.Itoa(count), benchSort(count, 8, 0, random, nil))
+		if count > 1e4 {
+			b.Run("partially-ordered(10)-"+strconv.Itoa(count), benchSort(count, 8, 10, random, nil))
+			b.Run("partially-ordered(100)-"+strconv.Itoa(count), benchSort(count, 8, 100, random, nil))
+			b.Run("partially-ordered(1000)-"+strconv.Itoa(count), benchSort(count, 8, 1000, random, nil))
+		}
 	}
 }
 
@@ -182,10 +187,51 @@ func stdlibSort8(b *testing.B, size int) {
 	}
 }
 
+func stdlibSort8PartiallySorted(b *testing.B, size int, partitions int) {
+	// 8 bytes per int64
+	b.SetBytes(8 * int64(size))
+	data := make([]int64, size)
+	// panic if not a whole number
+	partitionSize := int(size / partitions)
+	partitionOrder := rand.Perm(partitions)
+	groupedPartitions := make([][]int64, partitions)
+
+	for i := 0; i < len(groupedPartitions); i++ {
+		partition := make([]int64, partitionSize)
+		for j := 0; j < len(partition); j++ {
+			partition[j] = int64(rand.Intn(size / 10))
+		}
+		sort.Slice(partition, func(i, j int) bool { return partition[i] < partition[j] })
+		groupedPartitions[partitionOrder[i]] = partition
+	}
+
+	partiallyOrdered := make([]int64, size)
+	for _, partition := range groupedPartitions {
+		partiallyOrdered = append(partiallyOrdered, partition...)
+	}
+
+	b.StopTimer()
+	for i := 0; i < b.N; i++ {
+		copy(data, partiallyOrdered)
+		b.StartTimer()
+		sort.Slice(data, func(i, j int) bool { return data[i] < data[j] })
+		b.StopTimer()
+	}
+}
+
 func BenchmarkStdlibSort8(b *testing.B) {
 	for _, size := range []int{1e5, 1e6} {
-		b.Run(strconv.Itoa(size), func(b *testing.B) {
+		b.Run("random-"+strconv.Itoa(size), func(b *testing.B) {
 			stdlibSort8(b, size)
+		})
+		b.Run("partially-sorted(10)-"+strconv.Itoa(size), func(b *testing.B) {
+			stdlibSort8PartiallySorted(b, size, 10)
+		})
+		b.Run("partially-sorted(100)-"+strconv.Itoa(size), func(b *testing.B) {
+			stdlibSort8PartiallySorted(b, size, 100)
+		})
+		b.Run("partially-sorted(1000)-"+strconv.Itoa(size), func(b *testing.B) {
+			stdlibSort8PartiallySorted(b, size, 1000)
 		})
 	}
 }
@@ -193,51 +239,51 @@ func BenchmarkStdlibSort8(b *testing.B) {
 func BenchmarkSort8Indirect(b *testing.B) {
 	swap := func(int, int) {}
 	const count = 100000
-	b.Run("random", benchSort(count, 8, random, swap))
-	b.Run("asc", benchSort(count, 8, asc, swap))
-	b.Run("desc", benchSort(count, 8, desc, swap))
+	b.Run("random", benchSort(count, 8, 0, random, swap))
+	b.Run("asc", benchSort(count, 8, 0, asc, swap))
+	b.Run("desc", benchSort(count, 8, 0, desc, swap))
 }
 
 func BenchmarkSort16(b *testing.B) {
 	for _, count := range []int{1e3, 1e4, 1e5, 1e6} {
-		b.Run(strconv.Itoa(count), benchSort(count, 16, random, nil))
+		b.Run(strconv.Itoa(count), benchSort(count, 16, 0, random, nil))
 	}
 }
 
 func BenchmarkSort16Indirect(b *testing.B) {
 	swap := func(int, int) {}
 	const count = 100000
-	b.Run("random", benchSort(count, 16, random, swap))
-	b.Run("asc", benchSort(count, 16, asc, swap))
-	b.Run("desc", benchSort(count, 16, desc, swap))
+	b.Run("random", benchSort(count, 16, 0, random, swap))
+	b.Run("asc", benchSort(count, 16, 0, asc, swap))
+	b.Run("desc", benchSort(count, 16, 0, desc, swap))
 }
 
 func BenchmarkSort24(b *testing.B) {
 	for _, count := range []int{1e3, 1e4, 1e5, 1e6} {
-		b.Run(strconv.Itoa(count), benchSort(count, 24, random, nil))
+		b.Run(strconv.Itoa(count), benchSort(count, 24, 0, random, nil))
 	}
 }
 
 func BenchmarkSort24Indirect(b *testing.B) {
 	swap := func(int, int) {}
 	const count = 100000
-	b.Run("random", benchSort(count, 24, random, swap))
-	b.Run("asc", benchSort(count, 24, asc, swap))
-	b.Run("desc", benchSort(count, 24, desc, swap))
+	b.Run("random", benchSort(count, 24, 0, random, swap))
+	b.Run("asc", benchSort(count, 24, 0, asc, swap))
+	b.Run("desc", benchSort(count, 24, 0, desc, swap))
 }
 
 func BenchmarkSort32(b *testing.B) {
 	for _, count := range []int{1e3, 1e4, 1e5, 1e6} {
-		b.Run(strconv.Itoa(count), benchSort(count, 32, random, nil))
+		b.Run(strconv.Itoa(count), benchSort(count, 0, 32, random, nil))
 	}
 }
 
 func BenchmarkSort32Indirect(b *testing.B) {
 	swap := func(int, int) {}
 	const count = 100000
-	b.Run("random", benchSort(count, 32, random, swap))
-	b.Run("asc", benchSort(count, 32, asc, swap))
-	b.Run("desc", benchSort(count, 32, desc, swap))
+	b.Run("random", benchSort(count, 32, 0, random, swap))
+	b.Run("asc", benchSort(count, 32, 0, asc, swap))
+	b.Run("desc", benchSort(count, 32, 0, desc, swap))
 }
 
 type order int
@@ -246,9 +292,10 @@ const (
 	random order = iota
 	asc
 	desc
+	partiallyOrdered
 )
 
-func benchSort(count, size int, order order, indirect func(int, int)) func(*testing.B) {
+func benchSort(count, size, partitions int, order order, indirect func(int, int)) func(*testing.B) {
 	return func(b *testing.B) {
 		b.StopTimer()
 		buf := make([]byte, count*size)
@@ -263,6 +310,23 @@ func benchSort(count, size int, order order, indirect func(int, int)) func(*test
 			items := g.Len()
 			for i := 0; i < items/2; i++ {
 				g.Swap(i, items-1-i)
+			}
+		}
+
+		if order == partiallyOrdered {
+			// panic if not a whole number
+			partitionSize := int((count * size) / partitions)
+			partitionOrder := rand.Perm(partitions)
+			groupedPartitions := make([][]byte, partitions)
+
+			for i := 0; i < len(groupedPartitions); i++ {
+				partition := make([]byte, partitionSize)
+				sort.Sort(newGeneric(partition, partitionSize, nil))
+				groupedPartitions[partitionOrder[i]] = partition
+			}
+
+			for _, partition := range groupedPartitions {
+				unsorted = append(unsorted, partition...)
 			}
 		}
 
