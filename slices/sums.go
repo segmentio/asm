@@ -3,7 +3,7 @@ package slices
 import _ "github.com/segmentio/asm/cpu"
 
 // SumUint64 sums pairs of by index from x and y, similar to python's zip routine.
-// If available AVX instructions will be used to operate on many uint64s simultaneously.
+// If available SIMD instructions will be used to operate on many uint64s simultaneously.
 //
 // Results are returned in the x slice and y is left unaltered. If x and y differ in size
 // only len(x) elements will be processed.
@@ -18,7 +18,7 @@ func sumUint64Generic(x, y []uint64) {
 }
 
 // SumUint32 sums pairs of by index from x and y, similar to python's zip routine.
-// If available AVX instructions will be used to operate on many uint32s simultaneously.
+// If available SIMD instructions will be used to operate on many uint32s simultaneously.
 //
 // Results are returned in the x slice and y is left unaltered. If x and y differ in size
 // only len(x) elements will be processed.
@@ -33,7 +33,7 @@ func sumUint32Generic(x, y []uint32) {
 }
 
 // SumUint16 sums pairs of by index from x and y, similar to python's zip routine.
-// If available AVX instructions will be used to operate on many uint16s simultaneously.
+// If available SIMD instructions will be used to operate on many uint16s simultaneously.
 //
 // Results are returned in the x slice and y is left unaltered. If x and y differ in size
 // only len(x) elements will be processed.
@@ -48,7 +48,7 @@ func sumUint16Generic(x, y []uint16) {
 }
 
 // SumUint8 sums pairs of by index from x and y, similar to python's zip routine.
-// If available AVX instructions will be used to operate on many uint8s simultaneously.
+// If available SIMD instructions will be used to operate on many uint8s simultaneously.
 //
 // Results are returned in the x slice and y is left unaltered. If x and y differ in size
 // only len(x) elements will be processed.

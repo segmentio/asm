@@ -1,4 +1,4 @@
-// +build ignore
+//go:build ignore
 
 package main
 
@@ -27,7 +27,7 @@ type Processor struct {
 }
 
 func init() {
-	ConstraintExpr("!purego")
+	ConstraintExpr("!purego amd64")
 }
 
 func main() {
