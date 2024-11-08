@@ -253,7 +253,7 @@ var someutf8 = []byte("\xF4\x8F\xBF\xBF")
 
 func BenchmarkValid(b *testing.B) {
 	impls := map[string]func([]byte) bool{
-		"AVX":    Valid,
+		"SIMD":   Valid,
 		"Stdlib": utf8.Valid,
 	}
 

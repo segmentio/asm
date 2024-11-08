@@ -9,7 +9,7 @@ import (
 type Validation byte
 
 const (
-	Invalid = 0
+	Invalid = 0b00
 	UTF8    = 0b01
 	ASCII   = 0b10 | UTF8
 )
